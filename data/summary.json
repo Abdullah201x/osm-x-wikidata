@@ -1,0 +1,83 @@
+{
+  "updated_at": "2026-09-30 23:32:26",
+  "pbf_file": "gcc-states-260929-internal.osm.pbf",
+  "total_items": 93144,
+  "total_missing": 82628,
+  "total_candidates": 7411,
+  "total_linked": 3105,
+  "countries": {
+    "KW": {
+      "name_en": "Kuwait",
+      "name_ar": "الكويت",
+      "file": "kw.json",
+      "counts": {
+        "total": 382,
+        "missing": 203,
+        "candidates": 107,
+        "linked": 72,
+        "filtered_non_physical": 206
+      }
+    },
+    "QA": {
+      "name_en": "Qatar",
+      "name_ar": "قطر",
+      "file": "qa.json",
+      "counts": {
+        "total": 2096,
+        "missing": 1763,
+        "candidates": 191,
+        "linked": 142,
+        "filtered_non_physical": 948
+      }
+    },
+    "AE": {
+      "name_en": "United Arab Emirates",
+      "name_ar": "الإمارات العربية المتحدة",
+      "file": "ae.json",
+      "counts": {
+        "total": 4385,
+        "missing": 2377,
+        "candidates": 902,
+        "linked": 1106,
+        "filtered_non_physical": 178
+      }
+    },
+    "OM": {
+      "name_en": "Oman",
+      "name_ar": "سلطنة عمان",
+      "file": "om.json",
+      "counts": {
+        "total": 2775,
+        "missing": 1646,
+        "candidates": 418,
+        "linked": 711,
+        "filtered_non_physical": 627
+      }
+    },
+    "SA": {
+      "name_en": "Saudi Arabia",
+      "name_ar": "المملكة العربية السعودية",
+      "file": "sa.json",
+      "counts": {
+        "total": 82961,
+        "missing": 76349,
+        "candidates": 5657,
+        "linked": 955,
+        "filtered_non_physical": 4261
+      }
+    },
+    "BH": {
+      "name_en": "Bahrain",
+      "name_ar": "البحرين",
+      "file": "bh.json",
+      "counts": {
+        "total": 545,
+        "missing": 290,
+        "candidates": 136,
+        "linked": 119,
+        "filtered_non_physical": 41
+      }
+    }
+  },
+  "total_filtered_non_physical": 6261
+}

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ربط أوبن ستريت ماب وويكي بيانات لدول الخليج</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗺️</text></svg>" />
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Leaflet.markercluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="css/style.css?v=4" />
+</head>
+<body>
+
+  <div id="app-container">
+    
+    <!-- Sidebar Controls -->
+    <aside id="sidebar">
+      <header>
+        <div class="brand-row">
+          <div class="brand-title">
+            <div class="logo-glow"></div>
+            <h1 data-i18n="mainTitle">ربط OSM × ويكي بيانات</h1>
+          </div>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <button id="btn-about-modal" class="shortcuts-btn" title="حول الأداة والتواصل / About & Contact">ℹ️</button>
+            <button id="btn-shortcuts-modal" class="shortcuts-btn" title="اختصارات لوحة المفاتيح / Keyboard Shortcuts">⌨️</button>
+            <button id="btn-toggle-lang" class="lang-btn" title="تبديل اللغة / Toggle Language">English</button>
+          </div>
+        </div>
+        <p class="subtitle" data-i18n="subtitle">أداة متقدمة لربط بيانات OpenStreetMap بـ Wikidata، وكشف العناصر المفقودة في OSM لدول الخليج العربي.</p>
+        
+        <!-- OSM Auth Bar -->
+        <div class="auth-bar">
+          <span id="osm-user-badge" style="display: none;"></span>
+          <button id="btn-osm-login" class="osm-btn" data-i18n="loginOsm">تسجيل الدخول بـ OSM</button>
+        </div>
+      </header>
+
+      <div class="sidebar-body">
+        
+        <!-- Country Selector -->
+        <div class="control-group">
+          <label class="section-label" data-i18n="filterCountry">الدولة</label>
+          <select id="country-select" class="select-custom">
+            <option value="sa" selected>🇸🇦 المملكة العربية السعودية (Saudi Arabia)</option>
+            <option value="ae">🇦🇪 الإمارات (UAE)</option>
+            <option value="kw">🇰🇼 الكويت (Kuwait)</option>
+            <option value="qa">🇶🇦 قطر (Qatar)</option>
+            <option value="om">🇴🇲 سلطنة عمان (Oman)</option>
+            <option value="bh">🇧🇭 البحرين (Bahrain)</option>
+          </select>
+        </div>
+
+        <!-- Search Box -->
+        <div class="control-group">
+          <input type="text" id="search-input" class="search-box" placeholder="بحث بالاسم العربي أو الإنجليزي أو رمز QID..." />
+        </div>
+
+        <!-- Stats Section with Viewport Toggle -->
+        <div class="control-group">
+          <div class="stats-header-row">
+            <label class="section-label" data-i18n="statTotal">الإحصائيات</label>
+            <button id="btn-toggle-viewport-stats" class="viewport-toggle-btn" title="حساب الإحصائيات لمجال الرؤية الحالي فقط">
+              <span class="vp-dot"></span>
+              <span data-i18n="toggleViewportStats">نطاق الرؤية</span>
+            </button>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-val" id="stat-total-val">0</span>
+              <span class="stat-sub-inview" id="stat-total-inview"></span>
+              <span class="stat-lbl" data-i18n="statTotal">إجمالي العناصر</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-val missing" id="stat-missing-val">0</span>
+              <span class="stat-sub-inview" id="stat-missing-inview"></span>
+              <span class="stat-lbl" data-i18n="statMissing">مفقود في OSM</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-val candidates" id="stat-candidates-val">0</span>
+              <span class="stat-sub-inview" id="stat-candidates-inview"></span>
+              <span class="stat-lbl" data-i18n="statCandidates">مرشح للربط</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-val linked" id="stat-linked-val">0</span>
+              <span class="stat-sub-inview" id="stat-linked-inview"></span>
+              <span class="stat-lbl" data-i18n="statLinked">مرتبط مسبقاً</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status Filter Buttons -->
+        <div class="control-group">
+          <label class="section-label" data-i18n="filterStatus">حالة الربط</label>
+          <div class="status-pill-group">
+            <button class="status-filter-btn active" data-status="all" data-i18n="statusAll">الكل</button>
+            <button class="status-filter-btn" data-status="0">🔴 مفقود</button>
+            <button class="status-filter-btn" data-status="1">🟡 مرشح</button>
+            <button class="status-filter-btn" data-status="2">🟢 مرتبط</button>
+          </div>
+        </div>
+
+        <!-- Quick Quality Filter Chips -->
+        <div class="control-group">
+          <div class="filter-chips-container">
+            <button id="chip-wiki" class="filter-chip" data-filter="wiki" data-i18n="chipHasWiki">📖 مقال ويكيبيديا</button>
+            <button id="chip-photo" class="filter-chip" data-filter="photo" data-i18n="chipHasPhoto">📷 صورة كومنز</button>
+            <button id="chip-demolished" class="filter-chip active" data-filter="demolished" data-i18n="chipHideDemolished">🚫 إخفاء المهدم</button>
+            <button id="chip-mosques" class="filter-chip" data-filter="mosques" data-i18n="chipHideMosques">🕌 إخفاء المساجد</button>
+          </div>
+        </div>
+
+        <!-- Category Filter Checkboxes -->
+        <div class="control-group">
+          <div class="section-title-row">
+            <label class="section-label" data-i18n="filterCategory">التصنيفات</label>
+            <span style="font-size: 0.72rem; color: var(--color-text-muted);">
+              (<span id="visible-count">0</span> معروض)
+            </span>
+          </div>
+          <div class="category-grid">
+            <label class="cat-item">
+              <input type="checkbox" class="cat-checkbox" data-cat="1" checked />
+              <span>🏙️ المدن والتجمعات</span>
+            </label>
+            <label class="cat-item">
+              <input type="checkbox" class="cat-checkbox" data-cat="2" checked />
+              <span>🏛️ التراث والتاريخ</span>
+            </label>
+            <label class="cat-item">
+              <input type="checkbox" class="cat-checkbox" data-cat="3" checked />
+              <span>⛰️ المعالم الطبيعية</span>
+            </label>
+            <label class="cat-item">
+              <input type="checkbox" class="cat-checkbox" data-cat="4" checked />
+              <span>🏥 التعليم والصحة</span>
+            </label>
+            <label class="cat-item">
+              <input type="checkbox" class="cat-checkbox" data-cat="5" checked />
+              <span>🏨 السياحة والتجارة</span>
+            </label>
+            <label class="cat-item">
+              <input type="checkbox" class="cat-checkbox" data-cat="6" checked />
+              <span>🕌 المساجد والعبادة</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Export Center -->
+        <div class="control-group" style="margin-top: auto; padding-top: 10px; border-top: 1px solid var(--panel-border);">
+          <div style="display: flex; gap: 6px;">
+            <button id="btn-export-mr" class="btn" style="flex: 1; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;" title="MapRoulette GeoJSON">
+              🎯 MapRoulette
+            </button>
+            <button id="btn-export-josm-presets" class="btn" style="flex: 1; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;" title="تصدير قوالب ووسوم JOSM الرسمية بصيغة XML">
+              📥 JOSM XML
+            </button>
+            <button id="btn-export-csv" class="btn" style="flex: 1; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;" title="CSV Spreadsheet">
+              📊 CSV
+            </button>
+          </div>
+        <!-- Maintainer & Community Contact Footer -->
+        <footer class="sidebar-footer">
+          <div class="footer-maintainer">
+            <span>👤 <strong data-i18n="maintainerLabel">المطور:</strong> <a href="https://www.openstreetmap.org/user/Alshowaiey" target="_blank" rel="noopener">Alshowaiey</a></span>
+            <span class="sep-dot">·</span>
+            <a href="https://github.com/Abdullah201x/osm-x-wikidata" target="_blank" rel="noopener" title="GitHub Repository">GitHub ↗</a>
+          </div>
+          <div class="footer-links">
+            <a href="https://www.openstreetmap.org/message/new/Alshowaiey" target="_blank" rel="noopener" class="footer-contact-link">✉️ <span data-i18n="contactOsmMsg">رسالة OSM</span></a>
+            <a href="https://t.me/OSMSaudi" target="_blank" rel="noopener" class="footer-contact-link">💬 Telegram</a>
+            <button id="link-open-dwg-policy" class="footer-contact-link footer-policy-btn">🛡️ <span data-i18n="policyLabel">السياسات وDWG</span></button>
+          </div>
+        </footer>
+
+      </div>
+    </aside>
+
+    <!-- Map Viewport -->
+    <main id="map"></main>
+
+    <!-- Floating Basemap Bar -->
+    <nav class="floating-basemap-bar" aria-label="خريطة الأساس">
+      <button class="basemap-btn active" data-bm="dark" data-i18n="bmDark">داكن</button>
+      <button class="basemap-btn" data-bm="satellite" data-i18n="bmSatellite">قمر صناعي</button>
+      <button class="basemap-btn" data-bm="streets" data-i18n="bmStreets">شوارع</button>
+    </nav>
+
+    <!-- Inspector Drawer -->
+    <aside id="inspector-drawer">
+      <div id="inspector-content">
+        <div class="empty-state">
+          <div class="empty-icon">📍</div>
+          <h3 data-i18n="inspectorTitle">لوحة الفحص والمعاينة المتقدمة</h3>
+          <p data-i18n="inspectorEmpty">انقر على أي عنصر على الخريطة لعرض تفاصيله وأدوات الربط والرسم.</p>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Keyboard Shortcuts Modal -->
+  <div id="shortcuts-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card shortcuts-modal-card">
+      <div class="modal-header-row">
+        <h3 data-i18n="shortcutsTitle">اختصارات لوحة المفاتيح</h3>
+        <button class="btn-close-modal" id="btn-close-shortcuts">&times;</button>
+      </div>
+      <div class="shortcuts-grid">
+        <div class="shortcut-row"><kbd>J</kbd> <span data-i18n="shortcutJosmZoom">فتح وتكبير في JOSM</span></div>
+        <div class="shortcut-row"><kbd>L</kbd> <span data-i18n="shortcutDirectLink">ربط مباشر بـ OSM</span></div>
+        <div class="shortcut-row"><kbd>T</kbd> <span data-i18n="shortcutJosmTags">إرسال الوسم إلى JOSM</span></div>
+        <div class="shortcut-row"><kbd>I</kbd> <span data-i18n="shortcutId">فتح في محرر iD</span></div>
+        <div class="shortcut-row"><kbd>O</kbd> <span data-i18n="shortcutOverpass">فتح استعلام Overpass Turbo</span></div>
+        <div class="shortcut-row"><kbd>V</kbd> <span data-i18n="shortcutVerify">التحقق المباشر في خوادم OSM</span></div>
+        <div class="shortcut-row"><kbd>N</kbd> <span data-i18n="shortcutNext">الانتقال للمعلم التالي</span></div>
+        <div class="shortcut-row"><kbd>P</kbd> <span data-i18n="shortcutPrev">الانتقال للمعلم السابق</span></div>
+        <div class="shortcut-row"><kbd>[</kbd> / <kbd>]</kbd> <span data-i18n="shortcutBasemap">تبديل خريطة الأساس</span></div>
+        <div class="shortcut-row"><kbd>?</kbd> <span data-i18n="shortcutHelp">عرض نافذة الاختصارات</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- About & Community / DWG Contact Modal -->
+  <div id="about-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card about-modal-card">
+      <div class="modal-header-row">
+        <h3 data-i18n="aboutModalTitle">حول المشروع، التواصل، وسياسات فريق البيانات (DWG)</h3>
+        <button class="btn-close-modal" id="btn-close-about">&times;</button>
+      </div>
+      <div class="about-content">
+        <p class="about-lead-text" data-i18n="aboutLead">
+          أداة مساعدة لمجتمع OpenStreetMap لدول الخليج لربط المعالم القائمة بمعرفات Wikidata المقابلة لها (Assisted Conflation).
+        </p>
+
+        <div class="about-contact-box">
+          <h4 data-i18n="aboutContactHeading">👤 قنوات التواصل والمطور:</h4>
+          <ul>
+            <li><strong>OpenStreetMap:</strong> <a href="https://www.openstreetmap.org/user/Alshowaiey" target="_blank" rel="noopener">Alshowaiey ↗</a></li>
+            <li><strong>Direct OSM Message:</strong> <a href="https://www.openstreetmap.org/message/new/Alshowaiey" target="_blank" rel="noopener" data-i18n="aboutSendMsg">إرسال رسالة مباشرة على OSM ↗</a></li>
+            <li><strong>GitHub Repository:</strong> <a href="https://github.com/Abdullah201x/osm-x-wikidata" target="_blank" rel="noopener">Abdullah201x/osm-x-wikidata ↗</a></li>
+            <li><strong>Saudi OSM Community:</strong> <a href="https://t.me/OSMSaudi" target="_blank" rel="noopener">Telegram @OSMSaudi ↗</a></li>
+            <li><strong>Official Import & Compliance Guide:</strong> <a href="https://github.com/Abdullah201x/osm-x-wikidata/blob/main/OSM_IMPORT_GUIDELINES.md" target="_blank" rel="noopener">OSM_IMPORT_GUIDELINES.md ↗</a></li>
+          </ul>
+        </div>
+
+        <div class="dwg-statement-box">
+          <h4 data-i18n="dwgHeading">🛡️ التزام سياسة المجتمع وفريق العمل (DWG Compliance):</h4>
+          <p data-i18n="dwgText">
+            نحن نحترم قواعد OpenStreetMap وفريق البيانات (DWG) بشكل تام. هذه الأداة لا تقوم بأي تعديلات آلية غير مراقبة. جميع التعديلات تتطلب تسجيل دخول المستخدم، وتتم على عناصر قائمة تم التحقق منها بشرياً، وتخضع للمراجعة الكاملة. إذا كان لديك أي ملاحظات أو كنت عضواً في مجتمع الخريطة أو فريق DWG ولديك أي استفسار أو اعتراض، يرجى التواصل مباشرة عبر الرسائل أو GitHub وسنتعاون فوراً.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Lightbox Modal -->
+  <div id="image-lightbox-modal" class="modal-overlay lightbox-overlay" style="display: none;">
+    <div class="lightbox-content">
+      <button class="btn-close-modal lightbox-close" id="btn-close-lightbox">&times;</button>
+      <img id="lightbox-img" src="" alt="Enlarged preview" />
+      <div class="lightbox-meta">
+        <span id="lightbox-caption"></span>
+        <a id="lightbox-commons-link" href="#" target="_blank" rel="noopener" class="btn btn-wiki" data-i18n="openCommons">فتح في ويكيميديا كومنز ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- OSM Note Modal -->
+  <div id="note-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <h3 data-i18n="noteModalTitle">إرسال ملاحظة إلى OpenStreetMap</h3>
+      <div style="font-size: 0.78rem; color: var(--color-text-muted);">
+        الإحداثيات: <code id="note-coords"></code>
+      </div>
+      <textarea id="note-text-input" placeholder="اكتب تفاصيل الملاحظة هنا..."></textarea>
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button id="btn-cancel-note" class="btn" style="background: rgba(255,255,255,0.08); color: #fff;" data-i18n="btnCancel">إلغاء</button>
+        <button id="btn-submit-note-confirm" class="btn btn-josm-action" data-i18n="btnSubmitNote">إرسال الملاحظة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loading-indicator" style="display: none;">
+    <div class="spinner"></div>
+    <div style="color: #fff; font-size: 0.9rem; font-weight: 600;">جارٍ تحميل البيانات...</div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet.markercluster JS -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+  <!-- Application Modules -->
+  <script src="js/translations.js?v=8"></script>
+  <script src="js/arabic_utils.js?v=8"></script>
+  <script src="js/tag_generator.js?v=8"></script>
+  <script src="js/tools.js?v=8"></script>
+  <script src="js/osm_oauth.js?v=8"></script>
+  <script src="js/live_verify.js?v=8"></script>
+  <script src="js/map.js?v=8"></script>
+  <script src="js/app.js?v=8"></script>
+
+</body>
+</html>

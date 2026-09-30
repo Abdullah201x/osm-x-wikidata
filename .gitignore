@@ -1,0 +1,19 @@
+# Large local SQLite caches (rebuilt on-demand via update_data.py)
+pipeline/*.db
+*.db
+*.db-wal
+*.db-shm
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Logs & temp
+*.log
+.DS_Store
+Thumbs.db
+*.pem
+*.key
