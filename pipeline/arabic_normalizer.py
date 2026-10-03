@@ -53,13 +53,15 @@ def normalize_arabic(text: str, strip_al: bool = False) -> str:
         clean_w = RE_PUNCT.sub('', w).lower()
         if not clean_w:
             continue
-        if clean_w in ('جامع', 'مسجد'):
-            clean_w = 'مسجد'
-        elif clean_w in ('مستشفي', 'مشفى'):
-            clean_w = 'مستشفى'
-        
+        # Strip the article first so 'الجامع' / 'المسجد' are unified by the synonym step too
         if strip_al and clean_w.startswith('ال') and len(clean_w) > 3:
             clean_w = clean_w[2:]
+
+        # Compare against already-normalized spellings (ى was mapped to ي above)
+        if clean_w in ('جامع', 'مسجد'):
+            clean_w = 'مسجد'
+        elif clean_w in ('مستشفي', 'مشفي'):
+            clean_w = 'مستشفي'
         normalized_words.append(clean_w)
 
     return ' '.join(normalized_words)
@@ -78,6 +80,8 @@ GENERIC_NOISE_WORDS = {
     'clinic', 'mosque', 'masjid', 'hotel', 'apartments', 'park', 'school',
     'university', 'restaurant', 'cafe', 'showroom', 'mall', 'market'
 }
+# Words are compared after normalization (ة -> ه, ى -> ي, 'ال' stripped, ...), so normalize the set too
+GENERIC_NOISE_WORDS = {normalize_arabic(w, strip_al=True) for w in GENERIC_NOISE_WORDS}
 
 def strip_generic_noise(text: str) -> str:
     """

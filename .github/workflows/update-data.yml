@@ -32,11 +32,20 @@ jobs:
         run: |
           pip install requests shapely osmium scikit-learn joblib numpy
 
+      - name: Download GCC OSM extract
+        run: |
+          mkdir -p "$RUNNER_TEMP/osm"
+          curl -sSfL --retry 3 -o "$RUNNER_TEMP/osm/gcc-states-latest.osm.pbf" \
+            https://download.geofabrik.de/asia/gcc-states-latest.osm.pbf
+
       - name: Run Wikidata & OSM sync pipeline
         run: |
-          python update_data.py --refresh-wikidata
+          python update_data.py --refresh-wikidata --pbf "$RUNNER_TEMP/osm/gcc-states-latest.osm.pbf"
         env:
           PYTHONUNBUFFERED: "1"
+
+      - name: Remove local pipeline caches from the Pages artifact
+        run: rm -f pipeline/*.db pipeline/*.db-wal pipeline/*.db-shm
 
       - name: Commit and push updated datasets
         run: |

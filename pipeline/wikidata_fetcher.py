@@ -11,7 +11,7 @@ import json
 import sqlite3
 import requests
 from typing import Dict, List, Any, Optional
-from pipeline.config import GCC_COUNTRIES, BASE_DIR
+from pipeline.config import GCC_COUNTRIES, BASE_DIR, classify_p31
 
 CACHE_DB = os.path.join(BASE_DIR, "pipeline", "wikidata_cache.db")
 WIKIDATA_SPARQL_URL = "https://query.wikidata.org/sparql"
@@ -69,8 +69,18 @@ def parse_point_coords(coords_str: str) -> Optional[tuple]:
         return lat, lon
     return None
 
-def fetch_sparql(query: str, max_retries: int = 3, timeout: int = 45) -> List[Dict[str, Any]]:
-    """Executes a SPARQL query with retries and exponential backoff."""
+# "جامع" / "مسجد" / "مصلى" as whole words only: a plain substring test also matches "جامعة" (university)
+RE_MOSQUE_NAME = re.compile(r'(?<![\u0600-\u06FF])(ال)?(جامع|مسجد|مصلى)(?![\u0600-\u06FF])')
+RE_MOSQUE_NAME_EN = re.compile(r'\b(mosque|masjid)\b', re.IGNORECASE)
+
+def classify_item(name_ar: str, name_en: str, p31_qid: str, p31_label: str) -> tuple:
+    """Returns (cat_id, p31_qid, p31_label), promoting items named like mosques to the worship category."""
+    if RE_MOSQUE_NAME.search(name_ar or "") or RE_MOSQUE_NAME.search(name_en or "") or RE_MOSQUE_NAME_EN.search(name_en or ""):
+        return 6, "Q32815", "مسجد / جامع"
+    return classify_p31(p31_qid), p31_qid, p31_label
+
+def fetch_sparql(query: str, max_retries: int = 3, timeout: int = 45) -> Optional[List[Dict[str, Any]]]:
+    """Executes a SPARQL query with retries and exponential backoff. Returns None if every attempt failed."""
     headers = {
         "User-Agent": USER_AGENT,
         "Accept": "application/sparql-results+json"
@@ -96,7 +106,7 @@ def fetch_sparql(query: str, max_retries: int = 3, timeout: int = 45) -> List[Di
         except requests.exceptions.RequestException as e:
             print(f"  [Wikidata Request Exception] {e}. Retrying...")
             time.sleep((attempt + 1) * 3)
-    return []
+    return None
 
 def fetch_country_wikidata(country_code: str, force_refresh: bool = False) -> List[Dict[str, Any]]:
     """
@@ -129,14 +139,15 @@ def fetch_country_wikidata(country_code: str, force_refresh: bool = False) -> Li
         """, (country_code,))
         items = []
         for row in cursor.fetchall():
+            cat_id, p31_qid, p31_lbl = classify_item(row[7] or "", row[8] or "", row[5] or "", row[6] or "")
             items.append({
                 "qid": row[0],
                 "country": row[1],
                 "lat": row[2],
                 "lon": row[3],
-                "cat": row[4],
-                "p31": row[5] or "",
-                "p31_label": row[6] or "",
+                "cat": cat_id,
+                "p31": p31_qid,
+                "p31_label": p31_lbl,
                 "name_ar": row[7] or "",
                 "name_en": row[8] or "",
                 "desc_ar": row[9] or "",
@@ -155,8 +166,6 @@ def fetch_country_wikidata(country_code: str, force_refresh: bool = False) -> Li
         return items
 
     print(f"  [Wikidata] Fetching live items for {c_info['name_en']} ({c_qid}) via SPARQL...")
-
-    from pipeline.config import classify_p31
 
     # SPARQL queries
     # For Saudi Arabia (SA), we split non-mosques and mosques to avoid SPARQL timeout
@@ -225,6 +234,13 @@ def fetch_country_wikidata(country_code: str, force_refresh: bool = False) -> Li
     for idx, q in enumerate(queries):
         print(f"    Executing SPARQL query {idx+1}/{len(queries)}...")
         bindings = fetch_sparql(q)
+        if bindings is None:
+            # Never replace a good cache with a partial/empty result set
+            conn.close()
+            if count > 0:
+                print(f"  [Wikidata] SPARQL query {idx+1} failed; keeping the {count} cached items for {country_code}.")
+                return fetch_country_wikidata(country_code, force_refresh=False)
+            raise RuntimeError(f"Wikidata SPARQL query {idx+1} failed for {country_code} and no cache is available.")
         all_bindings.extend(bindings)
         time.sleep(1)
 
@@ -260,13 +276,7 @@ def fetch_country_wikidata(country_code: str, force_refresh: bool = False) -> Li
                 name_en = fallback_label
 
         # Intelligent Mosque / Category detection
-        comb_name = f"{name_ar} {name_en}".lower()
-        if "مسجد" in comb_name or "جامع" in comb_name or "مصلى" in comb_name or "mosque" in comb_name or "masjid" in comb_name:
-            p31_qid = "Q32815"
-            p31_lbl = "مسجد / جامع"
-            cat_id = 6
-        else:
-            cat_id = classify_p31(p31_qid)
+        cat_id, p31_qid, p31_lbl = classify_item(name_ar, name_en, p31_qid, p31_lbl)
 
         desc_ar = b.get("desc_ar", {}).get("value", "")
         desc_en = b.get("desc_en", {}).get("value", "")

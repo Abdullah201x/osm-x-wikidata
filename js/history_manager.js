@@ -40,13 +40,13 @@ const HistoryManager = {
 
   render() {
     const history = OsmAuth.getChangesetHistory();
-    const t = TRANSLATIONS[window.currentLang || "ar"];
 
     this.renderKpis(history);
     this.renderList(history);
   },
 
   renderKpis(history) {
+    const t = TRANSLATIONS[window.currentLang || "ar"];
     let totalChangesets = history.length;
     let totalElements = 0;
     let batchCount = 0;
@@ -139,38 +139,38 @@ const HistoryManager = {
         return `
           <div class="history-item-subrow">
             <div class="history-sub-name">
-              <strong>${it.name || it.qid}</strong>
+              <strong>${escapeHtml(it.name || it.qid)}</strong>
             </div>
             <div class="history-sub-links">
-              <a href="${wdUrl}" target="_blank" rel="noopener" class="qid-link"><code>${it.qid}</code> ↗</a>
+              <a href="${escapeHtml(wdUrl)}" target="_blank" rel="noopener" class="qid-link"><code>${escapeHtml(it.qid)}</code> ↗</a>
               <span class="batch-sep">➔</span>
-              <a href="${osmUrl}" target="_blank" rel="noopener" class="osm-link"><code>${it.osmRef}</code> ${it.version ? `(v${it.version})` : ''} ↗</a>
+              <a href="${escapeHtml(osmUrl)}" target="_blank" rel="noopener" class="osm-link"><code>${escapeHtml(it.osmRef)}</code> ${it.version ? `(v${escapeHtml(it.version)})` : ''} ↗</a>
             </div>
             <div class="history-sub-actions">
-              ${hasCoords ? `<button class="btn btn-history-zoom" onclick="HistoryManager.zoomToItem(${it.lat}, ${it.lon}, '${it.qid}', '${cs.country}')">📍 ${t.btnShowOnMap || 'Show on Map'}</button>` : ''}
+              ${hasCoords ? `<button class="btn btn-history-zoom" data-lat="${Number(it.lat)}" data-lon="${Number(it.lon)}" data-qid="${escapeHtml(it.qid)}">📍 ${t.btnShowOnMap || 'Show on Map'}</button>` : ''}
             </div>
           </div>
         `;
       }).join("");
 
       return `
-        <div class="history-card" data-csid="${cs.changesetId}">
+        <div class="history-card" data-csid="${escapeHtml(cs.changesetId)}">
           <div class="history-card-header">
             <div class="history-header-left">
-              <a href="${cs.changesetUrl}" target="_blank" rel="noopener" class="history-cs-link">
-                #${cs.changesetId} ↗
+              <a href="${escapeHtml(cs.changesetUrl)}" target="_blank" rel="noopener" class="history-cs-link">
+                #${escapeHtml(cs.changesetId)} ↗
               </a>
               ${typeBadge}
               <span class="history-date">${formattedDate}</span>
             </div>
             <div class="history-user-tag">
-              👤 ${cs.user || 'OSM Mapper'}
+              👤 ${escapeHtml(cs.user || 'OSM Mapper')}
             </div>
           </div>
           
           <div class="history-comment-bubble">
             <span class="comment-quote-icon">💬</span>
-            <span class="comment-text">${cs.comment || '(No comment)'}</span>
+            <span class="comment-text">${escapeHtml(cs.comment || '(No comment)')}</span>
           </div>
 
           <div class="history-items-container">
@@ -184,9 +184,13 @@ const HistoryManager = {
         </div>
       `;
     }).join("");
+
+    container.querySelectorAll(".btn-history-zoom").forEach(btn => {
+      btn.onclick = () => this.zoomToItem(Number(btn.dataset.lat), Number(btn.dataset.lon), btn.dataset.qid);
+    });
   },
 
-  zoomToItem(lat, lon, qid, country) {
+  zoomToItem(lat, lon, qid) {
     this.closeModal();
 
     if (window.MapController) {

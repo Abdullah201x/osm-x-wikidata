@@ -8,44 +8,49 @@ const TagGenerator = {
   ontology: {
     "Q32815": { "amenity": "place_of_worship", "religion": "muslim" },
     "Q16970": { "amenity": "place_of_worship", "religion": "christian" },
-    "Q637600": { "historic": "archaeological_site" },
     "Q839954": { "historic": "archaeological_site" },
-    "Q187971": { "historic": "heritage" },
+    "Q1081138": { "historic": "heritage" },
+    "Q358": { "historic": "heritage" },
     "Q23413": { "historic": "castle" },
     "Q33506": { "tourism": "museum" },
-    "Q498990": { "historic": "monument" },
-    "Q928830": { "historic": "castle", "castle_type": "palace" },
-    "Q184358": { "historic": "fort" },
+    "Q4989906": { "historic": "monument" },
+    "Q16560": { "historic": "castle", "castle_type": "palace" },
+    "Q57821": { "historic": "fort" },
+    "Q1785071": { "historic": "fort" },
+    "Q179700": { "historic": "memorial", "memorial": "statue" },
     "Q8502": { "natural": "peak" },
+    "Q187971": { "waterway": "wadi" },
     "Q355304": { "waterway": "wadi" },
+    "Q637600": { "natural": "wetland", "wetland": "saltmarsh" },
+    "Q25391": { "natural": "dune" },
+    "Q184358": { "natural": "reef" },
     "Q23442": { "place": "island" },
-    "Q190429": { "man_made": "water_well" },
+    "Q43483": { "man_made": "water_well" },
     "Q124714": { "natural": "spring" },
     "Q12323": { "waterway": "dam" },
-    "Q179700": { "boundary": "protected_area", "protect_class": "1" },
+    "Q179049": { "boundary": "protected_area", "protect_class": "1" },
     "Q515": { "place": "city" },
     "Q3957": { "place": "town" },
     "Q532": { "place": "village" },
-    "Q25391": { "place": "village" },
     "Q486972": { "place": "village" },
     "Q123705": { "place": "neighbourhood" },
     "Q16917": { "amenity": "hospital" },
-    "Q211884": { "amenity": "clinic" },
-    "Q131261": { "amenity": "pharmacy" },
+    "Q1774898": { "amenity": "clinic" },
+    "Q13107184": { "amenity": "pharmacy" },
     "Q3918": { "amenity": "university" },
     "Q3914": { "amenity": "school" },
     "Q7075": { "amenity": "library" },
     "Q1248784": { "aeroway": "aerodrome" },
     "Q27686": { "tourism": "hotel" },
-    "Q11256": { "shop": "mall" },
-    "Q205495": { "shop": "supermarket" },
-    "Q52615": { "amenity": "fuel" },
+    "Q11315": { "shop": "mall" },
+    "Q180846": { "shop": "supermarket" },
+    "Q205495": { "amenity": "fuel" },
     "Q22687": { "amenity": "bank" },
     "Q11707": { "amenity": "restaurant" },
     "Q30022": { "amenity": "cafe" },
-    "Q39176": { "amenity": "embassy" },
-    "Q180684": { "amenity": "post_office" },
-    "Q166118": { "leisure": "stadium" },
+    "Q3917681": { "amenity": "embassy" },
+    "Q35054": { "amenity": "post_office" },
+    "Q483110": { "leisure": "stadium" },
     "Q22698": { "leisure": "park" }
   },
 
@@ -115,12 +120,9 @@ const TagGenerator = {
       if (
         item[3] === 6 ||
         p31 === "Q32815" ||
-        lowerAr.includes("مسجد") ||
-        lowerAr.includes("جامع") ||
-        lowerAr.includes("مصلى") ||
-        lowerEn.includes("mosque") ||
-        lowerEn.includes("masjid") ||
-        lowerEn.includes("jami")
+        // Whole words only: "جامعة" (university) contains "جامع"
+        /(^|[^\u0600-\u06FF])(ال)?(مسجد|جامع|مصلى)(?![\u0600-\u06FF])/.test(lowerAr) ||
+        /\b(mosque|masjid|jami)\b/.test(lowerEn)
       ) {
         tags["amenity"] = "place_of_worship";
         tags["religion"] = "muslim";

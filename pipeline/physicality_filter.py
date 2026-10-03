@@ -13,26 +13,26 @@ from typing import Dict, Any, Tuple
 # Classes that are explicitly non-physical or not mappable as OSM physical nodes/buildings
 NON_MAPPABLE_P31 = {
     'Q178561',   # battle
-    'Q168983',   # fire / structure fire
+    'Q168983',   # conflagration
     'Q3241045',  # disease outbreak / pandemic
-    'Q30588142', # drone attack
+    'Q30588142', # drone warfare
     'Q750215',   # mass murder / shooting
     'Q3196',     # fire
     'Q744913',   # aviation accident / crash
-    'Q13418847', # terrorist attack
-    'Q1190554',  # disaster
-    'Q124757',   # explosion
+    'Q13418847', # historical event
+    'Q1190554',  # occurrence
+    'Q124757',   # riot
     'Q114609228',# recurring sports event edition
     'Q15275719', # recurring event
     'Q18340514', # year in country / period
     'Q186117',   # timeline
     'Q101352',   # family name
     'Q5',        # human
-    'Q1656682',  # event
+    'Q1656682',  # planned event
     'Q132241',   # festival
-    'Q40231',    # competition
-    'Q13406554', # protest / demonstration
-    'Q21480300', # election
+    'Q40231',    # public election
+    'Q13406554', # sports competition
+    'Q21480300', # mass shooting
     'Q198',      # war
 }
 
@@ -59,7 +59,7 @@ def is_physical_mappable(item: Dict[str, Any]) -> Tuple[bool, str]:
         (True, "Valid") if the item is physically mappable.
         (False, reason_string) if the item is an event, abstract concept, or blank noise.
     """
-    p31 = item.get('p31_qid', '')
+    p31 = item.get('p31') or item.get('p31_qid', '')
     if p31 in NON_MAPPABLE_P31:
         return False, f"Non-mappable class ({p31})"
         

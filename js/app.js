@@ -26,6 +26,10 @@ let filterHideLinked = false;
 let viewportStatsEnabled = false;
 let viewportTimer = null;
 
+// Top-level `let` bindings are not window properties; expose live getters for the other modules
+Object.defineProperty(window, "currentLang", { get: () => currentLang });
+Object.defineProperty(window, "currentCountry", { get: () => currentCountry });
+
 document.addEventListener("DOMContentLoaded", async () => {
   // Initialize UI language
   setLanguage(currentLang);
@@ -77,15 +81,18 @@ function renderSummaryStats() {
   let linked = countryCounts.linked || countryCounts.total_linked || 0;
 
   if (loadedDataset && loadedDataset.items) {
-    let localLinkedCount = 0;
     const verifiedCache = LiveVerifier.getVerifiedCache();
     for (let it of loadedDataset.items) {
-      if (it[4] !== 2 && verifiedCache[`Q${it[0]}`]) {
-        localLinkedCount++;
+      const origStatus = it.originalStatus ?? it[4];
+      if (origStatus !== 2 && verifiedCache[`Q${it[0]}`]) {
+        linked++;
+        if (origStatus === 1) {
+          candidates = Math.max(0, candidates - 1);
+        } else {
+          missing = Math.max(0, missing - 1);
+        }
       }
     }
-    linked += localLinkedCount;
-    candidates = Math.max(0, candidates - localLinkedCount);
   }
 
   document.getElementById("stat-total-val").innerText = total.toLocaleString();
@@ -170,8 +177,7 @@ function applyFilters() {
     if (filterHideDemolished) {
       if (
         p31 === "Q19860854" || // destroyed building or structure
-        p31 === "Q21014589" || // demolished building
-        p31 === "Q1656682"  || // former entity
+        p31 === "Q15893266" || // former entity
         nameAr.includes("سابق") ||
         nameAr.includes("مهدم") ||
         nameAr.includes("موقع قديم") ||
@@ -289,9 +295,9 @@ function selectItem(item, marker = null, skipFly = false) {
   const p31 = item[7] || "";
   const osmRef = item[8] || "";
   const candInfo = item[9] || "";
-  const imageUrl = item[10] || "";
-  const wikiAr = item[11] || "";
-  const website = item[12] || "";
+  const imageUrl = safeUrl(item[10]);
+  const wikiAr = safeUrl(item[11]);
+  const website = safeUrl(item[12]);
   const dissolvedYear = item[13] || "";
   const socialPipe = item[14] || "";
 
@@ -307,6 +313,9 @@ function selectItem(item, marker = null, skipFly = false) {
   const localVer = LiveVerifier.isLocallyVerified(qid);
   const effectiveStatus = localVer ? 2 : status;
   const effectiveOsmRef = localVer ? localVer.osm_ref : osmRef;
+
+  // Human-readable label for the P31 class (fetched from Wikidata if not cached yet)
+  const p31Entry = p31 ? WikidataLabels.get(p31) : null;
 
   // Generate suggested tags
   const tags = TagGenerator.generateTags(item);
@@ -325,7 +334,7 @@ function selectItem(item, marker = null, skipFly = false) {
   };
 
   const statusBadgeHtml = localVer 
-    ? `<span class="badge badge-linked">${t.liveFound} (${localVer.osm_ref})</span>`
+    ? `<span class="badge badge-linked">${t.liveFound} (${escapeHtml(localVer.osm_ref)})</span>`
     : statusBadges[effectiveStatus];
 
   let candHtml = "";
@@ -346,7 +355,7 @@ function selectItem(item, marker = null, skipFly = false) {
           <strong>🎯 ${currentLang === 'ar' ? 'عنصر مرشح مقترح بالذكاء الاصطناعي:' : 'AI Suggested OSM Candidate:'}</strong>
           ${confidenceBadge}
         </div>
-        <div class="cand-details">${displayInfo} (OSM ID: <code>${effectiveOsmRef}</code>)</div>
+        <div class="cand-details">${escapeHtml(displayInfo)} (OSM ID: <code>${escapeHtml(effectiveOsmRef)}</code>)</div>
       </div>
     `;
   }
@@ -355,7 +364,7 @@ function selectItem(item, marker = null, skipFly = false) {
   if (imageUrl) {
     mediaHtml += `
       <div class="inspector-image-container">
-        <img src="${imageUrl}?width=400" alt="${nameAr || nameEn}" class="inspector-thumb clickable" loading="lazy" title="${currentLang === 'ar' ? 'انقر لتكبير الصورة' : 'Click to enlarge'}" />
+        <img src="${escapeHtml(imageUrl)}?width=400" alt="${escapeHtml(nameAr || nameEn)}" class="inspector-thumb clickable" loading="lazy" title="${currentLang === 'ar' ? 'انقر لتكبير الصورة' : 'Click to enlarge'}" />
         <div class="image-zoom-hint">🔍 ${currentLang === 'ar' ? 'تكبير' : 'Zoom'}</div>
       </div>
     `;
@@ -363,7 +372,7 @@ function selectItem(item, marker = null, skipFly = false) {
 
   let wikiHtml = "";
   if (wikiAr) {
-    wikiHtml = `<a href="${wikiAr}" target="_blank" rel="noopener" class="btn btn-wiki">📖 ${t.labelWikipedia}</a>`;
+    wikiHtml = `<a href="${escapeHtml(wikiAr)}" target="_blank" rel="noopener" class="btn btn-wiki">📖 ${t.labelWikipedia}</a>`;
   }
 
   // NSI Dissolution Alert Banner
@@ -371,7 +380,7 @@ function selectItem(item, marker = null, skipFly = false) {
   if (dissolvedYear) {
     dissolvedHtml = `
       <div class="dissolved-alert-banner">
-        <span>${t.dissolvedWarning} (${dissolvedYear})</span>
+        <span>${t.dissolvedWarning} (${escapeHtml(dissolvedYear)})</span>
       </div>
     `;
   }
@@ -380,12 +389,12 @@ function selectItem(item, marker = null, skipFly = false) {
   let websiteRow = "";
   if (website) {
     const cleanWeb = website.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    websiteRow = `<tr><td>${t.contactWebsite}</td><td><a href="${website}" target="_blank" rel="noopener" class="external-url-link"><code>${cleanWeb.length > 26 ? cleanWeb.slice(0, 24) + '...' : cleanWeb}</code> ↗</a></td></tr>`;
+    websiteRow = `<tr><td>${t.contactWebsite}</td><td><a href="${escapeHtml(website)}" target="_blank" rel="noopener" class="external-url-link"><code>${escapeHtml(cleanWeb.length > 26 ? cleanWeb.slice(0, 24) + '...' : cleanWeb)}</code> ↗</a></td></tr>`;
   }
 
   let socialRow = "";
   if (socialPipe) {
-    const parts = socialPipe.split("|");
+    const parts = socialPipe.split("|").map(p => escapeHtml(p));
     const pills = [];
     if (parts[0]) pills.push(`<a href="https://twitter.com/${parts[0]}" target="_blank" rel="noopener" class="social-badge badge-twitter" title="Twitter: ${parts[0]}">🐦 @${parts[0]}</a>`);
     if (parts[1]) pills.push(`<a href="https://instagram.com/${parts[1]}" target="_blank" rel="noopener" class="social-badge badge-instagram" title="Instagram: ${parts[1]}">📸 ${parts[1]}</a>`);
@@ -417,8 +426,8 @@ function selectItem(item, marker = null, skipFly = false) {
   panel.innerHTML = `
     <div class="inspector-header">
       <div class="inspector-title-group">
-        <h3>${nameAr || nameEn || qid}</h3>
-        ${nameEn && nameAr ? `<div class="inspector-subtitle">${nameEn}</div>` : ""}
+        <h3>${escapeHtml(nameAr || nameEn || qid)}</h3>
+        ${nameEn && nameAr ? `<div class="inspector-subtitle">${escapeHtml(nameEn)}</div>` : ""}
       </div>
       <div class="status-badge-container">${statusBadgeHtml}</div>
     </div>
@@ -434,9 +443,14 @@ function selectItem(item, marker = null, skipFly = false) {
           <td>${t.labelQid}</td>
           <td><a href="https://www.wikidata.org/wiki/${qid}" target="_blank" rel="noopener" class="qid-link"><code>${qid}</code> ↗</a></td>
         </tr>
-        ${nameAr ? `<tr><td>${t.labelNameAr}</td><td><strong>${nameAr}</strong></td></tr>` : ""}
-        ${nameEn ? `<tr><td>${t.labelNameEn}</td><td>${nameEn}</td></tr>` : ""}
-        ${p31 ? `<tr><td>${t.labelP31}</td><td><a href="https://www.wikidata.org/wiki/${p31}" target="_blank" rel="noopener"><code>${p31}</code></a></td></tr>` : ""}
+        ${nameAr ? `<tr><td>${t.labelNameAr}</td><td><strong>${escapeHtml(nameAr)}</strong></td></tr>` : ""}
+        ${nameEn ? `<tr><td>${t.labelNameEn}</td><td>${escapeHtml(nameEn)}</td></tr>` : ""}
+        ${p31 ? `<tr><td>${t.labelP31}</td><td>
+          <div class="p31-cell">
+            <span id="p31-label" class="p31-label${p31Entry ? "" : " loading"}" title="${escapeHtml(WikidataLabels.description(p31Entry, currentLang))}">${p31Entry ? escapeHtml(WikidataLabels.label(p31Entry, currentLang) || p31) : "…"}</span>
+            <a href="https://www.wikidata.org/wiki/${escapeHtml(p31)}" target="_blank" rel="noopener" class="p31-qid-link"><code>${escapeHtml(p31)}</code> ↗</a>
+          </div>
+        </td></tr>` : ""}
         <tr><td>${t.labelCoords}</td><td><code>${lat.toFixed(5)}, ${lon.toFixed(5)}</code></td></tr>
         ${websiteRow}
         ${socialRow}
@@ -457,7 +471,7 @@ function selectItem(item, marker = null, skipFly = false) {
         <h4>${t.tagProposalTitle}</h4>
         <button id="btn-copy-tags" class="btn-copy" title="${t.btnCopyTags}">📋 ${t.btnCopyTags}</button>
       </div>
-      <pre class="tags-code-block" id="tags-code">${tagsLines}</pre>
+      <pre class="tags-code-block" id="tags-code">${escapeHtml(tagsLines)}</pre>
     </div>
 
     <!-- Power-User Action Bar (NSI Aligned) -->
@@ -479,6 +493,20 @@ function selectItem(item, marker = null, skipFly = false) {
       <button id="btn-copy-qs" class="btn btn-qs">⚡ ${t.btnQuickStatements}</button>
     </div>
   `;
+
+  if (p31 && !p31Entry) {
+    WikidataLabels.fetch(p31).then(entry => {
+      // Ignore if the user has moved on to another feature meanwhile
+      const el = document.getElementById("p31-label");
+      if (!el || selectedItem !== item) return;
+      el.textContent = WikidataLabels.label(entry, currentLang) || p31;
+      el.title = WikidataLabels.description(entry, currentLang);
+      el.classList.remove("loading");
+    }).catch(() => {
+      const el = document.getElementById("p31-label");
+      if (el && selectedItem === item) el.style.display = "none";
+    });
+  }
 
   // Image lightbox click
   const thumb = panel.querySelector(".inspector-thumb");
@@ -560,7 +588,7 @@ function selectItem(item, marker = null, skipFly = false) {
 
       if (result.status === "linked") {
         resBox.className = "verify-feedback success";
-        resBox.innerHTML = `<div>✓ ${t.liveFound} (OSM ID: <code>${result.ref}</code>)</div>`;
+        resBox.innerHTML = `<div>✓ ${t.liveFound} (OSM ID: <code>${escapeHtml(result.ref)}</code>)</div>`;
         LiveVerifier.markVerifiedLocally(qid, result.ref, item[5] || item[6]);
         updateDatasetItemStatus(qid, 2, result.ref);
         refreshViewAfterPush();
@@ -580,25 +608,24 @@ function selectItem(item, marker = null, skipFly = false) {
               <button id="btn-clear-cand-preview" class="btn-clear-preview">${t.clearCandidates}</button>
             </div>
             ${result.candidates.map((cand, idx) => {
-              const oType = cand.ref.charAt(0) === 'w' ? 'way' : cand.ref.charAt(0) === 'r' ? 'relation' : 'node';
-              const oId = cand.ref.slice(1);
+              const ref = OsmAuth.parseOsmRef(cand.ref);
               const isStaged = typeof BatchManager !== 'undefined' && BatchManager.isStaged(qid);
               return `
-                <div class="candidate-card-item">
+                <div class="candidate-card-item" data-cand-idx="${idx}">
                   <div class="cand-card-top">
                     <span class="cand-num-badge">#${idx + 1}</span>
-                    <span class="cand-name-title">${cand.name}</span>
+                    <span class="cand-name-title">${escapeHtml(cand.name)}</span>
                     <span class="cand-distance-pill">${cand.distance_m} ${t.distanceMeters}</span>
                   </div>
                   <div class="cand-meta-line">
-                    <a href="https://www.openstreetmap.org/${oType}/${oId}" target="_blank" rel="noopener"><code>${cand.ref}</code> ↗</a>
-                    · <span class="cand-reason-tag">${cand.matchedReason}</span>
+                    <a href="https://www.openstreetmap.org/${ref.type}/${ref.id}" target="_blank" rel="noopener"><code>${escapeHtml(cand.ref)}</code> ↗</a>
+                    · <span class="cand-reason-tag">${escapeHtml(cand.matchedReason)}</span>
                   </div>
                   <div class="cand-button-bar">
-                    <button class="btn btn-cand-mini btn-cand-direct-link" onclick="window.openSingleLinkModal('${cand.ref}', '${qid}', '${(cand.name || '').replace(/'/g, "\\'")}')">⚡ ${t.linkSingleNow || 'ربط فوري'}</button>
-                    <button class="btn btn-cand-mini ${isStaged ? 'btn-cand-in-batch' : 'btn-cand-add-batch'}" onclick="window.toggleCandidateBatch('${cand.ref}', '${qid}', '${(cand.name || '').replace(/'/g, "\\'")}')">${isStaged ? `✓ ${t.btnInBatch}` : `➕ ${t.btnAddToBatch}`}</button>
-                    <button class="btn btn-cand-mini" onclick="MappingTools.josmLoadAndZoom(${cand.lat}, ${cand.lon}, '${cand.ref}')">🎯 JOSM</button>
-                    <button class="btn btn-cand-mini" onclick="MappingTools.josmAddTags('${cand.ref}', '${qid}')">🏷️ ${t.btnJosmAddTags}</button>
+                    <button class="btn btn-cand-mini btn-cand-direct-link" data-action="link">⚡ ${t.linkSingleNow || 'ربط فوري'}</button>
+                    <button class="btn btn-cand-mini ${isStaged ? 'btn-cand-in-batch' : 'btn-cand-add-batch'}" data-action="batch">${isStaged ? `✓ ${t.btnInBatch}` : `➕ ${t.btnAddToBatch}`}</button>
+                    <button class="btn btn-cand-mini" data-action="josm">🎯 JOSM</button>
+                    <button class="btn btn-cand-mini" data-action="josm-tags">🏷️ ${t.btnJosmAddTags}</button>
                     <a href="${MappingTools.getIdEditorUrl(cand.lat, cand.lon)}" target="_blank" rel="noopener" class="btn btn-cand-mini">✏️ iD</a>
                   </div>
                 </div>
@@ -610,6 +637,19 @@ function selectItem(item, marker = null, skipFly = false) {
         document.getElementById("btn-clear-cand-preview").onclick = () => {
           MapController.clearCandidatesFromMap();
         };
+
+        resBox.querySelectorAll(".candidate-card-item").forEach(card => {
+          const cand = result.candidates[Number(card.dataset.candIdx)];
+          const actions = {
+            "link": () => window.openSingleLinkModal(cand.ref, qid, cand.name || ""),
+            "batch": () => window.toggleCandidateBatch(cand.ref, qid, cand.name || ""),
+            "josm": () => MappingTools.josmLoadAndZoom(cand.lat, cand.lon, cand.ref),
+            "josm-tags": () => MappingTools.josmAddTags(cand.ref, qid)
+          };
+          card.querySelectorAll("[data-action]").forEach(btn => {
+            btn.onclick = actions[btn.dataset.action];
+          });
+        });
 
       } else {
         MapController.clearCandidatesFromMap();
@@ -724,13 +764,13 @@ window.openSingleLinkModal = function(osmRef, qid, featureName, callback) {
 
         if (res.alreadyLinked) {
           feedbackEl.className = "verify-feedback info";
-          feedbackEl.innerHTML = `ℹ️ ${t.alreadyLinkedNotice} (<code>${osmRef}</code>)`;
+          feedbackEl.innerHTML = `ℹ️ ${t.alreadyLinkedNotice} (<code>${escapeHtml(osmRef)}</code>)`;
         } else {
           feedbackEl.className = "verify-feedback success";
           feedbackEl.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 4px;">
               <div><strong>✓ ${t.linkSuccess}</strong> <a href="${res.changesetUrl}" target="_blank" rel="noopener" class="qid-link">#${res.changesetId} ↗</a></div>
-              <div style="font-size: 0.72rem;"><a href="${res.url}" target="_blank" rel="noopener">OSM: <code>${osmRef}</code> (v${res.version}) ↗</a></div>
+              <div style="font-size: 0.72rem;"><a href="${res.url}" target="_blank" rel="noopener">OSM: <code>${escapeHtml(osmRef)}</code> (v${escapeHtml(res.version)}) ↗</a></div>
             </div>
           `;
         }
@@ -917,6 +957,9 @@ function setLanguage(lang) {
 
   const langBtn = document.getElementById("btn-toggle-lang");
   if (langBtn) langBtn.innerText = t.langLabel;
+
+  // The data-i18n pass above resets the auth button to "login"; restore the real login/logout state
+  updateAuthUI();
 
   if (selectedItem) {
     selectItem(selectedItem);
@@ -1256,12 +1299,15 @@ function updateDatasetItemStatus(qid, newStatus, osmRef = "") {
   if (loadedDataset && loadedDataset.items) {
     const found = loadedDataset.items.find(it => it[0] === rawQid);
     if (found) {
+      // Keep the dataset status so summary counters can be adjusted against the static summary.json
+      if (found.originalStatus === undefined) found.originalStatus = found[4];
       found[4] = newStatus;
       if (osmRef) found[8] = osmRef;
     }
   }
 
   if (selectedItem && `Q${selectedItem[0]}` === cleanQid) {
+    if (selectedItem.originalStatus === undefined) selectedItem.originalStatus = selectedItem[4];
     selectedItem[4] = newStatus;
     if (osmRef) selectedItem[8] = osmRef;
   }

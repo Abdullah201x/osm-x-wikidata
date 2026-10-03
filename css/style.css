@@ -403,6 +403,33 @@ h1 {
   width: 35%;
 }
 
+.p31-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.p31-label {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(0, 242, 254, 0.12);
+  border: 1px solid rgba(0, 242, 254, 0.35);
+  color: var(--color-primary);
+  font-weight: 600;
+  cursor: help;
+}
+.p31-label.loading {
+  opacity: 0.5;
+}
+.p31-qid-link {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+.p31-qid-link:hover {
+  color: var(--color-primary);
+}
+
 .candidate-box {
   background: rgba(255, 183, 3, 0.1);
   border: 1px solid var(--color-candidate);

@@ -3,8 +3,12 @@
  * Adapted from user's GCC20260707 implementation.
  */
 
+const DEFAULT_CLIENT_ID = "66V3GYmV7X9ZP9zIimXwk1Pi-R2YWBLz2peCFLjcImE";
+
 const OsmAuth = {
-  CLIENT_ID: "66V3GYmV7X9ZP9zIimXwk1Pi-R2YWBLz2peCFLjcImE",
+  CLIENT_ID: localStorage.getItem("osm_oauth_client_id") || DEFAULT_CLIENT_ID,
+  // OSM rejects tag values longer than 255 characters
+  MAX_TAG_LENGTH: 255,
   ENVIRONMENT: localStorage.getItem("osm_oauth_environment") || "production",
   NOTE_SIGNATURE: "via أداة ربط OSM و Wikidata (https://abdullah201x.github.io/osm-x-wikidata) #osm-wikidata-gcc",
 
@@ -48,11 +52,7 @@ const OsmAuth = {
   },
 
   async startLogin(clientId = null) {
-    if (clientId) {
-      this.CLIENT_ID = clientId;
-    } else {
-      this.CLIENT_ID = "66V3GYmV7X9ZP9zIimXwk1Pi-R2YWBLz2peCFLjcImE";
-    }
+    this.CLIENT_ID = clientId || DEFAULT_CLIENT_ID;
     localStorage.setItem("osm_oauth_client_id", this.CLIENT_ID);
 
     const codeVerifier = this.generateRandomString();
@@ -171,21 +171,26 @@ const OsmAuth = {
   parseOsmRef(osmRef) {
     if (!osmRef) return null;
     const str = String(osmRef).trim();
-    if (str.startsWith("n")) return { type: "node", id: str.slice(1) };
-    if (str.startsWith("w")) return { type: "way", id: str.slice(1) };
-    if (str.startsWith("r")) return { type: "relation", id: str.slice(1) };
-    if (str.includes("/")) {
-      const parts = str.split("/");
-      let t = parts[0].toLowerCase();
-      if (t === "n" || t === "node") t = "node";
-      else if (t === "w" || t === "way") t = "way";
-      else if (t === "r" || t === "relation") t = "relation";
-      return { type: t, id: parts[1] };
+    const types = { n: "node", node: "node", w: "way", way: "way", r: "relation", relation: "relation" };
+    let m = str.match(/^([a-z]+)\/(\d+)$/i);
+    if (m && types[m[1].toLowerCase()]) {
+      return { type: types[m[1].toLowerCase()], id: m[2] };
+    }
+    m = str.match(/^([nwr])(\d+)$/i);
+    if (m) {
+      return { type: types[m[1].toLowerCase()], id: m[2] };
     }
     if (/^\d+$/.test(str)) {
       return { type: "node", id: str };
     }
     return null;
+  },
+
+  _truncateTag(str) {
+    const chars = Array.from(String(str || ""));
+    return chars.length > this.MAX_TAG_LENGTH
+      ? chars.slice(0, this.MAX_TAG_LENGTH - 1).join("") + "…"
+      : chars.join("");
   },
 
   _escapeXml(str) {
@@ -420,7 +425,7 @@ const OsmAuth = {
       name: featureName
     }, countryCode);
 
-    const comment = (customComment || defaultComment).trim();
+    const comment = this._truncateTag((customComment || defaultComment).trim());
 
     const changesetXml = `<?xml version="1.0" encoding="UTF-8"?>
 <osm version="0.6" generator="OSM x Wikidata GCC Linker">
@@ -549,10 +554,15 @@ ${serializer.serializeToString(elemNode)}
 
     // 1. Generate comprehensive changeset comment
     const defaultComment = this.generateChangesetComment(itemsList, countryCode);
-    const comment = (customComment || defaultComment).trim();
+    const comment = this._truncateTag((customComment || defaultComment).trim());
 
     // Collect unique QIDs for changeset tags (up to 20 for tag length safety)
-    const uniqueQids = Array.from(new Set(itemsList.map(i => (i.qid.startsWith("Q") ? i.qid : `Q${i.qid}`)))).slice(0, 20).join(", ");
+    let uniqueQids = "";
+    for (const q of new Set(itemsList.map(i => (i.qid.startsWith("Q") ? i.qid : `Q${i.qid}`)))) {
+      const next = uniqueQids ? `${uniqueQids};${q}` : q;
+      if (next.length > this.MAX_TAG_LENGTH) break;
+      uniqueQids = next;
+    }
 
     // 2. Open ONE Changeset for all items
     const changesetXml = `<?xml version="1.0" encoding="UTF-8"?>

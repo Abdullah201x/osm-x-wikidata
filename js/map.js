@@ -8,6 +8,7 @@ let clusterGroup = null;
 let currentBasemap = null;
 let basemapLayers = {};
 let activeMarker = null;
+let candidatesLayerGroup = null;
 
 const MapController = {
   STATUS_COLORS: {
@@ -114,13 +115,13 @@ const MapController = {
       // 2. Candidate marker icon
       const candIcon = L.divIcon({
         className: "candidate-poi-marker",
-        html: `<div class="candidate-marker-pin" title="${cand.name} (${cand.ref})"><span>${idx + 1}</span></div>`,
+        html: `<div class="candidate-marker-pin" title="${escapeHtml(cand.name)} (${escapeHtml(cand.ref)})"><span>${idx + 1}</span></div>`,
         iconSize: [26, 26],
         iconAnchor: [13, 13]
       });
 
       const candMarker = L.marker([cand.lat, cand.lon], { icon: candIcon });
-      candMarker.bindTooltip(`<b>${cand.name}</b><br>OSM: <code>${cand.ref}</code> (${cand.distance_m}m)`, {
+      candMarker.bindTooltip(`<b>${escapeHtml(cand.name)}</b><br>OSM: <code>${escapeHtml(cand.ref)}</code> (${cand.distance_m}m)`, {
         direction: "top",
         offset: [0, -12],
         className: "marker-tooltip"
@@ -186,7 +187,7 @@ const MapController = {
         }
       });
 
-      marker.bindTooltip(name, {
+      marker.bindTooltip(escapeHtml(name), {
         direction: "top",
         offset: [0, -8],
         className: "marker-tooltip"

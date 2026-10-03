@@ -31,15 +31,16 @@ const ArabicUtils = {
       let clean = w.replace(this.rePunct, "").toLowerCase();
       if (!clean) continue;
 
-      // Mosque synonym normalization
-      if (clean === "جامع" || clean === "مسجد") {
-        clean = "مسجد";
-      } else if (clean === "مستشفي" || clean === "مشفى") {
-        clean = "مستشفى";
-      }
-
+      // Strip the article first so "الجامع" / "المسجد" are unified by the synonym step too
       if (stripAl && clean.startsWith("ال") && clean.length > 3) {
         clean = clean.slice(2);
+      }
+
+      // Synonym normalization (compare against already-normalized spellings: ى was mapped to ي above)
+      if (clean === "جامع" || clean === "مسجد") {
+        clean = "مسجد";
+      } else if (clean === "مستشفي" || clean === "مشفي") {
+        clean = "مستشفي";
       }
       result.push(clean);
     }
@@ -64,7 +65,11 @@ const ArabicUtils = {
   stripNoise(text) {
     if (!text) return "";
     const norm = this.normalize(text, true);
-    const filtered = norm.split(/\s+/).filter(w => !this.genericWords.has(w));
+    // Noise words contain ة / ى etc., so compare against their normalized form
+    if (!this._normGenericWords) {
+      this._normGenericWords = new Set([...this.genericWords].map(w => this.normalize(w, true)));
+    }
+    const filtered = norm.split(/\s+/).filter(w => !this._normGenericWords.has(w));
     return filtered.length > 0 ? filtered.join(" ") : norm;
   },
 

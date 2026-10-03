@@ -1,7 +1,7 @@
 """
 High-Speed Local PBF Extractor for GCC OSM Data using pyosmium.
 Extracts:
-1. All OSM entities (nodes & ways) tagged with `wikidata=*`.
+1. All OSM entities (nodes, ways & relations) tagged with `wikidata=*`.
 2. Candidate POIs (nodes & ways with names and relevant feature tags).
 Stores results in local SQLite cache (`pipeline/osm_cache.db`).
 """
@@ -123,7 +123,8 @@ class GCCPbfHandler(osmium.SimpleHandler):
         if not (12.0 <= lat <= 34.0 and 33.0 <= lon <= 61.0):
             return
 
-        wd = tags.get('wikidata') or tags.get('brand:wikidata') or tags.get('operator:wikidata')
+        # Only `wikidata` links the element itself; brand:/operator:wikidata point at the chain/operator item
+        wd = tags.get('wikidata')
         name = tags.get('name') or tags.get('brand') or tags.get('operator')
         name_ar = tags.get('name:ar') or tags.get('brand:ar')
         name_en = tags.get('name:en') or tags.get('brand:en')
@@ -161,7 +162,8 @@ class GCCPbfHandler(osmium.SimpleHandler):
         if not tags:
             return
 
-        wd = tags.get('wikidata') or tags.get('brand:wikidata') or tags.get('operator:wikidata')
+        # Only `wikidata` links the element itself; brand:/operator:wikidata point at the chain/operator item
+        wd = tags.get('wikidata')
         main_k = ""
         main_v = ""
         for k in TARGET_TAG_KEYS:
@@ -221,6 +223,33 @@ class GCCPbfHandler(osmium.SimpleHandler):
             ))
 
         if len(self.linked_batch) >= self.batch_size or len(self.candidate_batch) >= self.batch_size:
+            self._flush()
+
+    def relation(self, r):
+        # Relations are only needed for the linked-QID index (e.g. cities, protected areas, multipolygons).
+        # Their geometry is not assembled here, so they get a (0, 0) placeholder location that the
+        # matcher never uses for linked lookups and the ML trainer filters out by distance.
+        wd = r.tags.get('wikidata')
+        if not (wd and wd.startswith('Q')):
+            return
+
+        tags = r.tags
+        main_k = ""
+        main_v = ""
+        for k in TARGET_TAG_KEYS:
+            if k in tags:
+                main_k = k
+                main_v = tags.get(k, "")
+                break
+
+        tags_dict = {t.k: t.v for t in tags}
+        self.linked_batch.append((
+            'r', r.id, 0.0, 0.0, wd.strip(),
+            tags.get('name') or "", tags.get('name:ar') or "", tags.get('name:en') or "",
+            main_k, main_v, json.dumps(tags_dict, ensure_ascii=False)
+        ))
+
+        if len(self.linked_batch) >= self.batch_size:
             self._flush()
 
     def close(self):

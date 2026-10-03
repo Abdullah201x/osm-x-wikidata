@@ -6,6 +6,7 @@
 
 const BatchManager = {
   STORAGE_KEY: "osm_wd_staged_batch",
+  _progressTemplate: null,
 
   getStagedItems() {
     try {
@@ -134,6 +135,8 @@ const BatchManager = {
     const uploadBtn = document.getElementById("btn-batch-upload-confirm");
     const clearBtn = document.getElementById("btn-batch-clear-all");
 
+    this.resetProgressBox();
+
     if (items.length === 0) {
       if (listContainer) listContainer.style.display = "none";
       if (configSection) configSection.style.display = "none";
@@ -158,23 +161,27 @@ const BatchManager = {
       const wdUrl = `https://www.wikidata.org/wiki/${it.qid}`;
 
       return `
-        <div class="batch-item-row" data-qid="${it.qid}">
+        <div class="batch-item-row" data-qid="${escapeHtml(it.qid)}">
           <div class="batch-item-left">
             <span class="batch-index-badge">${idx + 1}</span>
             <div class="batch-item-info">
-              <div class="batch-item-title">${it.displayName}</div>
+              <div class="batch-item-title">${escapeHtml(it.displayName)}</div>
               <div class="batch-item-sub">
-                <a href="${wdUrl}" target="_blank" rel="noopener" class="qid-link"><code>${it.qid}</code> ↗</a>
+                <a href="${escapeHtml(wdUrl)}" target="_blank" rel="noopener" class="qid-link"><code>${escapeHtml(it.qid)}</code> ↗</a>
                 <span class="batch-sep">➔</span>
-                <a href="${osmUrl}" target="_blank" rel="noopener" class="osm-link"><code>${it.osmRef}</code> ↗</a>
-                ${it.extraTags?.wikipedia ? `<span class="batch-tag-chip">wiki: ${it.extraTags.wikipedia}</span>` : ""}
+                <a href="${escapeHtml(osmUrl)}" target="_blank" rel="noopener" class="osm-link"><code>${escapeHtml(it.osmRef)}</code> ↗</a>
+                ${it.extraTags?.wikipedia ? `<span class="batch-tag-chip">wiki: ${escapeHtml(it.extraTags.wikipedia)}</span>` : ""}
               </div>
             </div>
           </div>
-          <button class="btn-remove-batch-item" onclick="BatchManager.handleRemoveClick('${it.qid}')" title="${t.btnRemoveFromBatch || 'Remove'}">&times;</button>
+          <button class="btn-remove-batch-item" title="${t.btnRemoveFromBatch || 'Remove'}">&times;</button>
         </div>
       `;
     }).join("");
+
+    listContainer.querySelectorAll(".batch-item-row").forEach(row => {
+      row.querySelector(".btn-remove-batch-item").onclick = () => this.handleRemoveClick(row.dataset.qid);
+    });
 
     // Auto-generate suggested comment
     const commentInput = document.getElementById("batch-comment-input");
@@ -182,10 +189,15 @@ const BatchManager = {
       commentInput.value = OsmAuth.generateChangesetComment(items, country);
       this.updateCommentLength();
     }
+  },
 
-    // Reset progress container
+  resetProgressBox() {
     const progressBox = document.getElementById("batch-progress-box");
-    if (progressBox) progressBox.style.display = "none";
+    if (!progressBox) return;
+    if (this._progressTemplate !== null) {
+      progressBox.innerHTML = this._progressTemplate;
+    }
+    progressBox.style.display = "none";
   },
 
   handleRemoveClick(qid) {
@@ -242,10 +254,12 @@ const BatchManager = {
 
     // Show Progress Box
     const progressBox = document.getElementById("batch-progress-box");
-    const progressText = document.getElementById("batch-progress-text");
-    const progressBar = document.getElementById("batch-progress-bar-fill");
     const uploadBtn = document.getElementById("btn-batch-upload-confirm");
     const clearBtn = document.getElementById("btn-batch-clear-all");
+
+    this.resetProgressBox();
+    const progressText = document.getElementById("batch-progress-text");
+    const progressBar = document.getElementById("batch-progress-bar-fill");
 
     if (progressBox) progressBox.style.display = "block";
     if (uploadBtn) uploadBtn.disabled = true;
@@ -275,8 +289,9 @@ const BatchManager = {
         }
       }
 
-      // Clear batch
-      this.clear();
+      // Remove uploaded items from the queue; keep failed ones staged so they can be retried
+      const failedQids = new Set(res.results.filter(r => !r.success).map(r => r.qid || r.item?.qid));
+      this.saveStagedItems(items.filter(it => failedQids.has(it.qid)));
 
       // Refresh map & stats immediately so pushed features disappear from map
       if (typeof window.refreshViewAfterPush === "function") {
@@ -293,9 +308,11 @@ const BatchManager = {
       if (progressBox) {
         progressBox.innerHTML = `
           <div class="batch-success-box">
-            <div class="batch-success-icon">🎉</div>
+            <div class="batch-success-icon">${res.failCount > 0 ? "⚠️" : "🎉"}</div>
             <h4>${t.batchSuccessTitle || "Changeset Uploaded Successfully!"}</h4>
-            <p>${t.batchSuccessMessage || "All items were linked in a single changeset on OSM."}</p>
+            ${res.failCount > 0
+              ? `<p>${window.currentLang === "ar" ? "العناصر التي فشل رفعها بقيت في السلة لإعادة المحاولة." : "Items that failed to upload were kept in the batch queue for retry."}</p>`
+              : `<p>${t.batchSuccessMessage || "All items were linked in a single changeset on OSM."}</p>`}
             <div class="batch-success-links">
               <a href="${res.changesetUrl}" target="_blank" rel="noopener" class="btn btn-direct-link">
                 OSM Changeset #${res.changesetId} ↗
@@ -315,7 +332,7 @@ const BatchManager = {
     } catch (err) {
       console.error("Batch upload failed:", err);
       if (progressText) {
-        progressText.innerHTML = `<span style="color: var(--color-missing);">❌ Error: ${err.message}</span>`;
+        progressText.innerHTML = `<span style="color: var(--color-missing);">❌ Error: ${escapeHtml(err.message)}</span>`;
       }
       if (uploadBtn) uploadBtn.disabled = false;
       if (clearBtn) clearBtn.disabled = false;
@@ -324,6 +341,9 @@ const BatchManager = {
 
   init() {
     this.updateBadgeCount();
+
+    const progressBox = document.getElementById("batch-progress-box");
+    if (progressBox) this._progressTemplate = progressBox.innerHTML;
 
     // Wire Batch open buttons
     const openBtns = document.querySelectorAll(".btn-open-batch-modal");

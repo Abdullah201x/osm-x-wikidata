@@ -4,6 +4,30 @@
  * and MapRoulette / CSV exports.
  */
 
+/**
+ * Escapes text for safe interpolation into HTML (element content or quoted attributes).
+ * Names come from Wikidata and live OSM data, so they must never be injected raw.
+ */
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Returns the URL only if it uses http(s); blocks javascript: and similar schemes.
+ */
+function safeUrl(url) {
+  const s = String(url || "").trim();
+  return /^https?:\/\//i.test(s) ? s : "";
+}
+
+window.escapeHtml = escapeHtml;
+window.safeUrl = safeUrl;
+
 const MappingTools = {
   JOSM_BASE: "http://127.0.0.1:8111",
 
@@ -13,10 +37,10 @@ const MappingTools = {
   async josmLoadAndZoom(lat, lon, selectRef = null) {
     const delta = 0.002; // ~220m bounding box
     let url = `${this.JOSM_BASE}/load_and_zoom?left=${lon - delta}&right=${lon + delta}&top=${lat + delta}&bottom=${lat - delta}`;
-    if (selectRef) {
+    const ref = selectRef ? OsmAuth.parseOsmRef(selectRef) : null;
+    if (ref) {
       // e.g. "n12345" -> "node12345", "w987" -> "way987"
-      const fullSelect = selectRef.replace(/^n/, "node").replace(/^w/, "way").replace(/^r/, "relation");
-      url += `&select=${fullSelect}`;
+      url += `&select=${ref.type}${ref.id}`;
     }
     try {
       await fetch(url);
@@ -33,10 +57,9 @@ const MappingTools = {
   async josmAddTags(osmRef, qid) {
     const tagsParam = `wikidata=${qid}`;
     let url = `${this.JOSM_BASE}/add_tags?tags=${encodeURIComponent(tagsParam)}`;
-    if (osmRef) {
-      const type = osmRef.charAt(0) === 'w' ? 'way' : osmRef.charAt(0) === 'r' ? 'relation' : 'node';
-      const id = osmRef.slice(1);
-      url += `&url=https://www.openstreetmap.org/${type}/${id}`;
+    const ref = osmRef ? OsmAuth.parseOsmRef(osmRef) : null;
+    if (ref) {
+      url += `&url=${encodeURIComponent(`https://www.openstreetmap.org/${ref.type}/${ref.id}`)}`;
     }
     try {
       await fetch(url);
@@ -58,11 +81,12 @@ const MappingTools = {
    * Generates QuickStatements v2 format string.
    */
   getQuickStatements(qid, osmRef) {
-    if (!osmRef) return `${qid}|P11693|""`;
-    const type = osmRef.charAt(0) === 'w' ? 'way' : osmRef.charAt(0) === 'r' ? 'relation' : 'node';
-    const id = osmRef.slice(1);
-    // P11693 is OpenStreetMap element ID
-    return `${qid}|P11693|"${type}/${id}"`;
+    const ref = osmRef ? OsmAuth.parseOsmRef(osmRef) : null;
+    if (!ref) return `${qid}|P11693|""`;
+    // Each OSM element type has its own Wikidata property, and the value is the bare numeric ID:
+    // P11693 = OpenStreetMap node ID, P10689 = OpenStreetMap way ID, P402 = OpenStreetMap relation ID
+    const prop = { node: "P11693", way: "P10689", relation: "P402" }[ref.type];
+    return `${qid}|${prop}|"${ref.id}"`;
   },
 
   /**

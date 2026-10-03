@@ -138,22 +138,22 @@ P31_ONTOLOGY = {
     },
     
     # Heritage
-    "Q637600": {
-        "cat": 2,
-        "name_en": "Archaeological Site",
-        "name_ar": "موقع أثري",
-        "tags": {"historic": "archaeological_site"}
-    },
     "Q839954": {
         "cat": 2,
         "name_en": "Archaeological Site",
         "name_ar": "موقع أثري",
         "tags": {"historic": "archaeological_site"}
     },
-    "Q187971": {
+    "Q1081138": {
         "cat": 2,
         "name_en": "Historic Site / Heritage",
         "name_ar": "موقع تاريخي / تراثي",
+        "tags": {"historic": "heritage"}
+    },
+    "Q358": {
+        "cat": 2,
+        "name_en": "Heritage Site",
+        "name_ar": "موقع تراثي",
         "tags": {"historic": "heritage"}
     },
     "Q23413": {
@@ -168,23 +168,35 @@ P31_ONTOLOGY = {
         "name_ar": "متحف",
         "tags": {"tourism": "museum"}
     },
-    "Q498990": {
+    "Q4989906": {
         "cat": 2,
         "name_en": "Monument",
         "name_ar": "نصب تذكاري",
         "tags": {"historic": "monument"}
     },
-    "Q928830": {
+    "Q16560": {
         "cat": 2,
         "name_en": "Palace",
         "name_ar": "قصر",
         "tags": {"historic": "castle", "castle_type": "palace"}
     },
-    "Q184358": {
+    "Q57821": {
         "cat": 2,
-        "name_en": "Fortress",
+        "name_en": "Fortification",
         "name_ar": "حصن",
         "tags": {"historic": "fort"}
+    },
+    "Q1785071": {
+        "cat": 2,
+        "name_en": "Fort",
+        "name_ar": "حصن",
+        "tags": {"historic": "fort"}
+    },
+    "Q179700": {
+        "cat": 2,
+        "name_en": "Statue",
+        "name_ar": "تمثال",
+        "tags": {"historic": "memorial", "memorial": "statue"}
     },
 
     # Nature & Geography
@@ -194,11 +206,35 @@ P31_ONTOLOGY = {
         "name_ar": "جبل / قمة",
         "tags": {"natural": "peak"}
     },
-    "Q355304": {
+    "Q187971": {
         "cat": 3,
-        "name_en": "Wadi / Valley",
+        "name_en": "Wadi",
         "name_ar": "وادي",
         "tags": {"waterway": "wadi"}
+    },
+    "Q355304": {
+        "cat": 3,
+        "name_en": "Watercourse",
+        "name_ar": "مجرى مائي",
+        "tags": {"waterway": "wadi"}
+    },
+    "Q637600": {
+        "cat": 3,
+        "name_en": "Sabkha",
+        "name_ar": "سبخة",
+        "tags": {"natural": "wetland", "wetland": "saltmarsh"}
+    },
+    "Q25391": {
+        "cat": 3,
+        "name_en": "Dune",
+        "name_ar": "كثيب رملي",
+        "tags": {"natural": "dune"}
+    },
+    "Q184358": {
+        "cat": 3,
+        "name_en": "Reef",
+        "name_ar": "شعاب",
+        "tags": {"natural": "reef"}
     },
     "Q23442": {
         "cat": 3,
@@ -206,7 +242,7 @@ P31_ONTOLOGY = {
         "name_ar": "جزيرة",
         "tags": {"place": "island"}
     },
-    "Q190429": {
+    "Q43483": {
         "cat": 3,
         "name_en": "Water Well",
         "name_ar": "بئر ماء",
@@ -224,7 +260,7 @@ P31_ONTOLOGY = {
         "name_ar": "سد",
         "tags": {"waterway": "dam"}
     },
-    "Q179700": {
+    "Q179049": {
         "cat": 3,
         "name_en": "Nature Reserve",
         "name_ar": "محمية طبيعية",
@@ -248,12 +284,6 @@ P31_ONTOLOGY = {
         "cat": 1,
         "name_en": "Village",
         "name_ar": "قرية",
-        "tags": {"place": "village"}
-    },
-    "Q25391": {
-        "cat": 1,
-        "name_en": "Human Settlement",
-        "name_ar": "تجمع سكاني",
         "tags": {"place": "village"}
     },
     "Q486972": {
@@ -308,19 +338,19 @@ P31_ONTOLOGY = {
         "name_ar": "فندق",
         "tags": {"tourism": "hotel"}
     },
-    "Q11256": {
+    "Q11315": {
         "cat": 5,
         "name_en": "Shopping Mall",
         "name_ar": "مركز تسوق / مول",
         "tags": {"shop": "mall"}
     },
-    "Q205495": {
+    "Q180846": {
         "cat": 5,
         "name_en": "Supermarket",
         "name_ar": "سوبرماركت / هايبرماركت",
         "tags": {"shop": "supermarket"}
     },
-    "Q52615": {
+    "Q205495": {
         "cat": 5,
         "name_en": "Fuel Station",
         "name_ar": "محطة وقود",
@@ -332,13 +362,13 @@ P31_ONTOLOGY = {
         "name_ar": "مصرف / بنك",
         "tags": {"amenity": "bank"}
     },
-    "Q131261": {
+    "Q13107184": {
         "cat": 4,
         "name_en": "Pharmacy",
         "name_ar": "صيدلية",
         "tags": {"amenity": "pharmacy"}
     },
-    "Q211884": {
+    "Q1774898": {
         "cat": 4,
         "name_en": "Clinic",
         "name_ar": "مستوصف / عيادة",
@@ -356,19 +386,19 @@ P31_ONTOLOGY = {
         "name_ar": "مقهى / كافيه",
         "tags": {"amenity": "cafe"}
     },
-    "Q39176": {
+    "Q3917681": {
         "cat": 4,
         "name_en": "Embassy",
         "name_ar": "سفارة",
         "tags": {"amenity": "embassy"}
     },
-    "Q180684": {
+    "Q35054": {
         "cat": 4,
         "name_en": "Post Office",
         "name_ar": "مكتب بريد",
         "tags": {"amenity": "post_office"}
     },
-    "Q166118": {
+    "Q483110": {
         "cat": 5,
         "name_en": "Stadium",
         "name_ar": "استاد / ملعب رياضي",
