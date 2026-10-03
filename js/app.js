@@ -20,6 +20,7 @@ let filterHasWiki = false;
 let filterHasPhoto = false;
 let filterHideDemolished = true; // default true: hide demolished / destroyed
 let filterHideMosques = false;
+let filterHideLinked = false;
 
 // Viewport Stats state
 let viewportStatsEnabled = false;
@@ -49,6 +50,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupEventListeners();
   setupKeyboardShortcuts();
   setupViewportStatsListener();
+
+  // Initialize Batch Manager and History Manager
+  if (typeof BatchManager !== "undefined") BatchManager.init();
+  if (typeof HistoryManager !== "undefined") HistoryManager.init();
 });
 
 async function loadSummary() {
@@ -73,8 +78,9 @@ function renderSummaryStats() {
 
   if (loadedDataset && loadedDataset.items) {
     let localLinkedCount = 0;
+    const verifiedCache = LiveVerifier.getVerifiedCache();
     for (let it of loadedDataset.items) {
-      if (it[4] !== 2 && LiveVerifier.isLocallyVerified(`Q${it[0]}`)) {
+      if (it[4] !== 2 && verifiedCache[`Q${it[0]}`]) {
         localLinkedCount++;
       }
     }
@@ -104,6 +110,7 @@ async function loadCountry(code) {
     const res = await fetch(`data/${currentCountry}.json`);
     if (!res.ok) throw new Error(`Could not load data/${currentCountry}.json`);
     loadedDataset = await res.json();
+    window.loadedDataset = loadedDataset;
 
     // Set map center and zoom
     if (loadedDataset.center && loadedDataset.zoom) {
@@ -130,12 +137,13 @@ function applyFilters() {
 
   const items = loadedDataset.items;
   filteredItems = [];
+  const verifiedCache = LiveVerifier.getVerifiedCache();
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     const cat = item[3];
     const qid = `Q${item[0]}`;
-    const localVer = LiveVerifier.isLocallyVerified(qid);
+    const localVer = verifiedCache[qid];
     const status = localVer ? 2 : item[4];
     const nameAr = item[5] || "";
     const nameEn = (item[6] || "").toLowerCase();
@@ -145,6 +153,11 @@ function applyFilters() {
 
     // Status filter
     if (activeStatusFilter !== "all" && status !== activeStatusFilter) {
+      continue;
+    }
+
+    // Quality Filter: Hide Linked features
+    if (filterHideLinked && status === 2) {
       continue;
     }
 
@@ -224,6 +237,7 @@ function computeViewportStats() {
   const w = bounds.getWest(), e = bounds.getEast();
 
   let vpTotal = 0, vpMissing = 0, vpCandidates = 0, vpLinked = 0;
+  const verifiedCache = LiveVerifier.getVerifiedCache();
 
   for (let i = 0; i < filteredItems.length; i++) {
     const it = filteredItems[i];
@@ -232,7 +246,7 @@ function computeViewportStats() {
     if (lat >= s && lat <= n && lon >= w && lon <= e) {
       vpTotal++;
       const qid = `Q${it[0]}`;
-      const localVer = LiveVerifier.isLocallyVerified(qid);
+      const localVer = verifiedCache[qid];
       const st = localVer ? 2 : it[4];
       if (st === 0) vpMissing++;
       else if (st === 1) vpCandidates++;
@@ -260,8 +274,9 @@ function computeViewportStats() {
   setBadge("stat-linked-inview", vpLinked);
 }
 
-function selectItem(item, marker = null) {
+function selectItem(item, marker = null, skipFly = false) {
   selectedItem = item;
+  window.selectedItem = selectedItem;
   selectedItemIndex = filteredItems.indexOf(item);
 
   const qid = `Q${item[0]}`;
@@ -280,8 +295,10 @@ function selectItem(item, marker = null) {
   const dissolvedYear = item[13] || "";
   const socialPipe = item[14] || "";
 
-  // Fly to feature
-  MapController.flyTo(lat, lon, 17);
+  // Fly to feature if not skipped
+  if (!skipFly) {
+    MapController.flyTo(lat, lon, 17);
+  }
 
   // Clear previous candidate preview connector lines from map
   MapController.clearCandidatesFromMap();
@@ -445,7 +462,14 @@ function selectItem(item, marker = null) {
 
     <!-- Power-User Action Bar (NSI Aligned) -->
     <div class="inspector-actions">
-      ${effectiveStatus === 1 ? `<button id="btn-direct-link" class="btn btn-direct-link" title="Direct 1-Click OSM Link (API 0.6) - Shortcut: L">${t.btnDirectLinkOsm} <kbd class="kbd-inline">L</kbd></button>` : ""}
+      ${effectiveStatus === 1 ? `
+        <button id="btn-single-link-trigger" class="btn btn-direct-link" title="${t.linkSingleNow || 'Link Now (Single Changeset)'} - Shortcut: L">
+          ⚡ ${t.linkSingleNow || 'ربط فوري (مفرد)'} <kbd class="kbd-inline">L</kbd>
+        </button>
+        <button id="btn-batch-toggle-trigger" class="btn ${typeof BatchManager !== 'undefined' && BatchManager.isStaged(qid) ? 'btn-in-batch' : 'btn-add-batch'}" title="${t.batchQueueBtn}">
+          ${typeof BatchManager !== 'undefined' && BatchManager.isStaged(qid) ? `✓ ${t.btnInBatch}` : `➕ ${t.btnAddToBatch}`}
+        </button>
+      ` : ""}
       <button id="btn-josm-zoom" class="btn btn-josm" title="Shortcut: J">🎯 ${t.btnJosmZoom} <kbd class="kbd-inline">J</kbd></button>
       ${effectiveStatus === 1 ? `<button id="btn-josm-tags" class="btn btn-josm-action" title="Shortcut: T">🏷️ ${t.btnJosmAddTags} <kbd class="kbd-inline">T</kbd></button>` : ""}
       ${effectiveStatus === 0 ? `<button id="btn-josm-add-node" class="btn btn-josm-action">➕ ${t.btnJosmAddNode}</button>` : ""}
@@ -471,10 +495,17 @@ function selectItem(item, marker = null) {
     });
   };
 
-  const btnDirectLink = document.getElementById("btn-direct-link");
-  if (btnDirectLink) {
-    btnDirectLink.onclick = () => {
-      window.handleDirectLink(effectiveOsmRef, qid, nameAr || nameEn);
+  const btnSingleLinkTrigger = document.getElementById("btn-single-link-trigger");
+  if (btnSingleLinkTrigger) {
+    btnSingleLinkTrigger.onclick = () => {
+      window.openSingleLinkModal(effectiveOsmRef, qid, nameAr || nameEn);
+    };
+  }
+
+  const btnBatchToggleTrigger = document.getElementById("btn-batch-toggle-trigger");
+  if (btnBatchToggleTrigger) {
+    btnBatchToggleTrigger.onclick = () => {
+      window.toggleCandidateBatch(effectiveOsmRef, qid, nameAr || nameEn);
     };
   }
 
@@ -530,8 +561,9 @@ function selectItem(item, marker = null) {
       if (result.status === "linked") {
         resBox.className = "verify-feedback success";
         resBox.innerHTML = `<div>✓ ${t.liveFound} (OSM ID: <code>${result.ref}</code>)</div>`;
-        MapController.showCandidatesOnMap([lat, lon], result.candidates);
-        selectItem(item, marker); // refresh view with linked status
+        LiveVerifier.markVerifiedLocally(qid, result.ref, item[5] || item[6]);
+        updateDatasetItemStatus(qid, 2, result.ref);
+        refreshViewAfterPush();
       } else if (result.candidates && result.candidates.length > 0) {
         resBox.className = "verify-feedback warning";
 
@@ -550,6 +582,7 @@ function selectItem(item, marker = null) {
             ${result.candidates.map((cand, idx) => {
               const oType = cand.ref.charAt(0) === 'w' ? 'way' : cand.ref.charAt(0) === 'r' ? 'relation' : 'node';
               const oId = cand.ref.slice(1);
+              const isStaged = typeof BatchManager !== 'undefined' && BatchManager.isStaged(qid);
               return `
                 <div class="candidate-card-item">
                   <div class="cand-card-top">
@@ -562,7 +595,8 @@ function selectItem(item, marker = null) {
                     · <span class="cand-reason-tag">${cand.matchedReason}</span>
                   </div>
                   <div class="cand-button-bar">
-                    <button class="btn btn-cand-mini btn-cand-direct-link" onclick="window.handleDirectLink('${cand.ref}', '${qid}', '${(cand.name || '').replace(/'/g, "\\'")}')">${t.btnDirectLinkOsm}</button>
+                    <button class="btn btn-cand-mini btn-cand-direct-link" onclick="window.openSingleLinkModal('${cand.ref}', '${qid}', '${(cand.name || '').replace(/'/g, "\\'")}')">⚡ ${t.linkSingleNow || 'ربط فوري'}</button>
+                    <button class="btn btn-cand-mini ${isStaged ? 'btn-cand-in-batch' : 'btn-cand-add-batch'}" onclick="window.toggleCandidateBatch('${cand.ref}', '${qid}', '${(cand.name || '').replace(/'/g, "\\'")}')">${isStaged ? `✓ ${t.btnInBatch}` : `➕ ${t.btnAddToBatch}`}</button>
                     <button class="btn btn-cand-mini" onclick="MappingTools.josmLoadAndZoom(${cand.lat}, ${cand.lon}, '${cand.ref}')">🎯 JOSM</button>
                     <button class="btn btn-cand-mini" onclick="MappingTools.josmAddTags('${cand.ref}', '${qid}')">🏷️ ${t.btnJosmAddTags}</button>
                     <a href="${MappingTools.getIdEditorUrl(cand.lat, cand.lon)}" target="_blank" rel="noopener" class="btn btn-cand-mini">✏️ iD</a>
@@ -590,10 +624,9 @@ function selectItem(item, marker = null) {
 }
 
 /**
- * Executes a direct 1-click Assisted Conflation link via OSM API 0.6.
- * Adds wikidata=Q... to the existing OSM object under the user's authenticated OSM account.
+ * Opens the Single Link Confirmation & Improved Comment review modal.
  */
-window.handleDirectLink = async function(osmRef, qid, featureName, callback) {
+window.openSingleLinkModal = function(osmRef, qid, featureName, callback) {
   const t = TRANSLATIONS[currentLang];
 
   if (!OsmAuth.isLoggedIn()) {
@@ -604,17 +637,26 @@ window.handleDirectLink = async function(osmRef, qid, featureName, callback) {
     return;
   }
 
-  const confirmMsg = (t.confirmLinkPrompt || "Confirm adding tag {qid} to OSM element ({osmRef})?")
-    .replace("{qid}", qid)
-    .replace("{osmRef}", osmRef);
+  const modal = document.getElementById("single-link-modal");
+  const nameEl = document.getElementById("single-link-feature-name");
+  const qidEl = document.getElementById("single-link-qid");
+  const osmRefEl = document.getElementById("single-link-osmref");
+  const commentInput = document.getElementById("single-link-comment-input");
+  const charCountEl = document.getElementById("single-link-char-count");
+  const confirmBtn = document.getElementById("btn-confirm-single-link");
+  const cancelBtn = document.getElementById("btn-cancel-single-link");
+  const closeBtn = document.getElementById("btn-close-single-link");
 
-  if (!confirm(confirmMsg)) {
-    return;
-  }
+  if (!modal || !commentInput) return;
 
-  // Find if we have extra tags (like wikipedia) from selectedItem
+  const cleanQid = qid.startsWith("Q") ? qid : `Q${qid}`;
+  if (nameEl) nameEl.innerText = featureName || cleanQid;
+  if (qidEl) qidEl.innerText = cleanQid;
+  if (osmRefEl) osmRefEl.innerText = osmRef;
+
+  // Extract extra tags (like wikipedia)
   let extraTags = {};
-  if (selectedItem && `Q${selectedItem[0]}` === qid) {
+  if (selectedItem && `Q${selectedItem[0]}` === cleanQid) {
     const wikiAr = selectedItem[11];
     if (wikiAr) {
       try {
@@ -625,65 +667,153 @@ window.handleDirectLink = async function(osmRef, qid, featureName, callback) {
     }
   }
 
-  // Show status feedback
-  let feedbackEl = document.getElementById("link-feedback-box");
-  if (!feedbackEl) {
-    feedbackEl = document.createElement("div");
-    feedbackEl.id = "link-feedback-box";
-    const actionsContainer = document.querySelector(".inspector-actions");
-    if (actionsContainer && actionsContainer.parentNode) {
-      actionsContainer.parentNode.insertBefore(feedbackEl, actionsContainer);
+  // Pre-fill improved smart comment
+  const defaultComment = OsmAuth.generateChangesetComment({
+    name: featureName,
+    qid: cleanQid,
+    osmRef: osmRef
+  }, currentCountry);
+
+  commentInput.value = defaultComment;
+  if (charCountEl) charCountEl.innerText = commentInput.value.length;
+
+  commentInput.oninput = () => {
+    if (charCountEl) charCountEl.innerText = commentInput.value.length;
+  };
+
+  // Wire preset chips
+  document.querySelectorAll(".single-preset-chip").forEach(chip => {
+    chip.onclick = () => {
+      const preset = chip.getAttribute("data-preset");
+      if (preset && !commentInput.value.includes(preset)) {
+        commentInput.value = `${commentInput.value.trim()} [${preset}]`;
+        if (charCountEl) charCountEl.innerText = commentInput.value.length;
+      }
+    };
+  });
+
+  const closeModal = () => {
+    modal.style.display = "none";
+  };
+
+  if (cancelBtn) cancelBtn.onclick = closeModal;
+  if (closeBtn) closeBtn.onclick = closeModal;
+
+  if (confirmBtn) {
+    confirmBtn.onclick = async () => {
+      confirmBtn.disabled = true;
+      confirmBtn.innerText = `⏳ ${t.linkingInProgress || 'Linking...'}`;
+
+      try {
+        const finalComment = commentInput.value.trim() || defaultComment;
+        const res = await OsmAuth.linkOsmElement(osmRef, cleanQid, extraTags, finalComment, featureName, currentCountry);
+
+        closeModal();
+
+        // Show feedback banner in inspector
+        let feedbackEl = document.getElementById("link-feedback-box");
+        if (!feedbackEl) {
+          feedbackEl = document.createElement("div");
+          feedbackEl.id = "link-feedback-box";
+          const actionsContainer = document.querySelector(".inspector-actions");
+          if (actionsContainer && actionsContainer.parentNode) {
+            actionsContainer.parentNode.insertBefore(feedbackEl, actionsContainer);
+          }
+        }
+        feedbackEl.style.display = "block";
+
+        if (res.alreadyLinked) {
+          feedbackEl.className = "verify-feedback info";
+          feedbackEl.innerHTML = `ℹ️ ${t.alreadyLinkedNotice} (<code>${osmRef}</code>)`;
+        } else {
+          feedbackEl.className = "verify-feedback success";
+          feedbackEl.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div><strong>✓ ${t.linkSuccess}</strong> <a href="${res.changesetUrl}" target="_blank" rel="noopener" class="qid-link">#${res.changesetId} ↗</a></div>
+              <div style="font-size: 0.72rem;"><a href="${res.url}" target="_blank" rel="noopener">OSM: <code>${osmRef}</code> (v${res.version}) ↗</a></div>
+            </div>
+          `;
+        }
+
+        // Mark locally verified so it turns status 2 (Linked)
+        LiveVerifier.markVerifiedLocally(cleanQid, osmRef, featureName);
+
+        // Update in-memory item & dataset
+        updateDatasetItemStatus(cleanQid, 2, osmRef);
+
+        // Remove from batch if it was staged
+        if (typeof BatchManager !== "undefined" && BatchManager.isStaged(cleanQid)) {
+          BatchManager.remove(cleanQid);
+        }
+
+        // IMMEDIATELY refresh map view and counters so linked feature disappears from map
+        refreshViewAfterPush();
+
+        if (callback) callback(res);
+      } catch (err) {
+        console.error("Direct link error:", err);
+        alert(`❌ ${t.linkError || 'Error:'} ${err.message}`);
+      } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.innerText = t.btnConfirmLinkNow || 'Confirm & Upload';
+      }
+    };
+  }
+
+  modal.style.display = "flex";
+};
+
+/**
+ * Toggles an item in or out of the Batch Changeset queue.
+ */
+window.toggleCandidateBatch = function(osmRef, qid, candidateName = "") {
+  const cleanQid = qid.startsWith("Q") ? qid : `Q${qid}`;
+
+  if (typeof BatchManager !== "undefined" && BatchManager.isStaged(cleanQid)) {
+    BatchManager.remove(cleanQid);
+  } else {
+    // Determine item data from selectedItem or loadedDataset
+    let itemData = selectedItem;
+    if (!itemData || `Q${itemData[0]}` !== cleanQid) {
+      if (loadedDataset && loadedDataset.items) {
+        const raw = parseInt(cleanQid.replace(/^Q/, ""), 10);
+        itemData = loadedDataset.items.find(i => i[0] === raw);
+      }
+    }
+
+    if (!itemData) {
+      itemData = [
+        parseInt(cleanQid.replace(/^Q/, ""), 10),
+        0, 0, 1, 1,
+        candidateName, "", "", osmRef, "", "", "", "", "", ""
+      ];
+    }
+
+    let extraTags = {};
+    if (itemData[11]) {
+      try {
+        const u = new URL(itemData[11]);
+        const art = decodeURIComponent(u.pathname.replace(/^\/wiki\//, ""));
+        if (art) extraTags.wikipedia = `ar:${art}`;
+      } catch (e) {}
+    }
+
+    if (typeof BatchManager !== "undefined") {
+      BatchManager.add(itemData, osmRef, candidateName, extraTags, currentCountry);
     }
   }
-  feedbackEl.style.display = "block";
-  feedbackEl.className = "verify-feedback loading";
-  feedbackEl.innerText = `⏳ ${t.linkingInProgress}`;
 
-  try {
-    const res = await OsmAuth.linkOsmElement(osmRef, qid, extraTags);
-
-    if (res.alreadyLinked) {
-      feedbackEl.className = "verify-feedback info";
-      feedbackEl.innerHTML = `ℹ️ ${t.alreadyLinkedNotice} (<code>${osmRef}</code>)`;
-    } else {
-      feedbackEl.className = "verify-feedback success";
-      feedbackEl.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: 4px;">
-          <div><strong>✓ ${t.linkSuccess}</strong> <a href="${res.changesetUrl}" target="_blank" rel="noopener" class="qid-link">#${res.changesetId} ↗</a></div>
-          <div style="font-size: 0.72rem;"><a href="${res.url}" target="_blank" rel="noopener">OSM: <code>${osmRef}</code> (v${res.version}) ↗</a></div>
-        </div>
-      `;
-    }
-
-    // Mark locally verified so it turns status 2 (Linked)
-    LiveVerifier.markVerifiedLocally(qid, osmRef, featureName);
-
-    // Update in-memory item
-    if (selectedItem && `Q${selectedItem[0]}` === qid) {
-      selectedItem[4] = 2; // Linked
-      selectedItem[8] = osmRef;
-    }
-
-    // Refresh stats & re-render inspector with linked state
-    renderSummaryStats();
-    if (viewportStatsEnabled) {
-      computeViewportStats();
-    }
-    if (selectedItem && `Q${selectedItem[0]}` === qid) {
-      selectItem(selectedItem);
-    }
-
-    if (callback) callback(res);
-  } catch (err) {
-    console.error("Direct link error:", err);
-    feedbackEl.className = "verify-feedback error";
-
-    if (err.message === "AUTH_EXPIRED" || err.message === "NOT_AUTHENTICATED") {
-      feedbackEl.innerHTML = `⚠️ ${t.needLoginToLink} <button class="btn btn-verify" onclick="OsmAuth.startLogin()" style="margin-top: 4px;">${t.loginOsm}</button>`;
-    } else {
-      feedbackEl.innerText = `❌ ${t.linkError} ${err.message}`;
-    }
+  // Refresh inspector view if this item is currently selected
+  if (selectedItem && `Q${selectedItem[0]}` === cleanQid) {
+    selectItem(selectedItem);
   }
+};
+
+/**
+ * Backward compatibility alias for handleDirectLink.
+ */
+window.handleDirectLink = function(osmRef, qid, featureName, callback) {
+  window.openSingleLinkModal(osmRef, qid, featureName, callback);
 };
 
 function openImageLightbox(imageUrl, title, qid) {
@@ -828,6 +958,20 @@ function setupKeyboardShortcuts() {
       return;
     }
 
+    // 'b' or 'B' -> Open Changeset Batch modal
+    if (key === "b" || key === "B") {
+      e.preventDefault();
+      if (typeof BatchManager !== "undefined") BatchManager.openModal();
+      return;
+    }
+
+    // 'h' or 'H' -> Open Changeset History page modal
+    if (key === "h" || key === "H") {
+      e.preventDefault();
+      if (typeof HistoryManager !== "undefined") HistoryManager.openModal();
+      return;
+    }
+
     // '[' or ']' -> Cycle Basemap
     if (key === "[" || key === "]") {
       e.preventDefault();
@@ -856,7 +1000,7 @@ function setupKeyboardShortcuts() {
       MappingTools.josmLoadAndZoom(lat, lon, osmRef);
     } else if (key === "l" || key === "L") {
       e.preventDefault();
-      const btnDirectLink = document.getElementById("btn-direct-link");
+      const btnDirectLink = document.getElementById("btn-single-link-trigger") || document.getElementById("btn-direct-link");
       if (btnDirectLink) {
         btnDirectLink.click();
       } else {
@@ -982,6 +1126,15 @@ function setupEventListeners() {
     });
   }
 
+  const chipHideLinked = document.getElementById("chip-hide-linked");
+  if (chipHideLinked) {
+    chipHideLinked.addEventListener("click", () => {
+      filterHideLinked = !filterHideLinked;
+      chipHideLinked.classList.toggle("active", filterHideLinked);
+      applyFilters();
+    });
+  }
+
   // Status Filter Buttons
   document.querySelectorAll(".status-filter-btn").forEach(btn => {
     btn.addEventListener("click", (e) => {
@@ -1092,4 +1245,51 @@ function updateUrlHash() {
   const hash = `country=${currentCountry}`;
   window.history.replaceState(null, "", `#${hash}`);
 }
+
+/**
+ * Updates an item's status in loadedDataset.items and selectedItem.
+ */
+function updateDatasetItemStatus(qid, newStatus, osmRef = "") {
+  const cleanQid = qid.startsWith("Q") ? qid : `Q${qid}`;
+  const rawQid = parseInt(cleanQid.replace(/^Q/, ""), 10);
+
+  if (loadedDataset && loadedDataset.items) {
+    const found = loadedDataset.items.find(it => it[0] === rawQid);
+    if (found) {
+      found[4] = newStatus;
+      if (osmRef) found[8] = osmRef;
+    }
+  }
+
+  if (selectedItem && `Q${selectedItem[0]}` === cleanQid) {
+    selectedItem[4] = newStatus;
+    if (osmRef) selectedItem[8] = osmRef;
+  }
+}
+
+/**
+ * Refreshes the application view immediately after an OSM push (single or batch).
+ * Clears connector lines, updates counters, re-filters items (so linked items disappear from map),
+ * and refreshes the inspector state.
+ */
+function refreshViewAfterPush() {
+  MapController.clearCandidatesFromMap();
+  renderSummaryStats();
+  applyFilters();
+  if (selectedItem) {
+    selectItem(selectedItem, null, true);
+  }
+  if (viewportStatsEnabled) {
+    computeViewportStats();
+  }
+}
+
+// Global Window Exports
+window.loadedDataset = loadedDataset;
+window.selectedItem = selectedItem;
+window.applyFilters = applyFilters;
+window.renderSummaryStats = renderSummaryStats;
+window.selectItem = selectItem;
+window.updateDatasetItemStatus = updateDatasetItemStatus;
+window.refreshViewAfterPush = refreshViewAfterPush;
 

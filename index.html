@@ -36,6 +36,20 @@
         </div>
         <p class="subtitle" data-i18n="subtitle">أداة متقدمة لربط بيانات OpenStreetMap بـ Wikidata، وكشف العناصر المفقودة في OSM لدول الخليج العربي.</p>
         
+        <!-- Quick Nav Actions: Batch Staging & History Page -->
+        <div class="quick-nav-bar">
+          <button id="btn-header-batch" class="nav-pill-btn batch-pill-btn btn-open-batch-modal" title="سلة التعديلات المجمعة (B)">
+            <span class="pill-icon">📦</span>
+            <span data-i18n="batchQueueBtn">سلة التعديلات</span>
+            <span class="batch-counter">0</span>
+          </button>
+          <button id="btn-header-history" class="nav-pill-btn history-pill-btn btn-open-history-modal" title="سجل العمليات ومجموعات التعديل (H)">
+            <span class="pill-icon">📜</span>
+            <span data-i18n="historyPageTitle">سجل الإنجازات</span>
+            <span class="history-counter">0</span>
+          </button>
+        </div>
+
         <!-- OSM Auth Bar -->
         <div class="auth-bar">
           <span id="osm-user-badge" style="display: none;"></span>
@@ -114,6 +128,7 @@
             <button id="chip-photo" class="filter-chip" data-filter="photo" data-i18n="chipHasPhoto">📷 صورة كومنز</button>
             <button id="chip-demolished" class="filter-chip active" data-filter="demolished" data-i18n="chipHideDemolished">🚫 إخفاء المهدم</button>
             <button id="chip-mosques" class="filter-chip" data-filter="mosques" data-i18n="chipHideMosques">🕌 إخفاء المساجد</button>
+            <button id="chip-hide-linked" class="filter-chip" data-filter="linked" data-i18n="chipHideLinked">🟢 إخفاء المرتبط</button>
           </div>
         </div>
 
@@ -193,6 +208,12 @@
       <button class="basemap-btn" data-bm="streets" data-i18n="bmStreets">شوارع</button>
     </nav>
 
+    <!-- Floating Batch Dock Trigger (Shown when items are staged) -->
+    <div id="floating-batch-btn" class="floating-batch-dock btn-open-batch-modal" style="display: none;" title="فتح سلة التعديلات المجمعة (B)">
+      <span class="pulse-indicator"></span>
+      <span>📦 <strong data-i18n="batchQueueBtn">سلة التعديلات</strong> (<span class="batch-counter">0</span>)</span>
+    </div>
+
     <!-- Inspector Drawer -->
     <aside id="inspector-drawer">
       <div id="inspector-content">
@@ -214,6 +235,8 @@
         <button class="btn-close-modal" id="btn-close-shortcuts">&times;</button>
       </div>
       <div class="shortcuts-grid">
+        <div class="shortcut-row"><kbd>B</kbd> <span data-i18n="shortcutBatch">فتح سلة التعديلات المجمعة</span></div>
+        <div class="shortcut-row"><kbd>H</kbd> <span data-i18n="shortcutHistory">فتح سجل الإنجازات والتعديلات</span></div>
         <div class="shortcut-row"><kbd>J</kbd> <span data-i18n="shortcutJosmZoom">فتح وتكبير في JOSM</span></div>
         <div class="shortcut-row"><kbd>L</kbd> <span data-i18n="shortcutDirectLink">ربط مباشر بـ OSM</span></div>
         <div class="shortcut-row"><kbd>T</kbd> <span data-i18n="shortcutJosmTags">إرسال الوسم إلى JOSM</span></div>
@@ -288,6 +311,171 @@
     </div>
   </div>
 
+  <!-- Single OSM Link Confirmation & Comment Review Modal -->
+  <div id="single-link-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card single-link-card">
+      <div class="modal-header-row">
+        <h3 data-i18n="singleLinkTitle">مراجعة وتأكيد الربط الفردي</h3>
+        <button class="btn-close-modal" id="btn-close-single-link">&times;</button>
+      </div>
+      <p class="modal-sub-desc" data-i18n="singleLinkDesc">إنشاء مجموعة تعديل مستقلة لهذا المعلم وتحديث وسومه في خوادم OpenStreetMap.</p>
+      
+      <div class="single-link-target-box">
+        <div class="target-title-row">
+          <span class="target-feature-name" id="single-link-feature-name"></span>
+        </div>
+        <div class="target-tags-row">
+          <span class="target-tag-badge">Wikidata: <code id="single-link-qid"></code></span>
+          <span class="batch-sep">➔</span>
+          <span class="target-tag-badge">OSM: <code id="single-link-osmref"></code></span>
+        </div>
+      </div>
+
+      <div class="comment-field-group">
+        <div class="comment-field-header">
+          <label class="section-label" data-i18n="changesetCommentLabel">تعليق مجموعة التعديل (Changeset Comment):</label>
+          <span class="char-counter"><span id="single-link-char-count">0</span> حرف</span>
+        </div>
+        <textarea id="single-link-comment-input" class="comment-textarea" rows="3" placeholder="اكتب تعليقاً يوضح التعديل..."></textarea>
+        
+        <div class="preset-chips-row">
+          <span class="preset-label" data-i18n="quickInsertPresets">إضافات سريعة:</span>
+          <button type="button" class="preset-chip single-preset-chip" data-preset="#osm-wikidata-gcc">🏷️ #osm-wikidata-gcc</button>
+          <button type="button" class="preset-chip single-preset-chip" data-preset="Verified with aerial imagery">🛰️ صور جوية</button>
+          <button type="button" class="preset-chip single-preset-chip" data-preset="Name match confirmed">🔍 مطابقة أسماء مؤكدة</button>
+        </div>
+      </div>
+
+      <div class="modal-actions-footer">
+        <button id="btn-cancel-single-link" class="btn btn-modal-cancel" data-i18n="btnCancel">إلغاء</button>
+        <button id="btn-confirm-single-link" class="btn btn-direct-link" data-i18n="btnConfirmLinkNow">🚀 تأكيد ونشر التعديل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Changeset Batch Staging Queue Modal -->
+  <div id="batch-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card batch-modal-card">
+      <div class="modal-header-row">
+        <div class="batch-title-wrap">
+          <h3 data-i18n="batchModalTitle">مجموعة التعديل المجمعة (Batch Changeset)</h3>
+          <span class="batch-count-pill"><span id="batch-modal-count">0</span> عناصر مجهزة</span>
+        </div>
+        <button class="btn-close-modal" id="btn-close-batch-modal">&times;</button>
+      </div>
+
+      <div id="batch-modal-empty" class="batch-empty-view" style="display: none;">
+        <div class="empty-icon">📦</div>
+        <h4 data-i18n="batchEmptyTitle">سلة التعديلات فارغة</h4>
+        <p data-i18n="batchEmptyDesc">اختر أي عنصر مرشح واضغط 'إضافة للمجموعة' لتجميع عدة معالم ونشرها في مجموعة تعديل (Changeset) واحدة وفق معايير مجتمع OSM.</p>
+      </div>
+
+      <div id="batch-items-list" class="batch-items-scroll">
+        <!-- Rendered dynamically by BatchManager -->
+      </div>
+
+      <div id="batch-config-section" class="batch-config-wrap">
+        <div class="comment-field-group">
+          <div class="comment-field-header">
+            <label class="section-label" data-i18n="changesetCommentLabel">تعليق مجموعة التعديل (Changeset Comment):</label>
+            <span class="char-counter"><span id="batch-comment-char-count">0</span> حرف</span>
+          </div>
+          <textarea id="batch-comment-input" class="comment-textarea" rows="2" placeholder="تعليق مجموعة التعديل المجمعة..."></textarea>
+          
+          <div class="preset-chips-row">
+            <span class="preset-label" data-i18n="quickInsertPresets">إضافات سريعة:</span>
+            <button type="button" class="preset-chip batch-preset-chip" data-preset="#osm-wikidata-gcc">🏷️ #osm-wikidata-gcc</button>
+            <button type="button" class="preset-chip batch-preset-chip" data-preset="Verified with aerial imagery">🛰️ صور جوية</button>
+            <button type="button" class="preset-chip batch-preset-chip" data-preset="Arabic name match verified">🔍 تطابق أسماء</button>
+          </div>
+        </div>
+
+        <div class="batch-guidelines-tip">
+          ℹ️ <strong>ملاحظة للمحرر:</strong> يتم رفع جميع هذه المعالم في مجموعة تعديل رسمية واحدة، مع إغلاق المجموعة تلقائياً وتسجيلها في سجل الإنجازات.
+        </div>
+      </div>
+
+      <div id="batch-progress-box" class="batch-progress-container" style="display: none;">
+        <div class="batch-progress-header">
+          <span id="batch-progress-text">جارٍ التحضير...</span>
+        </div>
+        <div class="batch-progress-bar-track">
+          <div id="batch-progress-bar-fill" class="batch-progress-bar-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <div class="modal-actions-footer">
+        <button id="btn-batch-clear-all" class="btn btn-modal-cancel" data-i18n="btnClearBatch">تفريغ السلة</button>
+        <button id="btn-batch-upload-confirm" class="btn btn-direct-link" data-i18n="btnBatchUpload">🚀 رفع ونشر مجموعة التعديل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- What Has Been Done: Full Changeset History & Activity Page -->
+  <div id="history-page-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card history-page-card">
+      <div class="modal-header-row">
+        <div class="history-page-title-group">
+          <div class="brand-title">
+            <span class="history-title-icon">📜</span>
+            <h3 data-i18n="historyPageTitle">سجل التعديلات والإنجازات</h3>
+          </div>
+          <p class="history-page-subtitle" data-i18n="historyPageSubtitle">جميع مجموعات التعديل والعناصر التي تم ربطها ونشرها في OpenStreetMap عبر الأداة</p>
+        </div>
+        <button class="btn-close-modal" id="btn-close-history-modal">&times;</button>
+      </div>
+
+      <!-- KPI Metrics Strip -->
+      <div class="history-kpis-grid">
+        <div class="history-kpi-card">
+          <span class="kpi-val" id="history-kpi-changesets">0</span>
+          <span class="kpi-lbl" data-i18n="statTotalChangesets">إجمالي مجموعات التعديل</span>
+        </div>
+        <div class="history-kpi-card highlight-cyan">
+          <span class="kpi-val" id="history-kpi-elements">0</span>
+          <span class="kpi-lbl" data-i18n="statTotalLinkedItems">إجمالي المعالم المرتبطة</span>
+        </div>
+        <div class="history-kpi-card">
+          <span class="kpi-val" id="history-kpi-batch">0</span>
+          <span class="kpi-lbl" data-i18n="statBatchChangesets">مجموعات مجمعة</span>
+        </div>
+        <div class="history-kpi-card">
+          <span class="kpi-val" id="history-kpi-single">0</span>
+          <span class="kpi-lbl" data-i18n="statSingleChangesets">تعديلات مفردة</span>
+        </div>
+      </div>
+
+      <!-- Controls & Search Toolbar -->
+      <div class="history-toolbar-row">
+        <div class="history-search-wrap">
+          <input type="text" id="history-search-input" class="search-box" placeholder="بحث في السجل بالاسم، رمز QID، أو رقم المجموعة..." />
+        </div>
+        <div class="history-filter-pills">
+          <button class="history-filter-btn active" data-filter="all" data-i18n="historyFilterAll">الكل</button>
+          <button class="history-filter-btn" data-filter="batch" data-i18n="historyFilterBatch">📦 مجمعة</button>
+          <button class="history-filter-btn" data-filter="single" data-i18n="historyFilterSingle">⚡ مفردة</button>
+        </div>
+        <div class="history-export-btns">
+          <button id="btn-history-export-csv" class="btn btn-history-action" title="تصدير جدول اكسل CSV">📥 CSV</button>
+          <button id="btn-history-export-json" class="btn btn-history-action" title="تصدير بيانات كاملة JSON">📥 JSON</button>
+          <button id="btn-history-clear" class="btn btn-history-action btn-danger-action" title="مسح السجل المحلي">🗑️</button>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div id="history-empty-state" class="history-empty-view" style="display: none;">
+        <div class="empty-icon">🗺️</div>
+        <h4 data-i18n="historyEmptyTitle">لم يتم تسجيل أي تعديلات حتى الآن</h4>
+        <p data-i18n="historyEmptyDesc">عند قيامك بربط أي معالم (سواء فردياً أو عبر سلة التعديلات)، ستظهر جميع مجموعات التعديل هنا مع تفاصيلها وروابطها الرسمية في OSM.</p>
+      </div>
+
+      <!-- Timeline & Feed Container -->
+      <div id="history-timeline-container" class="history-timeline-scroll">
+        <!-- Rendered dynamically by HistoryManager -->
+      </div>
+    </div>
+  </div>
+
   <!-- Loading Overlay -->
   <div id="loading-indicator" style="display: none;">
     <div class="spinner"></div>
@@ -300,14 +488,16 @@
   <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
   <!-- Application Modules -->
-  <script src="js/translations.js?v=8"></script>
-  <script src="js/arabic_utils.js?v=8"></script>
-  <script src="js/tag_generator.js?v=8"></script>
-  <script src="js/tools.js?v=8"></script>
-  <script src="js/osm_oauth.js?v=8"></script>
-  <script src="js/live_verify.js?v=8"></script>
-  <script src="js/map.js?v=8"></script>
-  <script src="js/app.js?v=8"></script>
+  <script src="js/translations.js?v=9"></script>
+  <script src="js/arabic_utils.js?v=9"></script>
+  <script src="js/tag_generator.js?v=9"></script>
+  <script src="js/tools.js?v=9"></script>
+  <script src="js/osm_oauth.js?v=9"></script>
+  <script src="js/live_verify.js?v=9"></script>
+  <script src="js/batch_manager.js?v=9"></script>
+  <script src="js/history_manager.js?v=9"></script>
+  <script src="js/map.js?v=9"></script>
+  <script src="js/app.js?v=9"></script>
 
 </body>
 </html>

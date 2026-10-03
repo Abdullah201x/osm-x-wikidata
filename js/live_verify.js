@@ -12,12 +12,16 @@ const LiveVerifier = {
     "https://lz4.overpass-api.de/api/interpreter"
   ],
 
+  _cache: null,
+
   getVerifiedCache() {
+    if (this._cache) return this._cache;
     try {
-      return JSON.parse(localStorage.getItem("osm_wd_verified_qids") || "{}");
+      this._cache = JSON.parse(localStorage.getItem("osm_wd_verified_qids") || "{}");
     } catch (e) {
-      return {};
+      this._cache = {};
     }
+    return this._cache;
   },
 
   markVerifiedLocally(qid, osmRef, name) {
@@ -27,7 +31,12 @@ const LiveVerifier = {
       name: name,
       verified_at: Date.now()
     };
-    localStorage.setItem("osm_wd_verified_qids", JSON.stringify(cache));
+    this._cache = cache;
+    try {
+      localStorage.setItem("osm_wd_verified_qids", JSON.stringify(cache));
+    } catch (e) {
+      console.warn("Could not save to localStorage:", e);
+    }
   },
 
   isLocallyVerified(qid) {
@@ -216,3 +225,5 @@ const LiveVerifier = {
     };
   }
 };
+
+window.LiveVerifier = LiveVerifier;

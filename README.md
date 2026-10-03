@@ -13,7 +13,11 @@ Developed for power users and the GCC mapping community, this project highlights
 * **⚡ Local `.osm.pbf` Engine**: Uses `pyosmium` to stream through local GCC PBF extracts in under a minute without Overpass rate limits or network timeouts.
 * **🔍 Arabic Linguistic Normalization**: Advanced NLP normalization handles spelling variants (`الـ` prefix, hamza variants `أ/إ/آ`, taa marbuta `ة/ه`, and mosque synonyms `جامع/مسجد`) for high-precision candidate matching.
 * **🕌 Smart Category Filtering**: Segregates the 72,000+ Saudi mosques from other critical infrastructure (heritage sites, hospitals, schools, mountains, islands, settlements) so power users can focus on specific mapping targets.
-* **🔗 1-Click In-Browser OSM Linking (API 0.6)**: Just like `map.osm.wikidata.link`, authenticated mappers can link `wikidata=Q...` (and `wikipedia`) directly to existing candidate OSM elements via OSM API 0.6 without opening JOSM or iD editor.
+* **🔗 Flexible Single & Multi-Item OSM Linking (API 0.6)**: 
+  * **Single Item Mode**: 1-click instant edit with pre-flight comment review in a dedicated single changeset.
+  * **Batch Queue Mode**: Stage multiple candidate edits across the map into a changeset queue and upload them all in **ONE unified OSM Changeset** (following OSM community guidelines to prevent changeset clutter).
+* **💬 Intelligent, Community-Compliant Changeset Comments**: Generates informative comments with human-readable Arabic & English feature names, country context, QIDs, and community hashtags (`#osm-wikidata-gcc`), along with customizable preset chips (`[Verified with aerial imagery]`, `[Name match confirmed]`).
+* **📜 Dedicated Activity & History Page ("What Has Been Done")**: Complete activity center displaying all changesets created via the tool, summary KPIs (total changesets, elements linked, batch vs single breakdown), search and filters, 1-click map zooming to past edits, and CSV/JSON export.
 * **🎯 JOSM Remote Control (`localhost:8111`)**:
   * **Load & Zoom**: Jump directly to the bounding box in JOSM.
   * **Push Tags**: 1-click push of `wikidata=Q...` to candidate OSM elements.
@@ -51,8 +55,10 @@ Developed for power users and the GCC mapping community, this project highlights
 │   ├── arabic_utils.js       # Client-side Arabic search & normalization
 │   ├── tag_generator.js      # P31 -> OSM tag preset generator & OSM XML
 │   ├── tools.js              # JOSM 8111, iD Editor & MapRoulette exporter
-│   ├── osm_oauth.js          # OSM OAuth 2.0 PKCE & Notes API
+│   ├── osm_oauth.js          # OSM OAuth 2.0 PKCE & Changeset API 0.6
 │   ├── live_verify.js        # Real-time 150m Overpass verifier
+│   ├── batch_manager.js      # Staging queue & multi-item changeset manager
+│   ├── history_manager.js    # Activity log, KPI stats, & CSV/JSON export
 │   ├── map.js                # Leaflet map engine & marker clustering
 │   └── app.js                # State controller & UI wiring
 ├── index.html                # Main application interface

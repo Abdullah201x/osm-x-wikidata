@@ -197,11 +197,158 @@ const OsmAuth = {
       .replace(/>/g, "&gt;");
   },
 
+  getCountryName(countryCode) {
+    const code = (countryCode || "").toLowerCase();
+    const map = {
+      sa: "Saudi Arabia",
+      ae: "United Arab Emirates",
+      kw: "Kuwait",
+      qa: "Qatar",
+      om: "Oman",
+      bh: "Bahrain"
+    };
+    return map[code] || "GCC";
+  },
+
+  /**
+   * Generates a descriptive, community-compliant changeset comment.
+   */
+  generateChangesetComment(items, countryCode = "") {
+    const list = Array.isArray(items) ? items : [items];
+    const country = this.getCountryName(countryCode);
+    const count = list.length;
+
+    if (count === 1) {
+      const it = list[0];
+      const nameAr = it.nameAr || "";
+      const nameEn = it.nameEn || "";
+      let name = "";
+      if (nameAr && nameEn && nameAr !== nameEn) {
+        name = `${nameAr} (${nameEn})`;
+      } else {
+        name = nameAr || nameEn || it.name || it.displayName || it.qid;
+      }
+      const ref = it.osmRef ? ` on ${it.osmRef}` : "";
+      const cleanQid = it.qid.startsWith("Q") ? it.qid : `Q${it.qid}`;
+      return `Link "${name}" to Wikidata ${cleanQid}${ref} in ${country} #osm-wikidata-gcc`;
+    }
+
+    // Batch comment
+    const sampleNames = list
+      .slice(0, 3)
+      .map(i => i.nameAr || i.nameEn || i.name || i.qid)
+      .filter(Boolean);
+
+    if (count <= 3) {
+      const namesStr = sampleNames.map(n => `"${n}"`).join(", ");
+      return `Link ${count} features (${namesStr}) to Wikidata in ${country} #osm-wikidata-gcc`;
+    } else {
+      const remaining = count - sampleNames.length;
+      return `Link ${count} features (${sampleNames.join(", ")}, +${remaining} more) to Wikidata in ${country} #osm-wikidata-gcc`;
+    }
+  },
+
+  /**
+   * Persistent Changeset History Manager (Stored in LocalStorage)
+   */
+  getChangesetHistory() {
+    try {
+      const data = localStorage.getItem("osm_wd_changeset_history");
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.warn("Error reading changeset history:", e);
+      return [];
+    }
+  },
+
+  saveChangesetRecord(record) {
+    try {
+      const history = this.getChangesetHistory();
+      // Add new record at the top
+      history.unshift({
+        ...record,
+        timestamp: record.timestamp || Date.now()
+      });
+      // Cap at 300 recent changesets
+      if (history.length > 300) {
+        history.length = 300;
+      }
+      localStorage.setItem("osm_wd_changeset_history", JSON.stringify(history));
+      // Dispatch custom event for real-time UI synchronization
+      window.dispatchEvent(new CustomEvent("osm-history-updated", { detail: record }));
+      return true;
+    } catch (e) {
+      console.error("Failed to save changeset record:", e);
+      return false;
+    }
+  },
+
+  clearChangesetHistory() {
+    localStorage.removeItem("osm_wd_changeset_history");
+    window.dispatchEvent(new CustomEvent("osm-history-updated", { detail: null }));
+  },
+
+  exportHistoryCsv() {
+    const history = this.getChangesetHistory();
+    if (!history || history.length === 0) {
+      alert("No changesets recorded in history to export.");
+      return;
+    }
+
+    const rows = [
+      ["Changeset ID", "Changeset URL", "Date & Time", "OSM User", "Type", "Country", "Comment", "Item Name", "Wikidata QID", "OSM Ref", "OSM URL", "New Version", "Status"]
+    ];
+
+    for (let cs of history) {
+      const dateStr = new Date(cs.timestamp).toISOString();
+      const typeStr = cs.isBatch ? `Batch (${cs.itemCount})` : "Single";
+      for (let item of (cs.items || [])) {
+        rows.push([
+          cs.changesetId,
+          cs.changesetUrl,
+          dateStr,
+          cs.user || "",
+          typeStr,
+          cs.country || "",
+          cs.comment || "",
+          item.name || item.nameAr || item.nameEn || "",
+          item.qid || "",
+          item.osmRef || "",
+          item.osmRef ? `https://www.openstreetmap.org/${this.parseOsmRef(item.osmRef)?.type || 'node'}/${this.parseOsmRef(item.osmRef)?.id || ''}` : "",
+          item.version || "",
+          item.status || "success"
+        ]);
+      }
+    }
+
+    const csvContent = "\uFEFF" + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `osm_wikidata_changeset_history_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  },
+
+  exportHistoryJson() {
+    const history = this.getChangesetHistory();
+    const blob = new Blob([JSON.stringify(history, null, 2)], { type: "application/json;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `osm_wikidata_changeset_history_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  },
+
   /**
    * Links a Wikidata QID to an existing OSM element directly via OSM API 0.6.
    * Creates an assisted changeset, updates the element with wikidata=Q..., and closes the changeset.
    */
-  async linkOsmElement(osmRef, qid, extraTags = {}, customComment = "") {
+  async linkOsmElement(osmRef, qid, extraTags = {}, customComment = "", featureName = "", countryCode = "") {
     const token = localStorage.getItem("osm_access_token");
     if (!token) {
       throw new Error("NOT_AUTHENTICATED");
@@ -266,8 +413,13 @@ const OsmAuth = {
       }
     }
 
-    // 3. Open a Changeset
-    const defaultComment = `Add wikidata=${cleanQid} to ${ref.type}/${ref.id} #osm-wikidata-gcc`;
+    // 3. Open a Changeset with Improved Comment & Tags
+    const defaultComment = this.generateChangesetComment({
+      qid: cleanQid,
+      osmRef: `${ref.type}/${ref.id}`,
+      name: featureName
+    }, countryCode);
+
     const comment = (customComment || defaultComment).trim();
 
     const changesetXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -277,6 +429,8 @@ const OsmAuth = {
     <tag k="comment" v="${this._escapeXml(comment)}"/>
     <tag k="source" v="Wikidata; OpenStreetMap"/>
     <tag k="wikidata" v="${this._escapeXml(cleanQid)}"/>
+    <tag k="conflation" v="assisted_wikidata"/>
+    <tag k="hashtags" v="#osm-wikidata-gcc"/>
   </changeset>
 </osm>`;
 
@@ -338,6 +492,29 @@ ${serializer.serializeToString(elemNode)}
       }
     }
 
+    const changesetUrl = this.getChangesetUrl(changesetId);
+
+    // Save record to persistent history
+    this.saveChangesetRecord({
+      changesetId: changesetId,
+      changesetUrl: changesetUrl,
+      timestamp: Date.now(),
+      user: this.getUserName() || "OSM User",
+      isBatch: false,
+      itemCount: 1,
+      comment: comment,
+      country: countryCode || "gcc",
+      items: [
+        {
+          name: featureName || `${ref.type}/${ref.id}`,
+          qid: cleanQid,
+          osmRef: `${ref.type}/${ref.id}`,
+          version: newVersion,
+          status: "success"
+        }
+      ]
+    });
+
     return {
       success: true,
       changesetId: changesetId,
@@ -345,7 +522,267 @@ ${serializer.serializeToString(elemNode)}
       type: ref.type,
       id: ref.id,
       url: `https://www.openstreetmap.org/${ref.type}/${ref.id}`,
-      changesetUrl: this.getChangesetUrl(changesetId)
+      changesetUrl: changesetUrl
+    };
+  },
+
+  /**
+   * Links MULTIPLE items within a SINGLE OSM Changeset.
+   * Fully conformant with OSM API 0.6 and community batch guidelines.
+   *
+   * @param {Array} itemsList - Array of { osmRef, qid, nameAr, nameEn, extraTags, country }
+   * @param {string} customComment - User provided or edited changeset comment
+   * @param {string} countryCode - Active country code
+   * @param {Function} onProgress - Callback for real-time progress ({ current, total, item, message })
+   */
+  async linkOsmElementsBatch(itemsList, customComment = "", countryCode = "", onProgress = null) {
+    const token = localStorage.getItem("osm_access_token");
+    if (!token) {
+      throw new Error("NOT_AUTHENTICATED");
+    }
+
+    if (!itemsList || itemsList.length === 0) {
+      throw new Error("No items provided for batch linking.");
+    }
+
+    const urls = this.getUrls();
+
+    // 1. Generate comprehensive changeset comment
+    const defaultComment = this.generateChangesetComment(itemsList, countryCode);
+    const comment = (customComment || defaultComment).trim();
+
+    // Collect unique QIDs for changeset tags (up to 20 for tag length safety)
+    const uniqueQids = Array.from(new Set(itemsList.map(i => (i.qid.startsWith("Q") ? i.qid : `Q${i.qid}`)))).slice(0, 20).join(", ");
+
+    // 2. Open ONE Changeset for all items
+    const changesetXml = `<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="OSM x Wikidata GCC Linker">
+  <changeset>
+    <tag k="created_by" v="OSM x Wikidata GCC Linker (https://abdullah201x.github.io/osm-x-wikidata)"/>
+    <tag k="comment" v="${this._escapeXml(comment)}"/>
+    <tag k="source" v="Wikidata; OpenStreetMap"/>
+    <tag k="wikidata" v="${this._escapeXml(uniqueQids)}"/>
+    <tag k="conflation" v="assisted_wikidata"/>
+    <tag k="hashtags" v="#osm-wikidata-gcc"/>
+  </changeset>
+</osm>`;
+
+    if (onProgress) {
+      onProgress({ current: 0, total: itemsList.length, status: "opening_changeset", message: "Opening OSM Changeset..." });
+    }
+
+    const csRes = await fetch(`${urls.apiBase}/api/0.6/changeset/create`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/xml; charset=utf-8"
+      },
+      body: changesetXml
+    });
+
+    if (!csRes.ok) {
+      const errText = await csRes.text();
+      if (csRes.status === 401 || csRes.status === 403) {
+        throw new Error("AUTH_EXPIRED");
+      }
+      throw new Error(`Failed to open changeset (HTTP ${csRes.status}): ${errText}`);
+    }
+
+    const changesetId = (await csRes.text()).trim();
+    const changesetUrl = this.getChangesetUrl(changesetId);
+
+    const results = [];
+    const serializer = new XMLSerializer();
+    const parser = new DOMParser();
+
+    try {
+      // 3. Sequentially update each item in the SAME changeset
+      for (let i = 0; i < itemsList.length; i++) {
+        const item = itemsList[i];
+        const ref = this.parseOsmRef(item.osmRef);
+        const cleanQid = item.qid.startsWith("Q") ? item.qid : `Q${item.qid}`;
+        const displayName = item.nameAr || item.nameEn || item.name || item.displayName || cleanQid;
+
+        if (onProgress) {
+          onProgress({
+            current: i + 1,
+            total: itemsList.length,
+            item: item,
+            status: "updating_item",
+            message: `Updating ${i + 1}/${itemsList.length}: ${displayName} (${item.osmRef})...`
+          });
+        }
+
+        if (!ref) {
+          results.push({
+            item,
+            success: false,
+            error: `Invalid OSM ref: ${item.osmRef}`
+          });
+          continue;
+        }
+
+        try {
+          // Fetch element XML
+          const elemUrl = `${urls.apiBase}/api/0.6/${ref.type}/${ref.id}`;
+          const elemRes = await fetch(elemUrl);
+          if (!elemRes.ok) {
+            throw new Error(`HTTP ${elemRes.status}`);
+          }
+
+          const elemXmlText = await elemRes.text();
+          const xmlDoc = parser.parseFromString(elemXmlText, "application/xml");
+          const elemNode = xmlDoc.querySelector(`${ref.type}`);
+          if (!elemNode) {
+            throw new Error(`Failed to parse XML for ${ref.type}/${ref.id}`);
+          }
+
+          // Check if already has matching wikidata
+          let existingWdTag = elemNode.querySelector('tag[k="wikidata"]');
+          if (existingWdTag && existingWdTag.getAttribute("v") === cleanQid) {
+            results.push({
+              item,
+              success: true,
+              alreadyLinked: true,
+              version: elemNode.getAttribute("version"),
+              osmRef: item.osmRef,
+              qid: cleanQid,
+              name: displayName
+            });
+            continue;
+          }
+
+          if (existingWdTag) {
+            existingWdTag.setAttribute("v", cleanQid);
+          } else {
+            const newTag = xmlDoc.createElement("tag");
+            newTag.setAttribute("k", "wikidata");
+            newTag.setAttribute("v", cleanQid);
+            elemNode.appendChild(newTag);
+          }
+
+          // Add wikipedia tag if provided
+          if (item.extraTags && item.extraTags.wikipedia) {
+            let existingWikiTag = elemNode.querySelector('tag[k="wikipedia"]');
+            if (!existingWikiTag) {
+              const newWiki = xmlDoc.createElement("tag");
+              newWiki.setAttribute("k", "wikipedia");
+              newWiki.setAttribute("v", item.extraTags.wikipedia);
+              elemNode.appendChild(newWiki);
+            }
+          }
+
+          // Set element to this changeset ID
+          elemNode.setAttribute("changeset", changesetId);
+
+          const updatedXml = `<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="OSM x Wikidata GCC Linker">
+${serializer.serializeToString(elemNode)}
+</osm>`;
+
+          const updateRes = await fetch(`${urls.apiBase}/api/0.6/${ref.type}/${ref.id}`, {
+            method: "PUT",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/xml; charset=utf-8"
+            },
+            body: updatedXml
+          });
+
+          if (!updateRes.ok) {
+            const errText = await updateRes.text();
+            throw new Error(`HTTP ${updateRes.status}: ${errText}`);
+          }
+
+          const newVersion = (await updateRes.text()).trim();
+
+          // Mark verified locally
+          LiveVerifier.markVerifiedLocally(cleanQid, item.osmRef, displayName);
+
+          results.push({
+            item,
+            success: true,
+            version: newVersion,
+            osmRef: item.osmRef,
+            qid: cleanQid,
+            name: displayName
+          });
+
+          // Polite pause between requests (120ms)
+          if (i < itemsList.length - 1) {
+            await new Promise(r => setTimeout(r, 120));
+          }
+        } catch (itemErr) {
+          console.error(`Error updating item ${item.osmRef}:`, itemErr);
+          results.push({
+            item,
+            success: false,
+            osmRef: item.osmRef,
+            qid: cleanQid,
+            name: displayName,
+            error: itemErr.message
+          });
+        }
+      }
+    } finally {
+      // 4. Always close the changeset cleanly
+      if (onProgress) {
+        onProgress({
+          current: itemsList.length,
+          total: itemsList.length,
+          status: "closing_changeset",
+          message: "Closing OSM Changeset..."
+        });
+      }
+
+      try {
+        await fetch(`${urls.apiBase}/api/0.6/changeset/${changesetId}/close`, {
+          method: "PUT",
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+      } catch (closeErr) {
+        console.warn("Failed to close changeset cleanly:", closeErr);
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
+
+    // 5. Save to Persistent History
+    const historyRecord = {
+      changesetId: changesetId,
+      changesetUrl: changesetUrl,
+      timestamp: Date.now(),
+      user: this.getUserName() || "OSM User",
+      isBatch: true,
+      itemCount: itemsList.length,
+      successCount: successCount,
+      failCount: failCount,
+      comment: comment,
+      country: countryCode || "gcc",
+      items: results.map(r => ({
+        name: r.name || r.item?.nameAr || r.item?.nameEn || r.item?.qid,
+        qid: r.qid || r.item?.qid,
+        osmRef: r.osmRef || r.item?.osmRef,
+        version: r.version || null,
+        status: r.success ? (r.alreadyLinked ? "already_linked" : "success") : "error",
+        error: r.error || null,
+        lat: r.item?.lat,
+        lon: r.item?.lon
+      }))
+    };
+
+    this.saveChangesetRecord(historyRecord);
+
+    return {
+      success: true,
+      changesetId: changesetId,
+      changesetUrl: changesetUrl,
+      results: results,
+      total: itemsList.length,
+      successCount: successCount,
+      failCount: failCount,
+      comment: comment
     };
   },
 
@@ -371,3 +808,8 @@ ${serializer.serializeToString(elemNode)}
     return await res.json();
   }
 };
+
+if (typeof window !== "undefined") {
+  window.OsmAuth = OsmAuth;
+}
+
