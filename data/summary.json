@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-09-30 23:32:26",
-  "pbf_file": "gcc-states-260929-internal.osm.pbf",
+  "updated_at": "2026-10-03 18:01:52",
+  "pbf_file": "gcc-states-261002-internal.osm.pbf",
   "total_items": 93144,
-  "total_missing": 82628,
-  "total_candidates": 7411,
-  "total_linked": 3105,
+  "total_missing": 82624,
+  "total_candidates": 7406,
+  "total_linked": 3114,
   "countries": {
     "KW": {
       "name_en": "Kuwait",
@@ -60,9 +60,9 @@
       "file": "sa.json",
       "counts": {
         "total": 82961,
-        "missing": 76349,
-        "candidates": 5657,
-        "linked": 955,
+        "missing": 76345,
+        "candidates": 5652,
+        "linked": 964,
         "filtered_non_physical": 4261
       }
     },
