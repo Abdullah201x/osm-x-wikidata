@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-10-03 18:01:52",
-  "pbf_file": "gcc-states-261002-internal.osm.pbf",
-  "total_items": 93144,
-  "total_missing": 82624,
-  "total_candidates": 7406,
-  "total_linked": 3114,
+  "updated_at": "2026-10-04 09:44:01",
+  "pbf_file": "gcc-states-261003-internal.osm.pbf",
+  "total_items": 93118,
+  "total_missing": 82274,
+  "total_candidates": 7401,
+  "total_linked": 3443,
   "countries": {
     "KW": {
       "name_en": "Kuwait",
@@ -12,9 +12,9 @@
       "file": "kw.json",
       "counts": {
         "total": 382,
-        "missing": 203,
+        "missing": 191,
         "candidates": 107,
-        "linked": 72,
+        "linked": 84,
         "filtered_non_physical": 206
       }
     },
@@ -23,11 +23,11 @@
       "name_ar": "قطر",
       "file": "qa.json",
       "counts": {
-        "total": 2096,
-        "missing": 1763,
-        "candidates": 191,
-        "linked": 142,
-        "filtered_non_physical": 948
+        "total": 2095,
+        "missing": 1709,
+        "candidates": 216,
+        "linked": 170,
+        "filtered_non_physical": 949
       }
     },
     "AE": {
@@ -35,11 +35,11 @@
       "name_ar": "الإمارات العربية المتحدة",
       "file": "ae.json",
       "counts": {
-        "total": 4385,
-        "missing": 2377,
-        "candidates": 902,
-        "linked": 1106,
-        "filtered_non_physical": 178
+        "total": 4370,
+        "missing": 2275,
+        "candidates": 927,
+        "linked": 1168,
+        "filtered_non_physical": 193
       }
     },
     "OM": {
@@ -48,9 +48,9 @@
       "file": "om.json",
       "counts": {
         "total": 2775,
-        "missing": 1646,
-        "candidates": 418,
-        "linked": 711,
+        "missing": 1608,
+        "candidates": 425,
+        "linked": 742,
         "filtered_non_physical": 627
       }
     },
@@ -59,11 +59,11 @@
       "name_ar": "المملكة العربية السعودية",
       "file": "sa.json",
       "counts": {
-        "total": 82961,
-        "missing": 76345,
-        "candidates": 5652,
-        "linked": 964,
-        "filtered_non_physical": 4261
+        "total": 82956,
+        "missing": 76223,
+        "candidates": 5579,
+        "linked": 1154,
+        "filtered_non_physical": 4266
       }
     },
     "BH": {
@@ -71,13 +71,13 @@
       "name_ar": "البحرين",
       "file": "bh.json",
       "counts": {
-        "total": 545,
-        "missing": 290,
-        "candidates": 136,
-        "linked": 119,
-        "filtered_non_physical": 41
+        "total": 540,
+        "missing": 268,
+        "candidates": 147,
+        "linked": 125,
+        "filtered_non_physical": 46
       }
     }
   },
-  "total_filtered_non_physical": 6261
+  "total_filtered_non_physical": 6287
 }
