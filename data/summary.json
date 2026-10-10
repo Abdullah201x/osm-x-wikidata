@@ -1,9 +1,9 @@
 {
-  "updated_at": "2026-10-08 09:23:18",
-  "pbf_file": "gcc-states-261006-internal.osm.pbf",
+  "updated_at": "2026-10-10 13:04:36",
+  "pbf_file": "gcc-states-261009-internal.osm.pbf",
   "total_items": 93118,
-  "total_missing": 82219,
-  "total_candidates": 7378,
+  "total_missing": 82218,
+  "total_candidates": 7379,
   "total_linked": 3521,
   "countries": {
     "KW": {
@@ -60,8 +60,8 @@
       "file": "sa.json",
       "counts": {
         "total": 82956,
-        "missing": 76166,
-        "candidates": 5620,
+        "missing": 76164,
+        "candidates": 5622,
         "linked": 1170,
         "filtered_non_physical": 4266
       }
@@ -72,8 +72,8 @@
       "file": "bh.json",
       "counts": {
         "total": 540,
-        "missing": 270,
-        "candidates": 88,
+        "missing": 271,
+        "candidates": 87,
         "linked": 182,
         "filtered_non_physical": 46
       }
