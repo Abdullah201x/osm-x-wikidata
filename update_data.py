@@ -60,7 +60,7 @@ def main():
     print("==================================================")
     start_time = time.time()
 
-    pbf_file = args.pbf or find_pbf(BASE_DIR)
+    pbf_file = args.pbf or os.environ.get("OSM_PBF") or find_pbf(BASE_DIR)
     if not pbf_file or not os.path.exists(pbf_file):
         print(f"[ERROR] No .osm.pbf file found. Looked in 'update osm' and '{BASE_DIR}'.")
         sys.exit(1)
