@@ -53,6 +53,18 @@
           <span id="osm-user-badge" style="display: none;"></span>
           <button id="btn-osm-login" class="osm-btn" data-i18n="loginOsm">تسجيل الدخول بـ OSM</button>
         </div>
+
+        <!-- Direction Mode Switcher -->
+        <div class="mode-switcher-wrap">
+          <button id="btn-mode-forward" class="mode-btn active" data-mode="forward" title="ويكي بيانات ← OSM (الوضع الافتراضي)">
+            <span class="mode-icon">➡️</span>
+            <span data-i18n="modeForward">Wikidata → OSM</span>
+          </button>
+          <button id="btn-mode-reverse" class="mode-btn" data-mode="reverse" title="تدقيق معالم OSM الموسومة بـ wikidata=* وربطها بويكي بيانات">
+            <span class="mode-icon">🔄</span>
+            <span data-i18n="modeReverse">OSM → Wikidata (Reverse QA)</span>
+          </button>
+        </div>
       </header>
 
       <div class="sidebar-body">
@@ -88,95 +100,133 @@
             <div class="stat-card">
               <span class="stat-val" id="stat-total-val">0</span>
               <span class="stat-sub-inview" id="stat-total-inview"></span>
-              <span class="stat-lbl" data-i18n="statTotal">إجمالي العناصر</span>
+              <span class="stat-lbl" id="stat-total-lbl" data-i18n="statTotal">إجمالي العناصر</span>
             </div>
             <div class="stat-card">
               <span class="stat-val missing" id="stat-missing-val">0</span>
               <span class="stat-sub-inview" id="stat-missing-inview"></span>
-              <span class="stat-lbl" data-i18n="statMissing">مفقود في OSM</span>
+              <span class="stat-lbl" id="stat-missing-lbl" data-i18n="statMissing">مفقود في OSM</span>
             </div>
             <div class="stat-card">
               <span class="stat-val candidates" id="stat-candidates-val">0</span>
               <span class="stat-sub-inview" id="stat-candidates-inview"></span>
-              <span class="stat-lbl" data-i18n="statCandidates">مرشح للربط</span>
+              <span class="stat-lbl" id="stat-candidates-lbl" data-i18n="statCandidates">مرشح للربط</span>
             </div>
             <div class="stat-card">
               <span class="stat-val linked" id="stat-linked-val">0</span>
               <span class="stat-sub-inview" id="stat-linked-inview"></span>
-              <span class="stat-lbl" data-i18n="statLinked">مرتبط مسبقاً</span>
+              <span class="stat-lbl" id="stat-linked-lbl" data-i18n="statLinked">مرتبط مسبقاً</span>
             </div>
           </div>
         </div>
 
-        <!-- Status Filter Buttons -->
-        <div class="control-group">
-          <label class="section-label" data-i18n="filterStatus">حالة الربط</label>
-          <div class="status-pill-group">
-            <button class="status-filter-btn active" data-status="all" data-i18n="statusAll">الكل</button>
-            <button class="status-filter-btn" data-status="0">🔴 مفقود</button>
-            <button class="status-filter-btn" data-status="1">🟡 مرشح</button>
-            <button class="status-filter-btn" data-status="2">🟢 مرتبط</button>
+        <!-- Forward Linker Controls (Visible in Forward Mode) -->
+        <div id="forward-controls-panel">
+          <!-- Status Filter Buttons -->
+          <div class="control-group">
+            <label class="section-label" data-i18n="filterStatus">حالة الربط</label>
+            <div class="status-pill-group">
+              <button class="status-filter-btn active" data-status="all" data-i18n="statusAll">الكل</button>
+              <button class="status-filter-btn" data-status="0">🔴 مفقود</button>
+              <button class="status-filter-btn" data-status="1">🟡 مرشح</button>
+              <button class="status-filter-btn" data-status="2">🟢 مرتبط</button>
+            </div>
+          </div>
+
+          <!-- Quick Quality Filter Chips -->
+          <div class="control-group">
+            <div class="filter-chips-container">
+              <button id="chip-wiki" class="filter-chip" data-filter="wiki" data-i18n="chipHasWiki">📖 مقال ويكيبيديا</button>
+              <button id="chip-photo" class="filter-chip" data-filter="photo" data-i18n="chipHasPhoto">📷 صورة كومنز</button>
+              <button id="chip-demolished" class="filter-chip active" data-filter="demolished" data-i18n="chipHideDemolished">🚫 إخفاء المهدم</button>
+              <button id="chip-mosques" class="filter-chip" data-filter="mosques" data-i18n="chipHideMosques">🕌 إخفاء المساجد</button>
+              <button id="chip-hide-linked" class="filter-chip" data-filter="linked" data-i18n="chipHideLinked">🟢 إخفاء المرتبط</button>
+            </div>
+          </div>
+
+          <!-- Category Filter Checkboxes -->
+          <div class="control-group">
+            <div class="section-title-row">
+              <label class="section-label" data-i18n="filterCategory">التصنيفات</label>
+              <span style="font-size: 0.72rem; color: var(--color-text-muted);">
+                (<span id="visible-count">0</span> معروض)
+              </span>
+            </div>
+            <div class="category-grid">
+              <label class="cat-item">
+                <input type="checkbox" class="cat-checkbox" data-cat="1" checked />
+                <span>🏙️ المدن والتجمعات</span>
+              </label>
+              <label class="cat-item">
+                <input type="checkbox" class="cat-checkbox" data-cat="2" checked />
+                <span>🏛️ التراث والتاريخ</span>
+              </label>
+              <label class="cat-item">
+                <input type="checkbox" class="cat-checkbox" data-cat="3" checked />
+                <span>⛰️ المعالم الطبيعية</span>
+              </label>
+              <label class="cat-item">
+                <input type="checkbox" class="cat-checkbox" data-cat="4" checked />
+                <span>🏥 التعليم والصحة</span>
+              </label>
+              <label class="cat-item">
+                <input type="checkbox" class="cat-checkbox" data-cat="5" checked />
+                <span>🏨 السياحة والتجارة</span>
+              </label>
+              <label class="cat-item">
+                <input type="checkbox" class="cat-checkbox" data-cat="6" checked />
+                <span>🕌 المساجد والعبادة</span>
+              </label>
+            </div>
           </div>
         </div>
 
-        <!-- Quick Quality Filter Chips -->
-        <div class="control-group">
-          <div class="filter-chips-container">
-            <button id="chip-wiki" class="filter-chip" data-filter="wiki" data-i18n="chipHasWiki">📖 مقال ويكيبيديا</button>
-            <button id="chip-photo" class="filter-chip" data-filter="photo" data-i18n="chipHasPhoto">📷 صورة كومنز</button>
-            <button id="chip-demolished" class="filter-chip active" data-filter="demolished" data-i18n="chipHideDemolished">🚫 إخفاء المهدم</button>
-            <button id="chip-mosques" class="filter-chip" data-filter="mosques" data-i18n="chipHideMosques">🕌 إخفاء المساجد</button>
-            <button id="chip-hide-linked" class="filter-chip" data-filter="linked" data-i18n="chipHideLinked">🟢 إخفاء المرتبط</button>
+        <!-- Reverse QA Controls (Visible in Reverse Mode) -->
+        <div id="reverse-controls-panel" style="display: none;">
+          <!-- Reverse Kind Filter Pills -->
+          <div class="control-group">
+            <label class="section-label" data-i18n="reverseFilterKind">نوع التدقيق العكسي</label>
+            <div class="status-pill-group reverse-kind-pill-group">
+              <button class="reverse-filter-btn active" data-kind="all" data-i18n="kindAll">الكل</button>
+              <button class="reverse-filter-btn" data-kind="missing_backlink" data-i18n="kindMissingBacklink">🟢 روابط خلفية</button>
+              <button class="reverse-filter-btn" data-kind="broken_osm_tag" data-i18n="kindBrokenTag">🔴 وسوم تالفة</button>
+              <button class="reverse-filter-btn" data-kind="conflict" data-i18n="kindConflict">⚠️ تعارضات</button>
+              <button class="reverse-filter-btn" data-kind="review_gap" data-i18n="kindReviewGap">ℹ️ فجوات</button>
+            </div>
           </div>
-        </div>
 
-        <!-- Category Filter Checkboxes -->
-        <div class="control-group">
-          <div class="section-title-row">
-            <label class="section-label" data-i18n="filterCategory">التصنيفات</label>
-            <span style="font-size: 0.72rem; color: var(--color-text-muted);">
-              (<span id="visible-count">0</span> معروض)
-            </span>
+          <!-- Reverse Confidence Chips -->
+          <div class="control-group">
+            <label class="section-label" data-i18n="reverseConfidence">مستوى الدقة والثقة</label>
+            <div class="filter-chips-container">
+              <button id="chip-rev-high" class="filter-chip active" data-conf="high" data-i18n="confHigh">⭐ دقة عالية (≥ 85%)</button>
+              <button id="chip-rev-med" class="filter-chip active" data-conf="medium" data-i18n="confMedium">دقة متوسطة</button>
+              <button id="chip-rev-low" class="filter-chip" data-conf="low" data-i18n="confLow">دقة منخفضة</button>
+            </div>
           </div>
-          <div class="category-grid">
-            <label class="cat-item">
-              <input type="checkbox" class="cat-checkbox" data-cat="1" checked />
-              <span>🏙️ المدن والتجمعات</span>
-            </label>
-            <label class="cat-item">
-              <input type="checkbox" class="cat-checkbox" data-cat="2" checked />
-              <span>🏛️ التراث والتاريخ</span>
-            </label>
-            <label class="cat-item">
-              <input type="checkbox" class="cat-checkbox" data-cat="3" checked />
-              <span>⛰️ المعالم الطبيعية</span>
-            </label>
-            <label class="cat-item">
-              <input type="checkbox" class="cat-checkbox" data-cat="4" checked />
-              <span>🏥 التعليم والصحة</span>
-            </label>
-            <label class="cat-item">
-              <input type="checkbox" class="cat-checkbox" data-cat="5" checked />
-              <span>🏨 السياحة والتجارة</span>
-            </label>
-            <label class="cat-item">
-              <input type="checkbox" class="cat-checkbox" data-cat="6" checked />
-              <span>🕌 المساجد والعبادة</span>
-            </label>
+
+          <!-- Quick Action: Export Filtered Backlinks to QuickStatements -->
+          <div class="control-group">
+            <button id="btn-export-qs-batch" class="btn btn-export-qs-batch" title="تصدير جميع الروابط الخلفية عالية الدقة لـ QuickStatements بنقرة واحدة">
+              <span data-i18n="btnExportQsBatch">⚡ تصدير الروابط عالية الدقة لـ QuickStatements</span>
+            </button>
           </div>
         </div>
 
         <!-- Export Center -->
         <div class="control-group" style="margin-top: auto; padding-top: 10px; border-top: 1px solid var(--panel-border);">
-          <div style="display: flex; gap: 6px;">
-            <button id="btn-export-mr" class="btn" style="flex: 1; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;" title="MapRoulette GeoJSON">
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button id="btn-export-mr" class="btn" style="flex: 1; min-width: 80px; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;" title="MapRoulette GeoJSON">
               🎯 MapRoulette
             </button>
-            <button id="btn-export-josm-presets" class="btn" style="flex: 1; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;" title="تصدير قوالب ووسوم JOSM الرسمية بصيغة XML">
+            <button id="btn-export-josm-presets" class="btn" style="flex: 1; min-width: 80px; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;" title="تصدير قوالب ووسوم JOSM الرسمية بصيغة XML">
               📥 JOSM XML
             </button>
-            <button id="btn-export-csv" class="btn" style="flex: 1; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;" title="CSV Spreadsheet">
+            <button id="btn-export-csv" class="btn" style="flex: 1; min-width: 60px; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;" title="CSV Spreadsheet">
               📊 CSV
+            </button>
+            <button id="btn-export-qs" class="btn" style="flex: 1; min-width: 80px; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;" title="QuickStatements v2 Export">
+              ⚡ QS v2
             </button>
           </div>
         <!-- Maintainer & Community Contact Footer -->

@@ -200,6 +200,67 @@ const MapController = {
     clusterGroup.addLayers(markers);
   },
 
+  REVERSE_COLORS: {
+    missing_backlink_high: "#00ff87",
+    missing_backlink: "#ffb703",
+    broken_osm_tag: "#ff3366",
+    conflict: "#fb8500",
+    review_gap: "#3a86ff"
+  },
+
+  renderReverseItems(items, onSelectCallback) {
+    clusterGroup.clearLayers();
+    this.clearCandidatesFromMap();
+    activeMarker = null;
+
+    const markers = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const osm = item.osm || {};
+      const wd = item.wikidata || {};
+      const lat = osm.lat || wd.lat;
+      const lon = osm.lon || wd.lon;
+
+      if (!lat || !lon || (lat === 0.0 && lon === 0.0)) {
+        continue;
+      }
+
+      let colorKey = item.kind;
+      if (item.kind === "missing_backlink" && item.subkind === "high_confidence") {
+        colorKey = "missing_backlink_high";
+      }
+      const color = this.REVERSE_COLORS[colorKey] || "#00f2fe";
+      const name = osm.name || osm.name_ar || wd.name_ar || wd.name_en || item.qid;
+
+      const icon = L.divIcon({
+        className: `poi-marker reverse-marker kind-${item.kind}`,
+        html: `<div class="marker-dot" style="background-color: ${color}; border-color: rgba(255,255,255,0.85); box-shadow: 0 0 8px ${color};"></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+      });
+
+      const marker = L.marker([lat, lon], { icon: icon });
+      marker.itemData = item;
+
+      marker.on("click", () => {
+        if (onSelectCallback) {
+          onSelectCallback(item, marker);
+        }
+      });
+
+      marker.bindTooltip(escapeHtml(name), {
+        direction: "top",
+        offset: [0, -8],
+        className: "marker-tooltip"
+      });
+
+      markers.push(marker);
+    }
+
+    clusterGroup.addLayers(markers);
+  },
+
   flyTo(lat, lon, zoom = 16) {
     map.flyTo([lat, lon], zoom, { duration: 1.2 });
   },

@@ -26,9 +26,17 @@ let filterHideLinked = false;
 let viewportStatsEnabled = false;
 let viewportTimer = null;
 
+// Reverse QA Mode state: "forward" (Wikidata -> OSM) or "reverse" (OSM -> Wikidata)
+let currentMode = "forward";
+let loadedReverseDataset = null;
+let filteredReverseItems = [];
+let activeReverseKind = "all";
+let activeReverseConfidence = new Set(["high", "medium"]);
+
 // Top-level `let` bindings are not window properties; expose live getters for the other modules
 Object.defineProperty(window, "currentLang", { get: () => currentLang });
 Object.defineProperty(window, "currentCountry", { get: () => currentCountry });
+Object.defineProperty(window, "currentMode", { get: () => currentMode });
 
 document.addEventListener("DOMContentLoaded", async () => {
   // Initialize UI language
@@ -44,11 +52,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Load summary statistics
   await loadSummary();
 
-  // Parse URL hash if present (e.g. #country=ae&qid=Q12345)
+  // Parse URL hash if present (e.g. #mode=reverse&country=bh&qid=Q12345)
   parseUrlHash();
 
-  // Load initial country
-  await loadCountry(currentCountry);
+  if (currentMode === "reverse") {
+    await switchMode("reverse");
+  } else {
+    // Load initial country
+    await loadCountry(currentCountry);
+  }
 
   // Wire UI event listeners & keyboard shortcuts
   setupEventListeners();
@@ -110,6 +122,11 @@ async function loadCountry(code) {
   localStorage.setItem("osm_wd_country", currentCountry);
   updateUrlHash();
 
+  if (currentMode === "reverse") {
+    await loadReverseData(currentCountry);
+    return;
+  }
+
   const loadingEl = document.getElementById("loading-indicator");
   if (loadingEl) loadingEl.style.display = "flex";
 
@@ -137,6 +154,377 @@ async function loadCountry(code) {
     alert(`Failed to load dataset for ${code.toUpperCase()}. Please check data/${code}.json.`);
   } finally {
     if (loadingEl) loadingEl.style.display = "none";
+  }
+}
+
+async function loadReverseData(country) {
+  currentCountry = country.toLowerCase();
+  const loadingEl = document.getElementById("loading-indicator");
+  if (loadingEl) loadingEl.style.display = "flex";
+
+  try {
+    const vParam = summaryData?.updated_at ? `?v=${encodeURIComponent(summaryData.updated_at)}` : "";
+    let data = null;
+
+    // 1. Try static JSON first
+    try {
+      const res = await fetch(`data/reverse_${currentCountry}.json${vParam}`);
+      if (res.ok) {
+        data = await res.json();
+      }
+    } catch (e) {
+      console.warn("Could not load static reverse json, falling back to API:", e);
+    }
+
+    // 2. Fallback to API if static JSON not present
+    if (!data) {
+      const apiRes = await fetch(`/api/v1/reverse?cc=${currentCountry}&page_size=200`);
+      if (apiRes.ok) {
+        data = await apiRes.json();
+      }
+    }
+
+    if (!data) {
+      throw new Error(`Reverse dataset for ${currentCountry.toUpperCase()} not found.`);
+    }
+
+    loadedReverseDataset = data;
+    window.loadedReverseDataset = loadedReverseDataset;
+
+    // Update country selector
+    const countrySelect = document.getElementById("country-select");
+    if (countrySelect) countrySelect.value = currentCountry;
+
+    renderReverseSummaryStats();
+    applyReverseFilters();
+  } catch (err) {
+    console.error("Failed to load reverse data:", err);
+    loadedReverseDataset = { country: currentCountry.toUpperCase(), counts: {}, items: [] };
+    renderReverseSummaryStats();
+    applyReverseFilters();
+  } finally {
+    if (loadingEl) loadingEl.style.display = "none";
+  }
+}
+
+function renderReverseSummaryStats() {
+  const counts = loadedReverseDataset?.counts || {};
+  const total = counts.total_tagged || 0;
+  const backlinks = counts.missing_backlink || 0;
+  const broken = counts.broken_osm_tag || 0;
+  const conflicts = counts.conflict || 0;
+
+  const totalEl = document.getElementById("stat-total-val");
+  const missingEl = document.getElementById("stat-missing-val");
+  const candEl = document.getElementById("stat-candidates-val");
+  const linkedEl = document.getElementById("stat-linked-val");
+
+  if (totalEl) totalEl.innerText = total.toLocaleString();
+  if (missingEl) {
+    missingEl.innerText = backlinks.toLocaleString();
+    const inViewEl = document.getElementById("stat-missing-inview");
+    if (inViewEl) {
+      if (counts.missing_backlink_high) {
+        inViewEl.style.display = "inline-block";
+        inViewEl.innerText = `(${counts.missing_backlink_high.toLocaleString()} High)`;
+      } else {
+        inViewEl.style.display = "none";
+      }
+    }
+  }
+  if (candEl) candEl.innerText = broken.toLocaleString();
+  if (linkedEl) linkedEl.innerText = conflicts.toLocaleString();
+}
+
+function applyReverseFilters() {
+  if (!loadedReverseDataset || !loadedReverseDataset.items) {
+    filteredReverseItems = [];
+    return;
+  }
+
+  const query = searchQuery.trim().toLowerCase();
+  filteredReverseItems = [];
+
+  for (const it of loadedReverseDataset.items) {
+    // 1. Kind filter
+    if (activeReverseKind !== "all") {
+      if (it.kind !== activeReverseKind) continue;
+    } else {
+      // In "all", suppress review_gap by default unless explicitly chosen
+      if (it.kind === "review_gap") continue;
+    }
+
+    // 2. Confidence filter for missing_backlink
+    if (it.kind === "missing_backlink") {
+      let tier = "low";
+      if (it.confidence >= 0.85) tier = "high";
+      else if (it.confidence >= 0.60) tier = "medium";
+      if (!activeReverseConfidence.has(tier)) continue;
+    }
+
+    // 3. Search query
+    if (query) {
+      const qid = (it.qid || "").toLowerCase();
+      const osmId = String(it.osm_id || "");
+      const osmName = (it.osm?.name || it.osm?.name_ar || it.osm?.name_en || "").toLowerCase();
+      const wdName = (it.wikidata?.name_ar || it.wikidata?.name_en || "").toLowerCase();
+      const corpus = `${qid} ${osmId} ${osmName} ${wdName}`;
+      if (!corpus.includes(query)) continue;
+    }
+
+    filteredReverseItems.push(it);
+  }
+
+  // Update visible count badge
+  const visibleBadge = document.getElementById("visible-count");
+  if (visibleBadge) {
+    visibleBadge.innerText = filteredReverseItems.length.toLocaleString();
+  }
+
+  // Render on map
+  MapController.renderReverseItems(filteredReverseItems, (item, marker) => {
+    selectReverseItem(item, marker);
+  });
+}
+
+function selectReverseItem(item, marker = null, skipFly = false) {
+  selectedItem = item;
+  window.selectedItem = selectedItem;
+  selectedItemIndex = filteredReverseItems.indexOf(item);
+
+  const osm = item.osm || {};
+  const wd = item.wikidata || {};
+  const lat = osm.lat || wd.lat;
+  const lon = osm.lon || wd.lon;
+  const qid = item.qid;
+  const osmType = item.osm_type;
+  const osmId = item.osm_id;
+  const osmRef = `${osmType}${osmId}`;
+
+  if (!skipFly && lat && lon && (lat !== 0 || lon !== 0)) {
+    MapController.flyTo(lat, lon, 17);
+  }
+
+  const panel = document.getElementById("inspector-content");
+  if (!panel) return;
+
+  const t = TRANSLATIONS[currentLang];
+
+  // Kind badge
+  let kindBadgeClass = "badge-kind-backlink";
+  let kindLabel = t.kindMissingBacklink;
+  if (item.kind === "broken_osm_tag") {
+    kindBadgeClass = "badge-kind-broken";
+    kindLabel = t.kindBrokenTag;
+  } else if (item.kind === "conflict") {
+    kindBadgeClass = "badge-kind-conflict";
+    kindLabel = t.kindConflict;
+  } else if (item.kind === "review_gap") {
+    kindBadgeClass = "badge-kind-review";
+    kindLabel = t.kindReviewGap;
+  }
+
+  // Reasons HTML list
+  const reasonsListHtml = (item.reasons || []).map(r => `<li>✓ ${escapeHtml(r)}</li>`).join("");
+
+  // Suggested Action Box
+  let actionHtml = "";
+  if (item.suggested_fix) {
+    const fix = item.suggested_fix;
+    if (fix.target === "wikidata" && fix.action === "add_claim") {
+      actionHtml = `
+        <div class="reverse-action-card">
+          <div class="reverse-action-header">⚡ ${t.labelSuggestedFix} ${t.actionAddClaim}</div>
+          <div style="font-size: 0.76rem; margin-bottom: 8px;">
+            <code>${escapeHtml(qid)} ➔ ${escapeHtml(fix.property)} = "${escapeHtml(fix.value)}"</code>
+          </div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button id="btn-copy-qs-line" class="btn" style="flex: 1; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;">
+              📋 ${t.btnQuickStatements}
+            </button>
+            <button id="btn-live-verify" class="btn btn-primary" style="flex: 1; font-size: 0.72rem;">
+              🔍 ${t.btnLiveVerify} (V)
+            </button>
+          </div>
+        </div>
+      `;
+    } else if (fix.target === "osm") {
+      let desc = t.actionReplaceTag;
+      if (fix.action === "migrate_tag") {
+        desc = `${t.actionMigrateTag}: <code>${escapeHtml(fix.from_tag)}</code> ➔ <code>${escapeHtml(fix.to_tag)}=${escapeHtml(fix.value)}</code>`;
+      } else if (fix.action === "remove_tag") {
+        desc = `${t.actionRemoveTag}: <code>${escapeHtml(fix.tag)}</code>`;
+      }
+      actionHtml = `
+        <div class="reverse-action-card" style="border-color: rgba(255, 51, 102, 0.4); background: rgba(255, 51, 102, 0.08);">
+          <div class="reverse-action-header" style="color: #ff3366;">🛠️ ${t.labelSuggestedFix}</div>
+          <div style="font-size: 0.76rem; margin-bottom: 8px;">${desc}</div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button id="btn-reverse-josm" class="btn" style="flex: 1; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;">
+              🗺️ فتح في JOSM (J)
+            </button>
+            <button id="btn-reverse-id" class="btn" style="flex: 1; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;">
+              ✏️ محرر iD (I)
+            </button>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  const fullOsmType = { n: "node", w: "way", r: "relation" }[osmType] || osmType;
+  const osmUrl = `https://www.openstreetmap.org/${fullOsmType}/${osmId}`;
+  const wdUrl = `https://www.wikidata.org/wiki/${qid}`;
+
+  panel.innerHTML = `
+    <div class="inspector-header">
+      <div class="inspector-title-group">
+        <h3>${escapeHtml(osm.name || osm.name_ar || wd.name_ar || wd.name_en || qid)}</h3>
+        <div class="inspector-subtitle"><code>${escapeHtml(osmRef)}</code> ↔ <code>${escapeHtml(qid)}</code></div>
+      </div>
+      <div class="status-badge-container">
+        <span class="badge ${kindBadgeClass}">${escapeHtml(kindLabel)}</span>
+      </div>
+    </div>
+
+    <!-- Side by Side Details -->
+    <div class="reverse-card-grid">
+      <div class="reverse-elem-box">
+        <h5>🗺️ ${t.labelOsmElement}</h5>
+        <table class="meta-table">
+          <tr><td>النوع:</td><td><a href="${osmUrl}" target="_blank" rel="noopener" class="qid-link"><code>${escapeHtml(fullOsmType)}/${osmId}</code> ↗</a></td></tr>
+          ${osm.name ? `<tr><td>الاسم:</td><td><strong>${escapeHtml(osm.name)}</strong></td></tr>` : ""}
+          ${osm.name_ar && osm.name_ar !== osm.name ? `<tr><td>عربي:</td><td>${escapeHtml(osm.name_ar)}</td></tr>` : ""}
+          ${osm.main_key ? `<tr><td>الوسم:</td><td><code>${escapeHtml(osm.main_key)}=${escapeHtml(osm.main_val)}</code></td></tr>` : ""}
+        </table>
+      </div>
+
+      <div class="reverse-elem-box">
+        <h5>🏛️ ${t.labelWdEntity}</h5>
+        <table class="meta-table">
+          <tr><td>QID:</td><td><a href="${wdUrl}" target="_blank" rel="noopener" class="qid-link"><code>${escapeHtml(qid)}</code> ↗</a></td></tr>
+          ${wd.name_ar ? `<tr><td>عربي:</td><td><strong>${escapeHtml(wd.name_ar)}</strong></td></tr>` : ""}
+          ${wd.name_en ? `<tr><td>إنجليزي:</td><td>${escapeHtml(wd.name_en)}</td></tr>` : ""}
+          ${wd.dist_m !== undefined && wd.dist_m !== null ? `<tr><td>المسافة:</td><td><code>${wd.dist_m}m</code></td></tr>` : ""}
+        </table>
+      </div>
+    </div>
+
+    <!-- Reasons & Matching -->
+    <div class="reverse-reasons-wrap">
+      <h5>📊 ${t.labelReasons} (دقة ${Math.round((item.confidence || 0) * 100)}%)</h5>
+      <ul class="reverse-reasons-list">
+        ${reasonsListHtml || "<li>لا توجد ملاحظات إضافية</li>"}
+      </ul>
+    </div>
+
+    ${actionHtml}
+
+    <!-- External Navigation Links -->
+    <div class="inspector-section" style="margin-top: 10px;">
+      <div style="display: flex; gap: 6px;">
+        <a href="${osmUrl}" target="_blank" rel="noopener" class="btn" style="flex: 1; font-size: 0.72rem; text-align: center; text-decoration: none; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;">
+          🌐 عرض في OSM
+        </a>
+        <a href="${wdUrl}" target="_blank" rel="noopener" class="btn" style="flex: 1; font-size: 0.72rem; text-align: center; text-decoration: none; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;">
+          🏛️ عرض في Wikidata
+        </a>
+      </div>
+    </div>
+  `;
+
+  // Attach button events in drawer
+  const copyQsBtn = document.getElementById("btn-copy-qs-line");
+  if (copyQsBtn && item.suggested_fix) {
+    copyQsBtn.addEventListener("click", () => {
+      const line = `${item.qid}\t${item.suggested_fix.property}\t"${item.suggested_fix.value}"`;
+      navigator.clipboard.writeText(line).then(() => {
+        copyQsBtn.innerText = "✓ تم النسخ للحافظة!";
+        setTimeout(() => { copyQsBtn.innerText = `📋 ${t.btnQuickStatements}`; }, 2000);
+      });
+    });
+  }
+
+  const verifyBtn = document.getElementById("btn-live-verify");
+  if (verifyBtn) {
+    verifyBtn.addEventListener("click", async () => {
+      verifyBtn.disabled = true;
+      verifyBtn.innerText = "جارٍ التحقق...";
+      try {
+        const res = await fetch(`/api/v1/verify/${item.qid}?osm_type=${fullOsmType}&osm_id=${osmId}`);
+        if (res.ok) {
+          const vData = await res.json();
+          verifyBtn.innerText = "✓ تم التحقق بنجاح!";
+          alert(`تحقق مباشر ناجح:\nالعنصر موجود في ويكي بيانات (${vData.wikidata?.lastrevid ? 'نسخة ' + vData.wikidata.lastrevid : 'موجود'}).`);
+        } else {
+          verifyBtn.innerText = "تعذر الوصول للخدمة";
+        }
+      } catch (e) {
+        verifyBtn.innerText = "خطأ في الاتصال";
+      }
+    });
+  }
+
+  const josmBtn = document.getElementById("btn-reverse-josm");
+  if (josmBtn) {
+    josmBtn.addEventListener("click", () => {
+      MappingTools.josmLoadAndZoom(lat, lon, osmRef);
+    });
+  }
+
+  const idBtn = document.getElementById("btn-reverse-id");
+  if (idBtn) {
+    idBtn.addEventListener("click", () => {
+      window.open(MappingTools.getIdEditorUrl(lat, lon), "_blank");
+    });
+  }
+}
+
+async function switchMode(mode) {
+  if (mode === currentMode) return;
+  currentMode = mode;
+  updateUrlHash();
+
+  const btnFwd = document.getElementById("btn-mode-forward");
+  const btnRev = document.getElementById("btn-mode-reverse");
+  const panelFwd = document.getElementById("forward-controls-panel");
+  const panelRev = document.getElementById("reverse-controls-panel");
+
+  if (currentMode === "forward") {
+    if (btnFwd) btnFwd.classList.add("active");
+    if (btnRev) btnRev.classList.remove("active");
+    if (panelFwd) panelFwd.style.display = "block";
+    if (panelRev) panelRev.style.display = "none";
+
+    const t = TRANSLATIONS[currentLang];
+    const lblTotal = document.getElementById("stat-total-lbl");
+    const lblMissing = document.getElementById("stat-missing-lbl");
+    const lblCand = document.getElementById("stat-candidates-lbl");
+    const lblLinked = document.getElementById("stat-linked-lbl");
+    if (lblTotal) lblTotal.innerText = t.statTotal;
+    if (lblMissing) lblMissing.innerText = t.statMissing;
+    if (lblCand) lblCand.innerText = t.statCandidates;
+    if (lblLinked) lblLinked.innerText = t.statLinked;
+
+    renderSummaryStats();
+    applyFilters();
+  } else {
+    if (btnFwd) btnFwd.classList.remove("active");
+    if (btnRev) btnRev.classList.add("active");
+    if (panelFwd) panelFwd.style.display = "none";
+    if (panelRev) panelRev.style.display = "block";
+
+    const t = TRANSLATIONS[currentLang];
+    const lblTotal = document.getElementById("stat-total-lbl");
+    const lblMissing = document.getElementById("stat-missing-lbl");
+    const lblCand = document.getElementById("stat-candidates-lbl");
+    const lblLinked = document.getElementById("stat-linked-lbl");
+    if (lblTotal) lblTotal.innerText = t.statReverseTotal;
+    if (lblMissing) lblMissing.innerText = t.statReverseBacklinks;
+    if (lblCand) lblCand.innerText = t.statReverseBroken;
+    if (lblLinked) lblLinked.innerText = t.statReverseConflicts;
+
+    await loadReverseData(currentCountry);
   }
 }
 
@@ -1031,7 +1419,41 @@ function setupKeyboardShortcuts() {
       return;
     }
 
-    // Feature-specific shortcuts (require selectedItem)
+    // Feature-specific shortcuts
+    if (currentMode === "reverse") {
+      if (!selectedReverseItem) return;
+      const lat = selectedReverseItem.lat;
+      const lon = selectedReverseItem.lon;
+      const osmRef = selectedReverseItem.osm_ref || (selectedReverseItem.osm_type && selectedReverseItem.osm_id ? `${selectedReverseItem.osm_type}/${selectedReverseItem.osm_id}` : "");
+      const qid = selectedReverseItem.suggested_fix?.value || selectedReverseItem.qid || "";
+
+      if (key === "j" || key === "J") {
+        e.preventDefault();
+        MappingTools.josmLoadAndZoom(lat, lon, osmRef);
+      } else if (key === "i" || key === "I") {
+        e.preventDefault();
+        window.open(MappingTools.getIdEditorUrl(lat, lon), "_blank");
+      } else if (key === "t" || key === "T") {
+        e.preventDefault();
+        if (osmRef && qid) {
+          MappingTools.josmAddTags(osmRef, qid);
+        }
+      } else if (key === "n" || key === "N") {
+        e.preventDefault();
+        if (filteredReverseItems.length > 0) {
+          const nextIdx = (selectedReverseItemIndex + 1) % filteredReverseItems.length;
+          selectReverseItem(filteredReverseItems[nextIdx]);
+        }
+      } else if (key === "p" || key === "P") {
+        e.preventDefault();
+        if (filteredReverseItems.length > 0) {
+          const prevIdx = (selectedReverseItemIndex - 1 + filteredReverseItems.length) % filteredReverseItems.length;
+          selectReverseItem(filteredReverseItems[prevIdx]);
+        }
+      }
+      return;
+    }
+
     if (!selectedItem) return;
 
     const lat = selectedItem[1];
@@ -1111,7 +1533,11 @@ function setupEventListeners() {
       clearTimeout(searchTimer);
       searchTimer = setTimeout(() => {
         searchQuery = e.target.value;
-        applyFilters();
+        if (currentMode === "reverse") {
+          applyReverseFilters();
+        } else {
+          applyFilters();
+        }
       }, 250);
     });
   }
@@ -1273,21 +1699,103 @@ function setupEventListeners() {
       MappingTools.exportCsv(filteredItems, currentCountry.toUpperCase());
     });
   }
+
+  // Mode Switcher
+  const btnModeForward = document.getElementById("btn-mode-forward");
+  const btnModeReverse = document.getElementById("btn-mode-reverse");
+  if (btnModeForward) {
+    btnModeForward.addEventListener("click", () => switchMode("forward"));
+  }
+  if (btnModeReverse) {
+    btnModeReverse.addEventListener("click", () => switchMode("reverse"));
+  }
+
+  // Reverse Kind Filter Buttons
+  document.querySelectorAll(".reverse-filter-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".reverse-filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeReverseKind = btn.getAttribute("data-kind") || "all";
+      applyReverseFilters();
+    });
+  });
+
+  // Reverse Confidence Chips
+  ["high", "med", "low"].forEach(lvl => {
+    const chip = document.getElementById(`chip-rev-${lvl}`);
+    if (chip) {
+      chip.addEventListener("click", () => {
+        if (activeReverseConfidence.has(lvl)) {
+          activeReverseConfidence.delete(lvl);
+          chip.classList.remove("active");
+        } else {
+          activeReverseConfidence.add(lvl);
+          chip.classList.add("active");
+        }
+        applyReverseFilters();
+      });
+    }
+  });
+
+  // QuickStatements Batch Export Button
+  const btnExportQsBatch = document.getElementById("btn-export-qs-batch");
+  if (btnExportQsBatch) {
+    btnExportQsBatch.addEventListener("click", async () => {
+      if (!filteredReverseItems || filteredReverseItems.length === 0) {
+        alert(currentLang === "ar" ? "لا توجد عناصر مطابقة للتصدير إلى QuickStatements." : "No filtered reverse items to export to QuickStatements.");
+        return;
+      }
+      const qsText = MappingTools.generateQuickStatementsBatch(filteredReverseItems);
+      if (!qsText || qsText.trim() === "") {
+        alert(currentLang === "ar" ? "لا توجد عناصر بحاجة لإضافة وسوم إلى ويكي بيانات في القائمة المفلترة." : "No items requiring Wikidata backlink statements in the filtered list.");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(qsText);
+        const count = qsText.trim().split("\n").length;
+        alert(currentLang === "ar" 
+          ? `تم نسخ ${count} من أوامر QuickStatements إلى الحافظة بنجاح!\nالصقها في https://quickstatements.toolforge.org`
+          : `Copied ${count} QuickStatements commands to clipboard!\nPaste into https://quickstatements.toolforge.org`);
+      } catch (err) {
+        console.error("Clipboard write error:", err);
+        // Fallback prompt for copying
+        window.prompt(currentLang === "ar" ? "انسخ أوامر QuickStatements:" : "Copy QuickStatements commands:", qsText);
+      }
+    });
+  }
 }
 
 function parseUrlHash() {
   const hash = window.location.hash.replace(/^#/, "");
   if (!hash) return;
   const params = new URLSearchParams(hash);
+  const m = params.get("mode");
+  if (m === "reverse" || m === "forward") {
+    currentMode = m;
+  }
   const c = params.get("country");
   if (c && ["sa", "ae", "kw", "qa", "bh", "om"].includes(c.toLowerCase())) {
     currentCountry = c.toLowerCase();
   }
+  const kind = params.get("kind");
+  if (kind) {
+    activeReverseKind = kind;
+  }
 }
 
 function updateUrlHash() {
-  const hash = `country=${currentCountry}`;
-  window.history.replaceState(null, "", `#${hash}`);
+  const params = new URLSearchParams();
+  if (currentMode === "reverse") {
+    params.set("mode", "reverse");
+  }
+  params.set("country", currentCountry);
+  if (currentMode === "reverse") {
+    if (activeReverseKind !== "all") params.set("kind", activeReverseKind);
+    if (selectedReverseItem) params.set("qid", selectedReverseItem.qid || "");
+  } else if (selectedItem) {
+    params.set("qid", `Q${selectedItem[0]}`);
+  }
+  window.history.replaceState(null, "", `#${params.toString()}`);
 }
 
 /**

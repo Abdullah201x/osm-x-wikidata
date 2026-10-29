@@ -2234,3 +2234,194 @@ kbd, .kbd-inline {
 
 
 
+
+/* ==========================================================================
+   Reverse QA Mode (OSM -> Wikidata) Styles
+   ========================================================================== */
+.mode-switcher-wrap {
+  display: flex;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+  margin-top: 8px;
+}
+
+.mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-btn:hover {
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.22), rgba(79, 172, 254, 0.22));
+  color: #00f2fe;
+  border: 1px solid rgba(0, 242, 254, 0.4);
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.15);
+}
+
+.reverse-kind-pill-group {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.reverse-filter-btn {
+  background: var(--color-surface);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  font-size: 0.70rem;
+  font-weight: 600;
+  padding: 6px 4px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.reverse-filter-btn:hover {
+  background: var(--color-surface-hover);
+  color: #fff;
+}
+
+.reverse-filter-btn.active {
+  background: rgba(0, 242, 254, 0.18);
+  border-color: #00f2fe;
+  color: #00f2fe;
+}
+
+.btn-export-qs-batch {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(0, 255, 135, 0.2), rgba(0, 242, 254, 0.2));
+  border: 1px solid rgba(0, 255, 135, 0.4);
+  color: #00ff87;
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-export-qs-batch:hover {
+  background: linear-gradient(135deg, rgba(0, 255, 135, 0.35), rgba(0, 242, 254, 0.35));
+  box-shadow: 0 0 16px rgba(0, 255, 135, 0.25);
+  transform: translateY(-1px);
+}
+
+/* Reverse Inspector Styles */
+.reverse-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.reverse-elem-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.reverse-elem-box h5 {
+  font-size: 0.76rem;
+  color: var(--color-secondary);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reverse-reasons-wrap {
+  margin-top: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.reverse-reasons-wrap h5 {
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+
+.reverse-reasons-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reverse-reasons-list li {
+  font-size: 0.74rem;
+  color: #e2e8f0;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.reverse-action-card {
+  margin-top: 10px;
+  background: rgba(0, 242, 254, 0.06);
+  border: 1px solid rgba(0, 242, 254, 0.25);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.reverse-action-header {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 6px;
+}
+
+.badge-kind-backlink {
+  background: rgba(0, 255, 135, 0.15);
+  color: #00ff87;
+  border: 1px solid rgba(0, 255, 135, 0.4);
+}
+
+.badge-kind-broken {
+  background: rgba(255, 51, 102, 0.15);
+  color: #ff3366;
+  border: 1px solid rgba(255, 51, 102, 0.4);
+}
+
+.badge-kind-conflict {
+  background: rgba(251, 133, 0, 0.15);
+  color: #fb8500;
+  border: 1px solid rgba(251, 133, 0, 0.4);
+}
+
+.badge-kind-review {
+  background: rgba(58, 134, 255, 0.15);
+  color: #3a86ff;
+  border: 1px solid rgba(58, 134, 255, 0.4);
+}

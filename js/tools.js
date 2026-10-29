@@ -86,7 +86,25 @@ const MappingTools = {
     // Each OSM element type has its own Wikidata property, and the value is the bare numeric ID:
     // P11693 = OpenStreetMap node ID, P10689 = OpenStreetMap way ID, P402 = OpenStreetMap relation ID
     const prop = { node: "P11693", way: "P10689", relation: "P402" }[ref.type];
-    return `${qid}|${prop}|"${ref.id}"`;
+    return `${qid}\t${prop}\t"${ref.id}"`;
+  },
+
+  /**
+   * Generates QuickStatements v2 batch lines for high-confidence reverse back-links.
+   */
+  generateQuickStatementsBatch(reverseItems) {
+    const lines = [];
+    for (const it of reverseItems) {
+      if (it.kind === "missing_backlink" && it.suggested_fix && it.suggested_fix.target === "wikidata") {
+        const qid = it.qid;
+        const prop = it.suggested_fix.property;
+        const val = it.suggested_fix.value;
+        if (qid && prop && val) {
+          lines.push(`${qid}\t${prop}\t"${val}"`);
+        }
+      }
+    }
+    return lines.join("\n");
   },
 
   /**
