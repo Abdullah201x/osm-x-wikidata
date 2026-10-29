@@ -114,7 +114,8 @@ async function loadCountry(code) {
   if (loadingEl) loadingEl.style.display = "flex";
 
   try {
-    const res = await fetch(`data/${currentCountry}.json`);
+    const vParam = summaryData?.updated_at ? `?v=${encodeURIComponent(summaryData.updated_at)}` : "";
+    const res = await fetch(`data/${currentCountry}.json${vParam}`);
     if (!res.ok) throw new Error(`Could not load data/${currentCountry}.json`);
     loadedDataset = await res.json();
     window.loadedDataset = loadedDataset;

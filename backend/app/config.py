@@ -21,3 +21,4 @@ ALLOWED_ORIGINS = [
 ]
 
 USER_AGENT = "OSMxWikidataLinker/2.0 (+https://wikidata.saudiosm.org/)"
+

@@ -36,3 +36,4 @@ def test_waterfall_country_resolution():
     # Tier 3: (0, 0) coords, no tags, but Wikidata P17
     assert m.resolve_country(0.0, 0.0, wd_item={"p17": ["Q851"]}) == "SA"
     assert m.resolve_country(0.0, 0.0, wd_item={"lat": 26.05, "lon": 50.55}) == "BH"
+

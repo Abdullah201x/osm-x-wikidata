@@ -103,3 +103,4 @@ def test_get_real_client_ip_header_extraction():
     # Case 4: Fallback to client.host
     req4 = DummyRequest({})
     assert get_real_client_ip(req4) == "10.0.0.1"
+

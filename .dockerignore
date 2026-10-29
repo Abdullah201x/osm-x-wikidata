@@ -1,0 +1,14 @@
+.git
+.github
+tests
+pipeline/*.db*
+pipeline/*.geojson
+sa_boundary.geojson
+*.pbf
+__pycache__
+*.pyc
+.pytest_cache
+.venv
+venv
+*.pem
+*.key

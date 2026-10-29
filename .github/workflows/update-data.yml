@@ -30,7 +30,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install requests shapely osmium scikit-learn joblib numpy
+          pip install -r requirements.txt
 
       - name: Download GCC OSM extract
         run: |
@@ -55,7 +55,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No data changes to commit."
           else
-            git commit -m "Auto-update GCC OSM x Wikidata datasets [skip ci]"
+            git commit -m "Auto-update GCC OSM x Wikidata datasets"
             git push
           fi
 

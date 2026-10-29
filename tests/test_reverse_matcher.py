@@ -344,3 +344,4 @@ def test_stale_node_to_way_upgrade(in_memory_dbs):
     f = findings[0]
     assert f["kind"] == "conflict"
     assert f["subkind"] == "stale_node_to_way_upgrade"
+

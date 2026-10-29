@@ -10,7 +10,10 @@ const OsmAuth = {
   // OSM rejects tag values longer than 255 characters
   MAX_TAG_LENGTH: 255,
   ENVIRONMENT: localStorage.getItem("osm_oauth_environment") || "production",
-  NOTE_SIGNATURE: "via أداة ربط OSM و Wikidata (https://abdullah201x.github.io/osm-x-wikidata) #osm-wikidata-gcc",
+  get NOTE_SIGNATURE() {
+    const origin = (typeof window !== "undefined" && window.location.origin) ? window.location.origin : "https://wikidata.saudiosm.org";
+    return `via أداة ربط OSM و Wikidata (${origin}) #osm-wikidata-gcc`;
+  },
 
   getUrls() {
     const isDev = this.ENVIRONMENT === "dev";
@@ -58,8 +61,9 @@ const OsmAuth = {
     const codeVerifier = this.generateRandomString();
     sessionStorage.setItem("osm_oauth_code_verifier", codeVerifier);
 
-    const state = this.generateRandomString(32);
+    const state = "osm_" + this.generateRandomString(32);
     sessionStorage.setItem("osm_oauth_state", state);
+    sessionStorage.setItem("osm_oauth_return_hash", window.location.hash || "");
 
     const challenge = await this.generateChallenge(codeVerifier);
     const urls = this.getUrls();
@@ -82,14 +86,22 @@ const OsmAuth = {
 
     if (!code) return false;
 
+    // Check if callback belongs to Wikidata OAuth instead of OSM
+    if (state && !state.startsWith("osm_")) {
+      return false;
+    }
+
     const savedState = sessionStorage.getItem("osm_oauth_state");
     const codeVerifier = sessionStorage.getItem("osm_oauth_code_verifier");
 
     sessionStorage.removeItem("osm_oauth_state");
     sessionStorage.removeItem("osm_oauth_code_verifier");
 
-    // Clean address bar URL
-    const cleanUrl = window.location.origin + window.location.pathname + window.location.hash;
+    // Clean address bar URL while preserving or restoring active hash
+    const returnHash = sessionStorage.getItem("osm_oauth_return_hash");
+    sessionStorage.removeItem("osm_oauth_return_hash");
+    const activeHash = window.location.hash || returnHash || "";
+    const cleanUrl = window.location.origin + window.location.pathname + activeHash;
     window.history.replaceState({}, document.title, cleanUrl);
 
     if (state !== savedState || !codeVerifier) {
@@ -427,10 +439,11 @@ const OsmAuth = {
 
     const comment = this._truncateTag((customComment || defaultComment).trim());
 
+    const appOrigin = (typeof window !== "undefined" && window.location.origin) ? window.location.origin : "https://wikidata.saudiosm.org";
     const changesetXml = `<?xml version="1.0" encoding="UTF-8"?>
 <osm version="0.6" generator="OSM x Wikidata GCC Linker">
   <changeset>
-    <tag k="created_by" v="OSM x Wikidata GCC Linker (https://abdullah201x.github.io/osm-x-wikidata)"/>
+    <tag k="created_by" v="OSM x Wikidata GCC Linker (${appOrigin})"/>
     <tag k="comment" v="${this._escapeXml(comment)}"/>
     <tag k="source" v="Wikidata; OpenStreetMap"/>
     <tag k="wikidata" v="${this._escapeXml(cleanQid)}"/>
@@ -565,10 +578,11 @@ ${serializer.serializeToString(elemNode)}
     }
 
     // 2. Open ONE Changeset for all items
+    const appOrigin = (typeof window !== "undefined" && window.location.origin) ? window.location.origin : "https://wikidata.saudiosm.org";
     const changesetXml = `<?xml version="1.0" encoding="UTF-8"?>
 <osm version="0.6" generator="OSM x Wikidata GCC Linker">
   <changeset>
-    <tag k="created_by" v="OSM x Wikidata GCC Linker (https://abdullah201x.github.io/osm-x-wikidata)"/>
+    <tag k="created_by" v="OSM x Wikidata GCC Linker (${appOrigin})"/>
     <tag k="comment" v="${this._escapeXml(comment)}"/>
     <tag k="source" v="Wikidata; OpenStreetMap"/>
     <tag k="wikidata" v="${this._escapeXml(uniqueQids)}"/>
