@@ -1,0 +1,49 @@
+services:
+  osmwd-api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: osmwd-api
+    restart: unless-stopped
+    expose:
+      - "8010"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/api/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - coolify
+
+  osmwd-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: osmwd-web
+    restart: unless-stopped
+    environment:
+      - OSMWD_API_URL=http://osmwd-api:8010
+    expose:
+      - "80"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      osmwd-api:
+        condition: service_healthy
+    networks:
+      - coolify
+
+networks:
+  coolify:
+    external: true
