@@ -5,6 +5,7 @@
  */
 
 const HistoryManager = {
+  activeTab: "osm", // "osm" or "wikidata"
   activeFilter: "all", // "all", "batch", "single"
   searchQuery: "",
 
@@ -22,14 +23,15 @@ const HistoryManager = {
 
   updateBadgeCount() {
     const history = OsmAuth.getChangesetHistory();
-    let totalItems = 0;
+    const wdHistory = typeof WikidataEdit !== "undefined" ? WikidataEdit.getEditHistory() : [];
+    let totalItems = wdHistory.length;
     history.forEach(cs => {
       totalItems += (cs.itemCount || (cs.items ? cs.items.length : 1));
     });
 
     const badges = document.querySelectorAll(".history-counter");
     badges.forEach(badge => {
-      badge.innerText = history.length;
+      badge.innerText = history.length + wdHistory.length;
     });
 
     const totalBadges = document.querySelectorAll(".history-items-counter");
@@ -39,10 +41,103 @@ const HistoryManager = {
   },
 
   render() {
-    const history = OsmAuth.getChangesetHistory();
+    if (this.activeTab === "wikidata") {
+      const wdHistory = typeof WikidataEdit !== "undefined" ? WikidataEdit.getEditHistory() : [];
+      this.renderWikidataKpis(wdHistory);
+      this.renderWikidataList(wdHistory);
+    } else {
+      const history = OsmAuth.getChangesetHistory();
+      this.renderKpis(history);
+      this.renderList(history);
+    }
+  },
 
-    this.renderKpis(history);
-    this.renderList(history);
+  renderWikidataKpis(wdHistory) {
+    const csCountEl = document.getElementById("history-kpi-changesets");
+    if (csCountEl) csCountEl.innerText = wdHistory.length.toLocaleString();
+
+    const elemCountEl = document.getElementById("history-kpi-elements");
+    if (elemCountEl) elemCountEl.innerText = wdHistory.length.toLocaleString();
+
+    const batchCountEl = document.getElementById("history-kpi-batch");
+    if (batchCountEl) {
+      const uniqueBatches = new Set(wdHistory.map(h => h.batchId)).size;
+      batchCountEl.innerText = `${uniqueBatches} (Batches)`;
+    }
+
+    const singleCountEl = document.getElementById("history-kpi-single");
+    if (singleCountEl) singleCountEl.innerText = `${wdHistory.length} (Statements)`;
+  },
+
+  renderWikidataList(wdHistory) {
+    const container = document.getElementById("history-timeline-container");
+    const emptyState = document.getElementById("history-empty-state");
+
+    if (!container) return;
+
+    let filtered = wdHistory.filter(h => {
+      if (this.searchQuery) {
+        const q = this.searchQuery.toLowerCase().trim();
+        return (h.qid || "").toLowerCase().includes(q) ||
+               (h.osmId || "").includes(q) ||
+               (h.batchId || "").toLowerCase().includes(q);
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      container.style.display = "none";
+      if (emptyState) emptyState.style.display = "flex";
+      return;
+    }
+
+    if (emptyState) emptyState.style.display = "none";
+    container.style.display = "flex";
+
+    container.innerHTML = filtered.map(it => {
+      const date = new Date(it.timestamp);
+      const formattedDate = date.toLocaleDateString(window.currentLang === "ar" ? "ar-SA" : "en-US", {
+        year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
+      });
+
+      const egUrl = `https://editgroups.toolforge.org/b/CB/${it.batchId}/`;
+      const wdUrl = `https://www.wikidata.org/wiki/${it.qid}`;
+      const osmUrl = `https://www.openstreetmap.org/${it.osmType}/${it.osmId}`;
+
+      return `
+        <div class="history-card" data-qid="${escapeHtml(it.qid)}">
+          <div class="history-card-header">
+            <div class="history-header-left">
+              <a href="${escapeHtml(wdUrl)}" target="_blank" rel="noopener" class="history-cs-link">
+                🏛️ ${escapeHtml(it.qid)} ↗
+              </a>
+              <span class="history-type-pill batch">
+                <a href="${escapeHtml(egUrl)}" target="_blank" rel="noopener" style="color: inherit; text-decoration: none;">
+                  📦 EditGroups: <code>${escapeHtml(it.batchId)}</code> ↗
+                </a>
+              </span>
+              <span class="history-date">${formattedDate}</span>
+            </div>
+            <div class="history-user-tag">
+              👤 ${escapeHtml(it.user || 'Wikidata Mapper')}
+            </div>
+          </div>
+
+          <div class="history-items-container">
+            <div class="history-item-subrow">
+              <div class="history-sub-name">
+                <strong>${escapeHtml(it.property)} (${escapeHtml(it.osmType)} backlink)</strong>
+              </div>
+              <div class="history-sub-links">
+                <a href="${escapeHtml(wdUrl)}" target="_blank" rel="noopener" class="qid-link"><code>${escapeHtml(it.qid)}</code> ↗</a>
+                <span class="batch-sep">➔</span>
+                <a href="${escapeHtml(osmUrl)}" target="_blank" rel="noopener" class="osm-link"><code>${escapeHtml(it.osmType)}/${escapeHtml(it.osmId)}</code> ↗</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
   },
 
   renderKpis(history) {
@@ -219,6 +314,24 @@ const HistoryManager = {
     const closeBtn = document.getElementById("btn-close-history-modal");
     if (closeBtn) {
       closeBtn.onclick = () => this.closeModal();
+    }
+
+    // Tabs Switcher (OSM vs Wikidata)
+    const tabOsm = document.getElementById("btn-hist-tab-osm");
+    const tabWd = document.getElementById("btn-hist-tab-wd");
+    if (tabOsm && tabWd) {
+      tabOsm.onclick = () => {
+        tabOsm.classList.add("active");
+        tabWd.classList.remove("active");
+        this.activeTab = "osm";
+        this.render();
+      };
+      tabWd.onclick = () => {
+        tabWd.classList.add("active");
+        tabOsm.classList.remove("active");
+        this.activeTab = "wikidata";
+        this.render();
+      };
     }
 
     // Filter pills

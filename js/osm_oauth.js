@@ -545,6 +545,169 @@ ${serializer.serializeToString(elemNode)}
   },
 
   /**
+   * Safely repairs an OSM element's tag (replace, migrate, or remove).
+   * 
+   * @param {string} osmRef - "node/123", "way/456", or "relation/789"
+   * @param {string} repairType - "replace" | "migrate" | "remove"
+   * @param {Object} options - { oldQid, newQid, targetKey, customComment, featureName, countryCode }
+   * @returns {Promise<Object>} Result with changesetId, newVersion, etc.
+   */
+  async repairOsmTag(osmRef, repairType, options = {}) {
+    const token = localStorage.getItem("osm_access_token");
+    if (!token) {
+      throw new Error("NOT_AUTHENTICATED");
+    }
+
+    const ref = this.parseOsmRef(osmRef);
+    if (!ref) {
+      throw new Error(`Invalid OSM Reference: "${osmRef}"`);
+    }
+
+    const urls = this.getUrls();
+
+    // 1. Fetch current element XML
+    const elemUrl = `${urls.apiBase}/api/0.6/${ref.type}/${ref.id}`;
+    const elemRes = await fetch(elemUrl);
+    if (!elemRes.ok) {
+      if (elemRes.status === 404 || elemRes.status === 410) {
+        throw new Error(`Element ${ref.type}/${ref.id} was not found on OSM or has been deleted.`);
+      }
+      throw new Error(`Failed to fetch ${ref.type}/${ref.id}: HTTP ${elemRes.status}`);
+    }
+
+    const elemXmlText = await elemRes.text();
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(elemXmlText, "application/xml");
+    const elemNode = xmlDoc.querySelector(`${ref.type}`);
+    if (!elemNode) {
+      throw new Error(`Failed to parse XML response for ${ref.type}/${ref.id}`);
+    }
+
+    let existingWdTag = elemNode.querySelector('tag[k="wikidata"]');
+    const oldVal = existingWdTag ? existingWdTag.getAttribute("v") : null;
+
+    let comment = "";
+    if (repairType === "replace") {
+      const cleanNewQid = options.newQid.startsWith("Q") ? options.newQid : `Q${options.newQid}`;
+      if (existingWdTag) {
+        existingWdTag.setAttribute("v", cleanNewQid);
+      } else {
+        const newTag = xmlDoc.createElement("tag");
+        newTag.setAttribute("k", "wikidata");
+        newTag.setAttribute("v", cleanNewQid);
+        elemNode.appendChild(newTag);
+      }
+      comment = options.customComment || `Update wikidata tag on ${ref.type}/${ref.id} (${oldVal || ""} -> ${cleanNewQid}) #osm-wikidata-gcc`;
+    } else if (repairType === "migrate") {
+      const targetKey = options.targetKey || "brand:wikidata";
+      const qidToMigrate = options.newQid || oldVal;
+      if (existingWdTag) {
+        elemNode.removeChild(existingWdTag);
+      }
+      let targetTag = elemNode.querySelector(`tag[k="${targetKey}"]`);
+      if (targetTag) {
+        targetTag.setAttribute("v", qidToMigrate);
+      } else {
+        const newTag = xmlDoc.createElement("tag");
+        newTag.setAttribute("k", targetKey);
+        newTag.setAttribute("v", qidToMigrate);
+        elemNode.appendChild(newTag);
+      }
+      comment = options.customComment || `Migrate wikidata tag to ${targetKey}=${qidToMigrate} on ${ref.type}/${ref.id} #osm-wikidata-gcc`;
+    } else if (repairType === "remove") {
+      if (existingWdTag) {
+        elemNode.removeChild(existingWdTag);
+      }
+      comment = options.customComment || `Remove invalid wikidata tag (${oldVal || ""}) from ${ref.type}/${ref.id} #osm-wikidata-gcc`;
+    } else {
+      throw new Error(`Unknown repairType: ${repairType}`);
+    }
+
+    // 2. Open Changeset
+    const appOrigin = (typeof window !== "undefined" && window.location.origin) ? window.location.origin : "https://wikidata.saudiosm.org";
+    const changesetXml = `<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="OSM x Wikidata GCC Linker">
+  <changeset>
+    <tag k="created_by" v="OSM x Wikidata GCC Linker (${appOrigin})"/>
+    <tag k="comment" v="${this._escapeXml(comment)}"/>
+    <tag k="source" v="Wikidata; OpenStreetMap Quality Assurance"/>
+    <tag k="hashtags" v="#osm-wikidata-gcc"/>
+  </changeset>
+</osm>`;
+
+    const csRes = await fetch(`${urls.apiBase}/api/0.6/changeset/create`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/xml; charset=utf-8"
+      },
+      body: changesetXml
+    });
+
+    if (!csRes.ok) {
+      const errText = await csRes.text();
+      if (csRes.status === 401 || csRes.status === 403) {
+        throw new Error("AUTH_EXPIRED");
+      }
+      throw new Error(`Failed to open changeset (HTTP ${csRes.status}): ${errText}`);
+    }
+
+    const changesetId = (await csRes.text()).trim();
+
+    // 3. Update the element inside the changeset
+    elemNode.setAttribute("changeset", changesetId);
+    const serializer = new XMLSerializer();
+    const updatedXml = serializer.serializeToString(xmlDoc);
+
+    const updateRes = await fetch(`${urls.apiBase}/api/0.6/${ref.type}/${ref.id}`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/xml; charset=utf-8"
+      },
+      body: updatedXml
+    });
+
+    if (!updateRes.ok) {
+      await fetch(`${urls.apiBase}/api/0.6/changeset/${changesetId}/close`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${token}` }
+      }).catch(() => {});
+      const errText = await updateRes.text();
+      throw new Error(`Failed to update ${ref.type}/${ref.id}: ${errText}`);
+    }
+
+    const newVersion = (await updateRes.text()).trim();
+
+    // 4. Close the changeset
+    await fetch(`${urls.apiBase}/api/0.6/changeset/${changesetId}/close`, {
+      method: "PUT",
+      headers: { "Authorization": `Bearer ${token}` }
+    }).catch(e => console.warn("Could not explicitly close changeset:", e));
+
+    // 5. Mark resolved optimistically
+    if (typeof WikidataEdit !== "undefined") {
+      WikidataEdit.markReverseResolved(`${ref.type}${ref.id}:${oldVal || options.newQid || ""}:repair`, {
+        osm_type: ref.type,
+        osm_id: ref.id,
+        action: `osm_${repairType}`,
+        changesetId: changesetId,
+        resolved_at: Date.now()
+      });
+    }
+
+    return {
+      success: true,
+      changesetId: changesetId,
+      version: newVersion,
+      type: ref.type,
+      id: ref.id,
+      url: `https://www.openstreetmap.org/${ref.type}/${ref.id}`,
+      changesetUrl: `${urls.apiBase}/changeset/${changesetId}`
+    };
+  },
+
+  /**
    * Links MULTIPLE items within a SINGLE OSM Changeset.
    * Fully conformant with OSM API 0.6 and community batch guidelines.
    *

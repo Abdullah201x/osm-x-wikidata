@@ -218,6 +218,18 @@ const TRANSLATIONS = {
     actionRemoveTag: "إزالة الوسم الخاطئ من OSM",
     actionReview: "مراجعة يدوية في JOSM / iD",
 
+    // Phase 5 Bilingual Keys
+    loginWd: "تسجيل الدخول بـ Wikidata",
+    logoutWd: "تسجيل الخروج من Wikidata",
+    btnAddToWikidata: "⚡ إضافة إلى ويكي بيانات مباشرة",
+    btnOpenQsDirect: "↗️ فتح في QuickStatements (1-Click)",
+    btnOsmRepairTag: "🛠️ إصلاح الوسم في OSM مباشرة",
+    histTabOsm: "🗺️ تعديلات OSM",
+    histTabWd: "🏛️ تعديلات ويكي بيانات (EditGroups)",
+    statWdEdits: "تعديلات ويكي بيانات",
+    toastWdSuccess: "تمت إضافة المعرف إلى ويكي بيانات بنجاح!",
+    toastOsmSuccess: "تم تعديل الوسم في OpenStreetMap بنجاح!",
+
     footerText: 'بيانات <a href="https://www.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> و <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> · مجتمع OSM السعودي: <a href="https://t.me/OSMSaudi" target="_blank" rel="noopener">تيليجرام</a>'
   },
   en: {
@@ -430,6 +442,18 @@ const TRANSLATIONS = {
     actionMigrateTag: "Migrate tag to secondary key in OSM",
     actionRemoveTag: "Remove invalid wikidata tag in OSM",
     actionReview: "Manual review in JOSM / iD",
+
+    // Phase 5 Bilingual Keys
+    loginWd: "Log in with Wikidata",
+    logoutWd: "Log out of Wikidata",
+    btnAddToWikidata: "⚡ Add to Wikidata Directly",
+    btnOpenQsDirect: "↗️ Open in QuickStatements (1-Click)",
+    btnOsmRepairTag: "🛠️ Repair Tag in OSM Directly",
+    histTabOsm: "🗺️ OSM Changesets",
+    histTabWd: "🏛️ Wikidata Statements (EditGroups)",
+    statWdEdits: "Wikidata Statements",
+    toastWdSuccess: "Statement added to Wikidata with EditGroups batch successfully!",
+    toastOsmSuccess: "OSM element updated successfully!",
 
     footerText: 'Data from <a href="https://www.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> & <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> · Saudi OSM Community: <a href="https://t.me/OSMSaudi" target="_blank" rel="noopener">Telegram</a>'
   }

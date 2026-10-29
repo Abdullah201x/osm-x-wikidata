@@ -45,8 +45,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Initialize Map
   MapController.init();
 
-  // Handle OAuth callback if returning from OSM login
+  // Handle OAuth callback if returning from OSM or Wikidata login
   await OsmAuth.handleCallback();
+  if (typeof WikidataAuth !== "undefined") {
+    await WikidataAuth.handleCallback();
+  }
   updateAuthUI();
 
   // Load summary statistics
@@ -77,6 +80,9 @@ async function loadSummary() {
     const res = await fetch("data/summary.json");
     if (res.ok) {
       summaryData = await res.json();
+      if (typeof WikidataEdit !== "undefined" && summaryData.updated_at) {
+        WikidataEdit.pruneOldResolved(summaryData.updated_at);
+      }
       renderSummaryStats();
     }
   } catch (e) {
@@ -246,6 +252,14 @@ function applyReverseFilters() {
   filteredReverseItems = [];
 
   for (const it of loadedReverseDataset.items) {
+    // 0. Exclude already resolved items
+    const fullOsmType = { n: "node", w: "way", r: "relation" }[it.osm_type] || it.osm_type;
+    const itemKey1 = `${fullOsmType}${it.osm_id}:${it.qid}:${it.kind}`;
+    const itemKey2 = `${fullOsmType}${it.osm_id}:${it.qid}:repair`;
+    if (typeof WikidataEdit !== "undefined" && (WikidataEdit.isReverseResolved(itemKey1) || WikidataEdit.isReverseResolved(itemKey2))) {
+      continue;
+    }
+
     // 1. Kind filter
     if (activeReverseKind !== "all") {
       if (it.kind !== activeReverseKind) continue;
@@ -332,11 +346,20 @@ function selectReverseItem(item, marker = null, skipFly = false) {
   if (item.suggested_fix) {
     const fix = item.suggested_fix;
     if (fix.target === "wikidata" && fix.action === "add_claim") {
+      const qsUrl = `https://quickstatements.toolforge.org/#/v1=${encodeURIComponent(qid)}|${encodeURIComponent(fix.property)}|%22${encodeURIComponent(fix.value)}%22`;
       actionHtml = `
         <div class="reverse-action-card">
           <div class="reverse-action-header">⚡ ${t.labelSuggestedFix} ${t.actionAddClaim}</div>
           <div style="font-size: 0.76rem; margin-bottom: 8px;">
             <code>${escapeHtml(qid)} ➔ ${escapeHtml(fix.property)} = "${escapeHtml(fix.value)}"</code>
+          </div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px;">
+            <button id="btn-wd-add-claim" class="btn btn-wd-claim" style="flex: 1; font-size: 0.72rem;">
+              ${t.btnAddToWikidata || "⚡ إضافة إلى ويكي بيانات مباشرة"}
+            </button>
+            <a href="${qsUrl}" target="_blank" rel="noopener" class="btn btn-qs-action" style="flex: 1; font-size: 0.72rem;">
+              ${t.btnOpenQsDirect || "↗️ فتح في QuickStatements"}
+            </a>
           </div>
           <div style="display: flex; gap: 6px; flex-wrap: wrap;">
             <button id="btn-copy-qs-line" class="btn" style="flex: 1; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;">
@@ -359,6 +382,11 @@ function selectReverseItem(item, marker = null, skipFly = false) {
         <div class="reverse-action-card" style="border-color: rgba(255, 51, 102, 0.4); background: rgba(255, 51, 102, 0.08);">
           <div class="reverse-action-header" style="color: #ff3366;">🛠️ ${t.labelSuggestedFix}</div>
           <div style="font-size: 0.76rem; margin-bottom: 8px;">${desc}</div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px;">
+            <button id="btn-osm-repair-tag" class="btn btn-osm-repair" style="flex: 1; font-size: 0.72rem;">
+              ${t.btnOsmRepairTag || "🛠️ إصلاح الوسم في OSM مباشرة"}
+            </button>
+          </div>
           <div style="display: flex; gap: 6px; flex-wrap: wrap;">
             <button id="btn-reverse-josm" class="btn" style="flex: 1; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;">
               🗺️ فتح في JOSM (J)
@@ -477,6 +505,106 @@ function selectReverseItem(item, marker = null, skipFly = false) {
     idBtn.addEventListener("click", () => {
       window.open(MappingTools.getIdEditorUrl(lat, lon), "_blank");
     });
+  }
+
+  const wdClaimBtn = document.getElementById("btn-wd-add-claim");
+  if (wdClaimBtn && item.suggested_fix) {
+    wdClaimBtn.addEventListener("click", async () => {
+      if (typeof WikidataAuth === "undefined" || !WikidataAuth.isAuthenticated()) {
+        const wantLogin = confirm(currentLang === "ar"
+          ? "أنت غير مسجل الدخول بـ Wikidata بعد.\n\nهل ترغب في تسجيل الدخول عبر ويكيميديا الآن؟\n(ملاحظة: يمكنك استخدام زر QuickStatements المباشر بدون تسجيل دخول)"
+          : "You are not logged into Wikidata yet.\n\nWould you like to log in via Wikimedia OAuth now?\n(Note: you can also use the 1-Click QuickStatements button without logging in)");
+        if (wantLogin && typeof WikidataAuth !== "undefined") {
+          WikidataAuth.startLogin();
+        }
+        return;
+      }
+
+      wdClaimBtn.disabled = true;
+      wdClaimBtn.innerText = currentLang === "ar" ? "جارٍ الإضافة إلى ويكي بيانات..." : "Adding statement to Wikidata...";
+
+      try {
+        await WikidataEdit.addOsmBacklink(qid, fullOsmType, osmId);
+        window.dispatchEvent(new CustomEvent("osm-history-updated"));
+        alert(currentLang === "ar"
+          ? `✓ تمت إضافة المعرف ${fullOsmType}/${osmId} إلى ويكي بيانات (${qid}) بنجاح!\n\nحزمة التوثيق في EditGroups:\nhttps://editgroups.toolforge.org/b/CB/${WikidataEdit.getBatchId()}/`
+          : `✓ Statement ${fullOsmType}/${osmId} added to Wikidata (${qid}) successfully!\n\nEditGroups batch details:\nhttps://editgroups.toolforge.org/b/CB/${WikidataEdit.getBatchId()}/`);
+        refreshReverseViewAfterPush();
+      } catch (err) {
+        console.error("Wikidata claim error:", err);
+        wdClaimBtn.disabled = false;
+        wdClaimBtn.innerText = t.btnAddToWikidata || "⚡ إضافة إلى ويكي بيانات مباشرة";
+        alert(currentLang === "ar"
+          ? `تعذر إتمام الإضافة إلى ويكي بيانات:\n${err.message}\n\nيمكنك استخدام زر "فتح في QuickStatements" كبديل سريع ومباشر!`
+          : `Failed to add statement to Wikidata:\n${err.message}\n\nPlease try the 1-Click QuickStatements button as an instant fallback!`);
+      }
+    });
+  }
+
+  const osmRepairBtn = document.getElementById("btn-osm-repair-tag");
+  if (osmRepairBtn && item.suggested_fix) {
+    osmRepairBtn.addEventListener("click", async () => {
+      if (!OsmAuth.isAuthenticated()) {
+        alert(currentLang === "ar" ? "يرجى تسجيل الدخول بحساب OpenStreetMap أولاً." : "Please log in with your OpenStreetMap account first.");
+        OsmAuth.startLogin();
+        return;
+      }
+
+      const fix = item.suggested_fix;
+      let repairType = "replace";
+      let opts = { countryCode: currentCountry };
+
+      if (fix.action === "replace_tag" || fix.action === "normalize_qid") {
+        repairType = "replace";
+        opts.newQid = fix.to_qid || fix.value;
+      } else if (fix.action === "migrate_tag") {
+        repairType = "migrate";
+        opts.targetKey = fix.to_tag;
+        opts.newQid = fix.value;
+      } else if (fix.action === "remove_tag") {
+        repairType = "remove";
+      }
+
+      const confirmed = confirm(currentLang === "ar"
+        ? `هل تريد تأكيد إصلاح الوسم ونشر مجموعة تعديل في OSM للمعلم ${fullOsmType}/${osmId}؟`
+        : `Confirm tag repair and publish changeset to OSM for ${fullOsmType}/${osmId}?`);
+
+      if (!confirmed) return;
+
+      osmRepairBtn.disabled = true;
+      osmRepairBtn.innerText = currentLang === "ar" ? "جارٍ النشر في OSM..." : "Publishing to OSM...";
+
+      try {
+        const res = await OsmAuth.repairOsmTag(`${fullOsmType}/${osmId}`, repairType, opts);
+        window.dispatchEvent(new CustomEvent("osm-history-updated"));
+        alert(currentLang === "ar"
+          ? `✓ تم نشر مجموعة التعديل بنجاح!\nرقم المجموعة: #${res.changesetId}\nرابط المعلم: ${res.url}`
+          : `✓ Changeset published successfully!\nChangeset: #${res.changesetId}\nElement: ${res.url}`);
+        refreshReverseViewAfterPush();
+      } catch (err) {
+        console.error("OSM repair error:", err);
+        osmRepairBtn.disabled = false;
+        osmRepairBtn.innerText = t.btnOsmRepairTag || "🛠️ إصلاح الوسم في OSM مباشرة";
+        alert(currentLang === "ar"
+          ? `تعذر تحديث عنصر OSM:\n${err.message}`
+          : `Failed to update OSM element:\n${err.message}`);
+      }
+    });
+  }
+}
+
+function refreshReverseViewAfterPush() {
+  applyReverseFilters();
+  renderReverseSummaryStats();
+  const panel = document.getElementById("inspector-content");
+  if (panel) {
+    panel.innerHTML = `
+      <div class="empty-state" style="padding: 24px; text-align: center;">
+        <div class="empty-icon" style="font-size: 2.2rem; margin-bottom: 8px;">✅</div>
+        <h4 style="color: #00ff87; margin-bottom: 6px;">${currentLang === "ar" ? "تم إنجاز التدقيق والربط بنجاح!" : "Action completed successfully!"}</h4>
+        <p style="font-size: 0.8rem; color: var(--color-text-muted);">${currentLang === "ar" ? "تم تسجيل العملية محلياً وتحديث الخريطة والقوائم فوراً." : "Recorded locally; map and lists updated."}</p>
+      </div>
+    `;
   }
 }
 
@@ -1300,13 +1428,16 @@ function openNoteModal(lat, lon, name, qid) {
 }
 
 function updateAuthUI() {
+  const t = TRANSLATIONS[currentLang];
+
+  // 1. OSM Auth State
   const user = OsmAuth.getUserName();
   const loginBtn = document.getElementById("btn-osm-login");
   const userLabel = document.getElementById("osm-user-badge");
 
   if (user) {
     if (loginBtn) {
-      loginBtn.innerText = TRANSLATIONS[currentLang].logoutOsm;
+      loginBtn.innerText = t.logoutOsm;
       loginBtn.onclick = () => {
         OsmAuth.logout();
         updateAuthUI();
@@ -1314,14 +1445,39 @@ function updateAuthUI() {
     }
     if (userLabel) {
       userLabel.style.display = "inline-flex";
-      userLabel.innerText = `${TRANSLATIONS[currentLang].loggedInAs} ${user}`;
+      userLabel.innerText = `${t.loggedInAs} ${user}`;
     }
   } else {
     if (loginBtn) {
-      loginBtn.innerText = TRANSLATIONS[currentLang].loginOsm;
+      loginBtn.innerText = t.loginOsm;
       loginBtn.onclick = () => OsmAuth.startLogin();
     }
     if (userLabel) userLabel.style.display = "none";
+  }
+
+  // 2. Wikidata Auth State
+  const wdUser = typeof WikidataAuth !== "undefined" ? WikidataAuth.getUser() : null;
+  const wdLoginBtn = document.getElementById("btn-wd-login");
+  const wdUserLabel = document.getElementById("wd-user-badge");
+
+  if (wdUser && typeof WikidataAuth !== "undefined" && WikidataAuth.isAuthenticated()) {
+    if (wdLoginBtn) {
+      wdLoginBtn.innerText = t.logoutWd || "خروج (Wikidata)";
+      wdLoginBtn.onclick = () => {
+        WikidataAuth.logout();
+        updateAuthUI();
+      };
+    }
+    if (wdUserLabel) {
+      wdUserLabel.style.display = "inline-flex";
+      wdUserLabel.innerText = `🏛️ ${wdUser.username || "Wikidata"}`;
+    }
+  } else {
+    if (wdLoginBtn) {
+      wdLoginBtn.innerText = t.loginWd || "تسجيل الدخول بـ Wikidata";
+      wdLoginBtn.onclick = () => WikidataAuth.startLogin();
+    }
+    if (wdUserLabel) wdUserLabel.style.display = "none";
   }
 }
 

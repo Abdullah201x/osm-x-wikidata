@@ -48,10 +48,16 @@
           </button>
         </div>
 
-        <!-- OSM Auth Bar -->
+        <!-- Dual Auth Bar (OSM & Wikidata) -->
         <div class="auth-bar">
-          <span id="osm-user-badge" style="display: none;"></span>
-          <button id="btn-osm-login" class="osm-btn" data-i18n="loginOsm">تسجيل الدخول بـ OSM</button>
+          <div class="auth-chip-group">
+            <span id="osm-user-badge" style="display: none;"></span>
+            <button id="btn-osm-login" class="osm-btn" data-i18n="loginOsm">تسجيل الدخول بـ OSM</button>
+          </div>
+          <div class="auth-chip-group">
+            <span id="wd-user-badge" style="display: none;"></span>
+            <button id="btn-wd-login" class="wd-btn" data-i18n="loginWd">تسجيل الدخول بـ Wikidata</button>
+          </div>
         </div>
 
         <!-- Direction Mode Switcher -->
@@ -473,6 +479,12 @@
         <button class="btn-close-modal" id="btn-close-history-modal">&times;</button>
       </div>
 
+      <!-- History Tabs (OSM vs Wikidata) -->
+      <div class="history-tabs-row">
+        <button id="btn-hist-tab-osm" class="history-tab-btn active" data-tab="osm" data-i18n="histTabOsm">🗺️ تعديلات OSM</button>
+        <button id="btn-hist-tab-wd" class="history-tab-btn" data-tab="wikidata" data-i18n="histTabWd">🏛️ تعديلات ويكي بيانات (EditGroups)</button>
+      </div>
+
       <!-- KPI Metrics Strip -->
       <div class="history-kpis-grid">
         <div class="history-kpi-card">
@@ -541,6 +553,8 @@
   <script src="js/wikidata_labels.js?v=10"></script>
   <script src="js/tools.js?v=10"></script>
   <script src="js/osm_oauth.js?v=10"></script>
+  <script src="js/wikidata_auth.js?v=10"></script>
+  <script src="js/wikidata_edit.js?v=10"></script>
   <script src="js/live_verify.js?v=10"></script>
   <script src="js/batch_manager.js?v=10"></script>
   <script src="js/history_manager.js?v=10"></script>

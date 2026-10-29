@@ -2425,3 +2425,127 @@ kbd, .kbd-inline {
   color: #3a86ff;
   border: 1px solid rgba(58, 134, 255, 0.4);
 }
+
+/* Phase 5: Dual Auth & In-App Wikidata Styling */
+.auth-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.auth-chip-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.wd-btn {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(51, 102, 204, 0.25) 0%, rgba(153, 0, 0, 0.25) 100%);
+  border: 1px solid rgba(51, 102, 204, 0.5);
+  color: #8bb2ff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wd-btn:hover {
+  background: linear-gradient(135deg, rgba(51, 102, 204, 0.45) 0%, rgba(153, 0, 0, 0.45) 100%);
+  border-color: #8bb2ff;
+  color: #ffffff;
+}
+
+#wd-user-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8bb2ff;
+  background: rgba(51, 102, 204, 0.15);
+  border: 1px solid rgba(51, 102, 204, 0.4);
+  padding: 5px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-qs-action {
+  background: rgba(139, 92, 246, 0.18) !important;
+  border: 1px solid rgba(139, 92, 246, 0.45) !important;
+  color: #c4b5fd !important;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-qs-action:hover {
+  background: rgba(139, 92, 246, 0.35) !important;
+  border-color: #c4b5fd !important;
+  color: #ffffff !important;
+}
+
+.btn-wd-claim {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  transition: all 0.2s ease;
+}
+
+.btn-wd-claim:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+}
+
+.btn-osm-repair {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.btn-osm-repair:hover {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
+}
+
+.history-tabs-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.history-tab-btn {
+  background: var(--color-surface);
+  border: 1px solid var(--panel-border);
+  color: var(--color-text-muted);
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.history-tab-btn:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.history-tab-btn.active {
+  background: rgba(0, 242, 254, 0.15);
+  border-color: var(--color-primary);
+  color: #fff;
+}
