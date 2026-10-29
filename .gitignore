@@ -17,3 +17,8 @@ venv/
 Thumbs.db
 *.pem
 *.key
+
+# Generated spatial caches
+pipeline/*.geojson
+sa_boundary.geojson
+.pytest_cache/

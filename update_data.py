@@ -28,6 +28,7 @@ from pipeline.config import GCC_COUNTRIES, DATA_DIR, find_pbf
 from pipeline.pbf_extractor import extract_pbf_to_cache
 from pipeline.wikidata_fetcher import fetch_country_wikidata
 from pipeline.matcher import match_country_items
+from pipeline.reverse_matcher import run_reverse_analysis
 
 def main():
     parser = argparse.ArgumentParser(description="Update OSM x Wikidata GCC datasets.")
@@ -52,6 +53,11 @@ def main():
         "--refresh-wikidata",
         action="store_true",
         help="Force fresh Wikidata SPARQL queries instead of using SQLite cache.",
+    )
+    parser.add_argument(
+        "--skip-reverse",
+        action="store_true",
+        help="Skip reverse analysis QA generation.",
     )
     args = parser.parse_args()
 
@@ -119,6 +125,13 @@ def main():
         file_size_kb = os.path.getsize(out_file) / 1024
         print(f"  [Export] Wrote {out_file} ({file_size_kb:.1f} KB, {matched_result['counts']['total']:,} items)")
 
+        # Run reverse QA audit for this country
+        reverse_counts = None
+        if not args.skip_reverse:
+            print(f"  [Reverse QA] Running reverse tag audit & back-link analysis for {c_code}...")
+            reverse_res = run_reverse_analysis(c_code, force_refresh_wikidata=args.refresh_wikidata)
+            reverse_counts = reverse_res["counts"]
+
         # Update summary for this country
         summary["countries"][c_code] = {
             "name_en": c_info["name_en"],
@@ -126,6 +139,8 @@ def main():
             "file": f"{c_code.lower()}.json",
             "counts": matched_result["counts"]
         }
+        if reverse_counts:
+            summary["countries"][c_code]["reverse_counts"] = reverse_counts
 
     # Recompute overall totals from all countries in summary
     summary["total_items"] = sum(c["counts"]["total"] for c in summary["countries"].values())
@@ -133,6 +148,20 @@ def main():
     summary["total_candidates"] = sum(c["counts"]["candidates"] for c in summary["countries"].values())
     summary["total_linked"] = sum(c["counts"]["linked"] for c in summary["countries"].values())
     summary["total_filtered_non_physical"] = sum(c["counts"].get("filtered_non_physical", 0) for c in summary["countries"].values())
+
+    # Recompute overall reverse totals if present
+    rev_counts_list = [c["reverse_counts"] for c in summary["countries"].values() if "reverse_counts" in c]
+    if rev_counts_list:
+        summary["reverse_totals"] = {
+            "total_tagged": sum(rc.get("total_tagged", 0) for rc in rev_counts_list),
+            "missing_backlink": sum(rc.get("missing_backlink", 0) for rc in rev_counts_list),
+            "missing_backlink_high": sum(rc.get("missing_backlink_high", 0) for rc in rev_counts_list),
+            "missing_backlink_medium": sum(rc.get("missing_backlink_medium", 0) for rc in rev_counts_list),
+            "missing_backlink_low": sum(rc.get("missing_backlink_low", 0) for rc in rev_counts_list),
+            "broken_osm_tag": sum(rc.get("broken_osm_tag", 0) for rc in rev_counts_list),
+            "conflict": sum(rc.get("conflict", 0) for rc in rev_counts_list),
+            "review_gap": sum(rc.get("review_gap", 0) for rc in rev_counts_list),
+        }
 
     # Write summary.json
     summary_file = os.path.join(DATA_DIR, "summary.json")
@@ -148,6 +177,12 @@ def main():
     print(f" ML Candidates:    {summary['total_candidates']:,} (🟡 needs tag linkage)")
     print(f" Fully Linked:     {summary['total_linked']:,} (🟢 already in OSM)")
     print(f" Filtered Noise:   {summary['total_filtered_non_physical']:,} (🚫 events/non-physical purged)")
+    if "reverse_totals" in summary:
+        rt = summary["reverse_totals"]
+        print(f" Reverse Tagged:   {rt['total_tagged']:,}")
+        print(f" High Back-links:  {rt['missing_backlink_high']:,} (🟢 1-click stageable to Wikidata)")
+        print(f" Broken OSM Tags:  {rt['broken_osm_tag']:,} (🔴 needs OSM tag fix)")
+        print(f" Conflicts:        {rt['conflict']:,} (⚠️ multi-tag / ID mismatch)")
     print(f" Summary Saved:    {summary_file}")
     print("==================================================")
 

@@ -1,8 +1,9 @@
 """
 High-Speed Local PBF Extractor for GCC OSM Data using pyosmium.
 Extracts:
-1. All OSM entities (nodes, ways & relations) tagged with `wikidata=*`.
+1. All OSM entities (nodes, ways & relations) tagged with `wikidata=*` (including malformed QIDs for QA).
 2. Candidate POIs (nodes & ways with names and relevant feature tags).
+3. Relation memberships and approximate centroids for relations carrying `wikidata=*`.
 Stores results in local SQLite cache (`pipeline/osm_cache.db`).
 """
 
@@ -21,7 +22,9 @@ OSM_CACHE_DB = os.path.join(BASE_DIR, "pipeline", "osm_cache.db")
 TARGET_TAG_KEYS = (
     "amenity", "historic", "tourism", "place", "building",
     "leisure", "natural", "waterway", "aeroway", "man_made", "office",
-    "shop", "healthcare", "craft", "boundary", "emergency"
+    "shop", "healthcare", "craft", "boundary", "emergency",
+    "highway", "railway", "landuse", "route", "public_transport",
+    "power", "water", "bridge", "military", "barrier"
 )
 
 def init_osm_db():
@@ -69,24 +72,37 @@ def init_osm_db():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS osm_relation_members (
+        rel_id INTEGER NOT NULL,
+        member_type TEXT NOT NULL,
+        member_id INTEGER NOT NULL,
+        role TEXT,
+        PRIMARY KEY (rel_id, member_type, member_id, role)
+    )
+    """)
+
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_linked_qid ON osm_linked(qid)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_linked_lat_lon ON osm_linked(lat, lon)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_cand_lat_lon ON osm_candidates(lat, lon)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_cand_name ON osm_candidates(name)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_cand_name_ar ON osm_candidates(name_ar)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_rel_members_ref ON osm_relation_members(member_type, member_id)")
 
     conn.commit()
     conn.close()
 
 class GCCPbfHandler(osmium.SimpleHandler):
     """
-    Scans the GCC .osm.pbf file and extracts both linked objects and candidate POIs.
+    Scans the GCC .osm.pbf file and extracts both linked objects, candidate POIs,
+    and relation memberships for relations carrying wikidata=*.
     """
     def __init__(self, batch_size: int = 50000):
         super().__init__()
         self.batch_size = batch_size
         self.linked_batch: List[Tuple] = []
         self.candidate_batch: List[Tuple] = []
+        self.rel_members_batch: List[Tuple] = []
         self.conn = sqlite3.connect(OSM_CACHE_DB)
         self.cursor = self.conn.cursor()
         self.total_linked = 0
@@ -106,6 +122,12 @@ class GCCPbfHandler(osmium.SimpleHandler):
             """, self.candidate_batch)
             self.total_candidates += len(self.candidate_batch)
             self.candidate_batch.clear()
+
+        if self.rel_members_batch:
+            self.cursor.executemany("""
+            INSERT OR IGNORE INTO osm_relation_members VALUES (?,?,?,?)
+            """, self.rel_members_batch)
+            self.rel_members_batch.clear()
 
         self.conn.commit()
 
@@ -138,8 +160,8 @@ class GCCPbfHandler(osmium.SimpleHandler):
                 main_v = tags.get(k, "")
                 break
 
-        if wd and wd.startswith('Q'):
-            # Linked entity
+        if wd and wd.strip():
+            # Linked entity (canonical or malformed)
             tags_dict = {t.k: t.v for t in tags}
             self.linked_batch.append((
                 'n', n.id, round(lat, 6), round(lon, 6), wd.strip(),
@@ -177,7 +199,9 @@ class GCCPbfHandler(osmium.SimpleHandler):
         name_en = tags.get('name:en') or tags.get('brand:en')
 
         # Only process if it has wikidata or is a candidate POI
-        if not (wd and wd.startswith('Q')) and not (main_k and (name or name_ar or name_en)):
+        has_wd = bool(wd and wd.strip())
+        is_cand = bool(main_k and (name or name_ar or name_en))
+        if not has_wd and not is_cand:
             return
 
         # Compute centroid from way nodes
@@ -208,14 +232,14 @@ class GCCPbfHandler(osmium.SimpleHandler):
         if not (12.0 <= lat <= 34.0 and 33.0 <= lon <= 61.0):
             return
 
-        if wd and wd.startswith('Q'):
+        if has_wd:
             tags_dict = {t.k: t.v for t in tags}
             self.linked_batch.append((
                 'w', w.id, round(lat, 6), round(lon, 6), wd.strip(),
                 name or "", name_ar or "", name_en or "",
                 main_k, main_v, json.dumps(tags_dict, ensure_ascii=False)
             ))
-        elif main_k and (name or name_ar or name_en):
+        elif is_cand:
             self.candidate_batch.append((
                 'w', w.id, round(lat, 6), round(lon, 6),
                 name or "", name_ar or "", name_en or "",
@@ -226,11 +250,9 @@ class GCCPbfHandler(osmium.SimpleHandler):
             self._flush()
 
     def relation(self, r):
-        # Relations are only needed for the linked-QID index (e.g. cities, protected areas, multipolygons).
-        # Their geometry is not assembled here, so they get a (0, 0) placeholder location that the
-        # matcher never uses for linked lookups and the ML trainer filters out by distance.
+        # Relations carrying wikidata=* are indexed for reverse QA & forward linking
         wd = r.tags.get('wikidata')
-        if not (wd and wd.startswith('Q')):
+        if not (wd and wd.strip()):
             return
 
         tags = r.tags
@@ -249,7 +271,10 @@ class GCCPbfHandler(osmium.SimpleHandler):
             main_k, main_v, json.dumps(tags_dict, ensure_ascii=False)
         ))
 
-        if len(self.linked_batch) >= self.batch_size:
+        for m in r.members:
+            self.rel_members_batch.append((r.id, m.type, m.ref, m.role or ""))
+
+        if len(self.linked_batch) >= self.batch_size or len(self.rel_members_batch) >= self.batch_size:
             self._flush()
 
     def close(self):
@@ -294,6 +319,7 @@ def extract_pbf_to_cache(pbf_path: Optional[str] = None, force_reparse: bool = F
     cursor = conn.cursor()
     cursor.execute("DELETE FROM osm_linked")
     cursor.execute("DELETE FROM osm_candidates")
+    cursor.execute("DELETE FROM osm_relation_members")
     conn.commit()
     conn.close()
 
@@ -301,11 +327,39 @@ def extract_pbf_to_cache(pbf_path: Optional[str] = None, force_reparse: bool = F
     handler.apply_file(pbf_path, locations=True)
     handler.close()
 
+    # Step 2: Compute approximate centroids for relations from linked/candidate members
+    conn = sqlite3.connect(OSM_CACHE_DB)
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE osm_linked
+    SET lat = sub.avg_lat, lon = sub.avg_lon
+    FROM (
+        SELECT m.rel_id, ROUND(AVG(l.lat), 6) AS avg_lat, ROUND(AVG(l.lon), 6) AS avg_lon
+        FROM osm_relation_members m
+        JOIN osm_linked l ON l.osm_type = m.member_type AND l.osm_id = m.member_id
+        WHERE l.lat != 0.0 AND l.lon != 0.0
+        GROUP BY m.rel_id
+    ) AS sub
+    WHERE osm_linked.osm_type = 'r' AND osm_linked.osm_id = sub.rel_id AND osm_linked.lat = 0.0
+    """)
+
+    cursor.execute("""
+    UPDATE osm_linked
+    SET lat = sub.avg_lat, lon = sub.avg_lon
+    FROM (
+        SELECT m.rel_id, ROUND(AVG(c.lat), 6) AS avg_lat, ROUND(AVG(c.lon), 6) AS avg_lon
+        FROM osm_relation_members m
+        JOIN osm_candidates c ON c.osm_type = m.member_type AND c.osm_id = m.member_id
+        WHERE c.lat != 0.0 AND c.lon != 0.0
+        GROUP BY m.rel_id
+    ) AS sub
+    WHERE osm_linked.osm_type = 'r' AND osm_linked.osm_id = sub.rel_id AND osm_linked.lat = 0.0
+    """)
+    conn.commit()
+
     elapsed = time.time() - start_time
 
     # Record mtime
-    conn = sqlite3.connect(OSM_CACHE_DB)
-    cursor = conn.cursor()
     cursor.execute("INSERT OR REPLACE INTO meta VALUES ('pbf_mtime', ?)", (pbf_mtime,))
     cursor.execute("INSERT OR REPLACE INTO meta VALUES ('pbf_file', ?)", (os.path.basename(pbf_path),))
     cursor.execute("INSERT OR REPLACE INTO meta VALUES ('last_parsed', ?)", (time.ctime(),))
@@ -315,7 +369,9 @@ def extract_pbf_to_cache(pbf_path: Optional[str] = None, force_reparse: bool = F
     linked_count = cursor.fetchone()[0]
     cursor.execute("SELECT COUNT(*) FROM osm_candidates")
     cand_count = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM osm_relation_members")
+    rel_mem_count = cursor.fetchone()[0]
     conn.close()
 
-    print(f"  [OSM Parser] Finished in {elapsed:.1f}s. Extracted {linked_count:,} linked entities and {cand_count:,} candidates.")
+    print(f"  [OSM Parser] Finished in {elapsed:.1f}s. Extracted {linked_count:,} linked entities, {cand_count:,} candidates, {rel_mem_count:,} relation members.")
     return linked_count, cand_count

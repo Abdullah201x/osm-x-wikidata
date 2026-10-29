@@ -158,3 +158,103 @@ def string_similarity(s1: str, s2: str) -> float:
     # Blended score
     return max(jaccard, containment * 0.85)
 
+
+
+RE_SERIAL_SUFFIX = re.compile(r'\s+[0-9٠-٩]+$')
+
+def strip_serial_suffix(text: str) -> str:
+    """Strips trailing serial/batch numbers like 'جامع الرمال 1' -> 'جامع الرمال'."""
+    if not text:
+        return ""
+    return RE_SERIAL_SUFFIX.sub("", text).strip()
+
+_AR_TO_LATIN = {
+    'ا': 'a', 'أ': 'a', 'إ': 'i', 'آ': 'aa', 'ٱ': 'a',
+    'ب': 'b', 'ت': 't', 'ث': 'th', 'ج': 'j', 'ح': 'h',
+    'خ': 'kh', 'د': 'd', 'ذ': 'dh', 'ر': 'r', 'ز': 'z',
+    'س': 's', 'ش': 'sh', 'ص': 's', 'ض': 'd', 'ط': 't',
+    'ظ': 'z', 'ع': 'a', 'غ': 'gh', 'ف': 'f', 'ق': 'q',
+    'ك': 'k', 'ل': 'l', 'م': 'm', 'ن': 'n', 'ه': 'h',
+    'ة': 'h', 'و': 'w', 'ي': 'y', 'ى': 'a', 'ء': '',
+    'ئ': 'y', 'ؤ': 'w'
+}
+
+def transliterate_ar_to_en(text: str) -> str:
+    """Simple phonetic transliteration for cross-script name comparison."""
+    if not text:
+        return ""
+    norm = normalize_arabic(strip_serial_suffix(text), strip_al=True)
+    out = []
+    for ch in norm:
+        if ch in _AR_TO_LATIN:
+            out.append(_AR_TO_LATIN[ch])
+        elif ch.isascii():
+            out.append(ch)
+    res = "".join(out)
+    return RE_MULTI_SPACE.sub(" ", res).strip().lower()
+
+def consonant_skeleton(text: str) -> str:
+    """Extracts consonant skeleton for Semitic root matching across Arabic/Latin."""
+    if not text:
+        return ""
+    s = text.lower()
+    # Strip common prefixes/suffixes
+    s = re.sub(r'\b(al|el)[-\s]', '', s)
+    s = re.sub(r'[-\s](al|el)\b', '', s)
+    # Strip vowels, weak letters, spaces, and repeated consonants
+    s = re.sub(r'[aeiouwy\s]', '', s)
+    # Collapse consecutive duplicate consonants (e.g. mm -> m)
+    return re.sub(r'(.)\1+', r'\1', s)
+
+def match_names_composite(
+    name1_ar: str, name1_en: str,
+    name2_ar: str, name2_en: str
+) -> float:
+    """
+    Computes name similarity considering Arabic, English, serial suffix stripping,
+    and cross-script phonetic fallback. Returns a score between 0.0 and 1.0.
+    """
+    scores = []
+
+    # 1. Arabic vs Arabic
+    c1_ar = strip_serial_suffix(name1_ar)
+    c2_ar = strip_serial_suffix(name2_ar)
+    if c1_ar and c2_ar:
+        scores.append(string_similarity(c1_ar, c2_ar))
+
+    # 2. English vs English
+    c1_en = strip_serial_suffix(name1_en).lower().strip()
+    c2_en = strip_serial_suffix(name2_en).lower().strip()
+    if c1_en and c2_en:
+        w1 = set(re.findall(r'\b\w+\b', c1_en))
+        w2 = set(re.findall(r'\b\w+\b', c2_en))
+        if w1 and w2:
+            inter = len(w1 & w2)
+            union = len(w1 | w2)
+            jaccard = inter / union if union > 0 else 0.0
+            containment = max(inter / len(w1), inter / len(w2))
+            scores.append(max(jaccard, containment * 0.9 if containment >= 0.75 else 0.0))
+
+    # 3. Cross-script fallback: transliterate Arabic to English if one side lacks English or Arabic
+    if not scores or max(scores) < 0.6:
+        t1 = transliterate_ar_to_en(strip_generic_noise(name1_ar)) if name1_ar else strip_generic_noise(c1_en)
+        t2 = transliterate_ar_to_en(strip_generic_noise(name2_ar)) if name2_ar else strip_generic_noise(c2_en)
+        if t1 and t2:
+            # First try word token overlap
+            w1 = set(re.findall(r'\b\w+\b', t1))
+            w2 = set(re.findall(r'\b\w+\b', t2))
+            if w1 and w2:
+                inter = len(w1 & w2)
+                union = len(w1 | w2)
+                if union > 0 and inter > 0:
+                    scores.append((inter / union) * 0.85)
+            # Consonant skeleton fallback
+            sk1 = consonant_skeleton(t1)
+            sk2 = consonant_skeleton(t2)
+            if sk1 and sk2:
+                if sk1 == sk2:
+                    scores.append(0.82)
+                elif len(sk1) >= 3 and len(sk2) >= 3 and (sk1 in sk2 or sk2 in sk1):
+                    scores.append(0.72)
+
+    return max(scores) if scores else 0.0
