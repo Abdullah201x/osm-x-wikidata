@@ -64,7 +64,7 @@ async def preview_edit(request: Request, payload: EditPreviewRequest):
         client = httpx.AsyncClient(timeout=8.0, headers={"User-Agent": USER_AGENT})
 
     # 1. Fetch live Wikidata entity
-    wd_url = f"https://www.wikidata.org/w/api.php?action=wbgetentities&ids={qid}&props=info|claims&format=json"
+    wd_url = f"https://www.wikidata.org/w/api.php?action=wbgetentities&ids={qid}&props=info|claims&redirects=yes&format=json"
     try:
         wd_resp = await client.get(wd_url)
         wd_data = wd_resp.json()
@@ -80,8 +80,19 @@ async def preview_edit(request: Request, payload: EditPreviewRequest):
             "warnings": [f"Wikidata entity {qid} does not exist."]
         }
 
-    if "redirects" in wd_data:
-        warnings.append(f"Entity {qid} is a redirect.")
+    # With redirects=yes Wikidata resolves the redirect and returns the *target's*
+    # data under the requested id, flagged by a "redirects" object on the entity.
+    # Writing to a redirect item fails and the claims below would be the target's,
+    # so report it instead of previewing a statement that cannot be saved.
+    redirect = entity.get("redirects")
+    if redirect:
+        target = redirect.get("to", "")
+        return {
+            "valid": False,
+            "status": "redirected_entity",
+            "redirect_to": target,
+            "warnings": [f"Entity {qid} is a redirect to {target}; link the OSM element to {target} instead."]
+        }
 
     claims = entity.get("claims", {})
     baserevid = entity.get("lastrevid", 0)

@@ -248,3 +248,26 @@ def test_lock_table_is_bounded_and_keeps_held_locks(monkeypatch):
         held.release()
 
     asyncio.run(scenario())
+
+
+# --- preview.py: redirects ---
+
+def test_preview_requests_redirects_yes_and_flags_redirect_items(client):
+    seen = []
+
+    def handler(request):
+        seen.append(request.url)
+        return httpx.Response(200, json={"entities": {"Q10000003": {
+            "id": "Q7809164", "lastrevid": 5, "claims": {},
+            "redirects": {"from": "Q10000003", "to": "Q7809164"}}}})
+
+    _install_mock_upstream(client, handler)
+    body = {"qid": "Q10000003", "property": "P11693", "osm_type": "node", "osm_id": 1}
+    r = client.post("/api/v1/edits/preview", json=body, headers={"X-Real-IP": "198.51.100.94"})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["valid"] is False
+    assert data["status"] == "redirected_entity"
+    assert data["redirect_to"] == "Q7809164"
+    assert seen[0].params["redirects"] == "yes"
+    assert len(seen) == 1  # no OSM lookup for an unwritable item
