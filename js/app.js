@@ -59,6 +59,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   parseUrlHash();
 
   if (currentMode === "reverse") {
+    // parseUrlHash() only recorded the requested mode; switchMode() is a no-op when
+    // the mode already matches, so reset it to let the switch really apply the panels and data.
+    currentMode = "forward";
     await switchMode("reverse");
   } else {
     // Load initial country
@@ -812,7 +815,6 @@ function selectItem(item, marker = null, skipFly = false) {
   const qid = `Q${item[0]}`;
   const lat = item[1];
   const lon = item[2];
-  const catId = item[3];
   const status = item[4];
   const nameAr = item[5] || "";
   const nameEn = item[6] || "";
@@ -1584,11 +1586,12 @@ function setupKeyboardShortcuts() {
 
     // Feature-specific shortcuts
     if (currentMode === "reverse") {
-      if (!selectedReverseItem) return;
-      const lat = selectedReverseItem.lat;
-      const lon = selectedReverseItem.lon;
-      const osmRef = selectedReverseItem.osm_ref || (selectedReverseItem.osm_type && selectedReverseItem.osm_id ? `${selectedReverseItem.osm_type}/${selectedReverseItem.osm_id}` : "");
-      const qid = selectedReverseItem.suggested_fix?.value || selectedReverseItem.qid || "";
+      // selectReverseItem() stores the reverse item in selectedItem / selectedItemIndex
+      if (!selectedItem) return;
+      const lat = selectedItem.osm?.lat || selectedItem.wikidata?.lat;
+      const lon = selectedItem.osm?.lon || selectedItem.wikidata?.lon;
+      const osmRef = selectedItem.osm_type && selectedItem.osm_id ? `${selectedItem.osm_type}${selectedItem.osm_id}` : "";
+      const qid = selectedItem.qid || "";
 
       if (key === "j" || key === "J") {
         e.preventDefault();
@@ -1604,13 +1607,13 @@ function setupKeyboardShortcuts() {
       } else if (key === "n" || key === "N") {
         e.preventDefault();
         if (filteredReverseItems.length > 0) {
-          const nextIdx = (selectedReverseItemIndex + 1) % filteredReverseItems.length;
+          const nextIdx = (selectedItemIndex + 1) % filteredReverseItems.length;
           selectReverseItem(filteredReverseItems[nextIdx]);
         }
       } else if (key === "p" || key === "P") {
         e.preventDefault();
         if (filteredReverseItems.length > 0) {
-          const prevIdx = (selectedReverseItemIndex - 1 + filteredReverseItems.length) % filteredReverseItems.length;
+          const prevIdx = (selectedItemIndex - 1 + filteredReverseItems.length) % filteredReverseItems.length;
           selectReverseItem(filteredReverseItems[prevIdx]);
         }
       }
@@ -1954,7 +1957,7 @@ function updateUrlHash() {
   params.set("country", currentCountry);
   if (currentMode === "reverse") {
     if (activeReverseKind !== "all") params.set("kind", activeReverseKind);
-    if (selectedReverseItem) params.set("qid", selectedReverseItem.qid || "");
+    if (selectedItem) params.set("qid", selectedItem.qid || "");
   } else if (selectedItem) {
     params.set("qid", `Q${selectedItem[0]}`);
   }

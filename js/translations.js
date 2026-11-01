@@ -363,6 +363,11 @@ const TRANSLATIONS = {
     openChangeset: "View Changeset in OSM ↗",
     alreadyLinkedNotice: "This OSM element is already linked with this Wikidata QID!",
     shortcutDirectLink: "Direct Link in OSM",
+    // Maintainer & DWG Contact
+    maintainerLabel: "Maintainer:",
+    contactOsmMsg: "Message on OSM",
+    policyLabel: "Policies & DWG",
+    aboutModalTitle: "About, Contact & Data Working Group (DWG) Policies",
 
     // Batch & Multi-Item Changesets
     batchQueueTitle: "Changeset Batch Queue",
