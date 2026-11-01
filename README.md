@@ -1,148 +1,239 @@
-# OSM × Wikidata GCC Linker & Missing Entries Finder
+# OSM × Wikidata GCC Linker & Reverse QA Workbench
+### منصة الربط والتحقق الثنائي بين خريطة الشارع المفتوحة وويكي بيانات لدول الخليج
 
-A high-performance web workbench and hybrid data pipeline designed to couple **OpenStreetMap (OSM)** data with **Wikidata** across the 6 GCC countries (**Saudi Arabia, UAE, Kuwait, Qatar, Bahrain, Oman**).
+[![CI](https://github.com/Abdullah201x/osm-x-wikidata/actions/workflows/ci.yml/badge.svg)](https://github.com/Abdullah201x/osm-x-wikidata/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
+[![OpenStreetMap](https://img.shields.io/badge/OpenStreetMap-API%200.6%20OAuth2-7EBC6F.svg)](https://www.openstreetmap.org/)
+[![Wikidata](https://img.shields.io/badge/Wikidata-OAuth2%20PKCE-339966.svg)](https://www.wikidata.org/)
 
-Developed for power users and the GCC mapping community, this project highlights Wikidata entities that are **missing in OpenStreetMap** so mappers can add them with 1-click tag presets, detects potential candidate matches, and integrates directly with **JOSM Remote Control** and **OSM iD Editor**.
+A high-performance, bidirectional web workbench and hybrid data pipeline coupling **OpenStreetMap (OSM)** with **Wikidata** across the 6 GCC countries (**Saudi Arabia, United Arab Emirates, Kuwait, Qatar, Bahrain, and Oman**).
+
+Live Production: **[wikidata.saudiosm.org](https://wikidata.saudiosm.org)**
 
 ---
 
-## 🌟 Key Features
+## 🌟 Key Capabilities
 
-* **🤖 Machine Learning Conflation Engine**: Uses a trained `HistGradientBoostingClassifier` (ROC-AUC 0.996) evaluated on strictly local spatial neighborhoods (10m–400m) to predict candidate match probabilities with AI confidence percentages.
-* **🛡️ Physicality & Ground Truth Guard**: Automatically filters out 6,200+ non-physical entities (events, disasters, pandemics, drone strikes, timelines, and blank GeoNames imports) to ensure strict compliance with the OSM Ground Truth rule.
-* **⚡ Local `.osm.pbf` Engine**: Uses `pyosmium` to stream through local GCC PBF extracts in under a minute without Overpass rate limits or network timeouts.
-* **🔍 Arabic Linguistic Normalization**: Advanced NLP normalization handles spelling variants (`الـ` prefix, hamza variants `أ/إ/آ`, taa marbuta `ة/ه`, and mosque synonyms `جامع/مسجد`) for high-precision candidate matching.
-* **🕌 Smart Category Filtering**: Segregates the 72,000+ Saudi mosques from other critical infrastructure (heritage sites, hospitals, schools, mountains, islands, settlements) so power users can focus on specific mapping targets.
-* **🔗 Flexible Single & Multi-Item OSM Linking (API 0.6)**: 
-  * **Single Item Mode**: 1-click instant edit with pre-flight comment review in a dedicated single changeset.
-  * **Batch Queue Mode**: Stage multiple candidate edits across the map into a changeset queue and upload them all in **ONE unified OSM Changeset** (following OSM community guidelines to prevent changeset clutter).
-* **💬 Intelligent, Community-Compliant Changeset Comments**: Generates informative comments with human-readable Arabic & English feature names, country context, QIDs, and community hashtags (`#osm-wikidata-gcc`), along with customizable preset chips (`[Verified with aerial imagery]`, `[Name match confirmed]`).
-* **📜 Dedicated Activity & History Page ("What Has Been Done")**: Complete activity center displaying all changesets created via the tool, summary KPIs (total changesets, elements linked, batch vs single breakdown), search and filters, 1-click map zooming to past edits, and CSV/JSON export.
-* **🎯 JOSM Remote Control (`localhost:8111`)**:
-  * **Load & Zoom**: Jump directly to the bounding box in JOSM.
-  * **Push Tags**: 1-click push of `wikidata=Q...` to candidate OSM elements.
-  * **Add Node**: Instant creation of new nodes in JOSM with pre-filled tags (`name`, `name:ar`, `name:en`, `wikidata`, `wikipedia`, `amenity`, etc.).
-* **✏️ OSM iD Editor & Notes API**: Direct deep-links to iD Editor and in-app OSM Notes creation (authenticated via OAuth 2.0 PKCE or anonymous).
-* **🛰️ High-Resolution Satellite Verification**: Seamless switching between Dark Mode, Esri World Imagery (Satellite), and OSM Streets to visually verify physical structures on the ground.
-* **🔄 Hybrid Live OSM Verifier**: 1-click on-demand micro-query against live OSM servers (150m radius) to check if an item was mapped after the PBF extract was generated.
-* **📦 Community Export Tools**: Export any filtered subset as a **MapRoulette Challenge (GeoJSON)** for mapping sprints, or as a CSV/QuickStatements table.
+### 1. 🔄 Bidirectional Linking & QA Modes
+
+The workbench operates seamlessly in two specialized modes via a top navigation pill:
+
+* **Mode A: Forward Conflation (Wikidata &rarr; OSM)**:
+  * Discovers Wikidata entities missing in OpenStreetMap so mappers can add them with 1-click presets.
+  * **Machine Learning Conflation**: Employs a trained `HistGradientBoostingClassifier` (ROC-AUC 0.996) evaluated on strictly local spatial neighborhoods (10 m–400 m) to predict match probabilities with AI confidence percentages.
+  * **Physicality & Ground Truth Guard**: Automatically filters out 6,200+ non-physical entities (events, disasters, pandemics, timelines, administrative lists) ensuring strict adherence to OSM's Ground Truth rule.
+  * **Arabic Linguistic Normalization**: Advanced NLP normalization handles spelling variants (`الـ` prefix, hamza variants `أ/إ/آ`, taa marbuta `ة/ه`, and mosque synonyms `جامع/مسجد`).
+  * **1-Click Tag Presets**: Pre-fills tags for hundreds of entity types across all GCC states.
+
+* **Mode B: Reverse QA & Back-Linking (OSM &rarr; Wikidata)**:
+  * Scans existing OSM elements carrying `wikidata=*` tags across the 6 GCC countries to detect errors and sync Wikidata reciprocal statements.
+  * **Missing Back-links Engine**: Identifies OSM elements correctly linked to Wikidata where Wikidata lacks the corresponding external identifier (`P11693` for nodes, `P10689` for ways, `P402` for relations).
+  * **Broken OSM Tag Detection**: Catches malformed QIDs (`q851`, full URLs, semicolon lists), deleted entities, and redirected QIDs with 1-click tag migration.
+  * **Wrong-Key Classifier**: Proactively prevents bad Wikidata edits by detecting entity misclassifications:
+    * `Q5` (human) &rarr; suggests `name:etymology:wikidata` (named streets, mosques) or `subject:wikidata` (statues).
+    * Retail chains / corporate brands &rarr; suggests `brand:wikidata` or `operator:wikidata`.
+    * Taxa (`Q16521`) &rarr; suggests `species:wikidata`.
+  * **Multi-Tag Conflict Engine (5 Buckets)**: Classifies multi-tagged QIDs into benign relations (e.g. Haramain Railway), linear segmented ways (Wadi Hanifah, Sheikh Zayed Rd), admin relations, duplicate POIs, and parent-admin copy-paste pollution (e.g. Jazan governorate tags pasted onto 60+ child villages).
+
+### 2. 🔐 Dual OAuth 2.0 PKCE & In-App Writing
+
+* **OpenStreetMap OAuth 2.0 PKCE**: Authenticated changeset creation (API 0.6) with automatic token management, smart changeset comments, and optional dev sandbox toggle (`master.apis.dev.openstreetmap.org`).
+* **Wikidata OAuth 2.0 PKCE**: Direct in-app creation of `P11693`, `P10689`, and `P402` claims with `maxlag=5` throttling, conflict `baserevid` protection, upstream 429 backoff, and [EditGroups](https://editgroups.toolforge.org) batch links.
+* **Pre-Flight Edit Preview**: Calls `/api/v1/edits/preview` before every write to verify live Wikidata and OSM element state.
+* **Batch Staging Queue**: Queue up to **25 items** per changeset or Wikidata batch with polite &ge;600 ms spacing and real-time progress indicators. No blind bulk bot writes.
+
+### 3. 🎯 External Tool Integrations
+
+* **JOSM Remote Control (`localhost:8111`)**:
+  * **Load & Zoom (`J`)**: Jump directly to the bounding box in JOSM.
+  * **Push Tags**: 1-click push of `wikidata=Q...` to selected OSM elements.
+  * **Add Node**: Instant node creation in JOSM with pre-filled tags.
+* **OSM iD Editor (`I`)**: Deep-links directly to the exact zoom and location in iD editor.
+* **QuickStatements v2 Export**: 1-click copy of QuickStatements lines or batch export of high-confidence back-links.
+* **MapRoulette Challenge Export**: Export any filtered subset as a GeoJSON task challenge.
+
+### 4. ⚡ High-Speed Pipeline & FastAPI Backend
+
+* **Local PBF Scanner**: Uses `pyosmium` and `shapely` to extract GCC features from Geofabrik extracts in under a minute without network timeouts or Overpass limits.
+* **Stateless FastAPI Backend (`osmwd-api`)**:
+  * Serves filtered reverse-QA queries with pagination and search (`/api/v1/reverse`).
+  * Real-time live Wikidata & OSM entity verification with caching and upstream backoff (`/api/v1/verify/{qid}`).
+  * Pre-flight write validation (`/api/v1/edits/preview`).
+  * Health and dataset freshness monitoring (`/api/healthz`, `/api/healthz/freshness`).
+  * Rate-limited with `slowapi` using client real IPs behind proxy headers.
+* **Self-Contained Container Stack**: Pre-compressed Brotli (`-q 9`) and Gzip static assets served via Caddy with strict Content Security Policy (CSP), zero external CDN dependencies, and same-origin Umami analytics proxying.
 
 ---
 
 ## 📂 Project Structure
 
 ```
-├── .github/workflows/
-│   └── update-data.yml       # Automated weekly GitHub Actions sync & deploy
-├── data/
-│   ├── summary.json          # Overall & per-country statistics
-│   ├── bh.json               # Bahrain dataset
-│   ├── kw.json               # Kuwait dataset
-│   ├── qa.json               # Qatar dataset
-│   ├── ae.json               # UAE dataset
-│   ├── om.json               # Oman dataset
-│   └── sa.json               # Saudi Arabia dataset
-├── pipeline/
-│   ├── config.py             # GCC metadata & P31-to-OSM ontology
-│   ├── arabic_normalizer.py  # Arabic NLP normalizer & string similarity
-│   ├── pbf_extractor.py      # pyosmium PBF scanner with SQLite caching
-│   ├── wikidata_fetcher.py   # SPARQL client with SQLite caching
-│   └── matcher.py            # Spatial join & candidate detection
+├── backend/                  # FastAPI backend service (osmwd-api)
+│   ├── app/
+│   │   ├── routers/          # API route handlers
+│   │   │   ├── healthz.py    # Health & freshness endpoints (HEAD + GET)
+│   │   │   ├── preview.py    # Pre-flight edit validation (/edits/preview)
+│   │   │   ├── reverse.py    # Paginated reverse QA query engine (/reverse)
+│   │   │   └── verify.py     # Live Wikidata & OSM verifier (/verify/{qid})
+│   │   ├── body_limit.py     # 16 KB request body limit middleware
+│   │   ├── config.py         # Environment configuration & CORS origins
+│   │   ├── limiter.py        # SlowAPI rate limiting configuration
+│   │   ├── main.py           # FastAPI application entrypoint
+│   │   └── store.py          # In-memory dataset store with atomic hot-reload
+│   ├── Dockerfile            # Pinned python:3.12-slim non-root container
+│   └── requirements.txt      # Backend Python dependencies
 ├── css/
 │   └── style.css             # Dark glassmorphic design system
-├── js/
-│   ├── translations.js       # Arabic & English localizations
+├── data/                     # Published datasets (committed to git)
+│   ├── summary.json          # Overall stats, reverse counts & UTC updated_at
+│   ├── {sa,ae,kw,qa,bh,om}.json          # Forward conflation 15-tuple datasets
+│   └── reverse_{sa,ae,kw,qa,bh,om}.json  # Reverse QA datasets
+├── deploy/                   # Production deployment assets
+│   ├── Caddyfile.container   # Production Caddy config with strict CSP & Umami proxy
+│   └── docker-compose.coolify.yml # Coolify compose recipe (osmwd-web + osmwd-api)
+├── js/                       # Client-side vanilla JavaScript modules
+│   ├── app.js                # State controller & UI event binding
 │   ├── arabic_utils.js       # Client-side Arabic search & normalization
-│   ├── tag_generator.js      # P31 -> OSM tag preset generator & OSM XML
-│   ├── tools.js              # JOSM 8111, iD Editor & MapRoulette exporter
-│   ├── osm_oauth.js          # OSM OAuth 2.0 PKCE & Changeset API 0.6
-│   ├── live_verify.js        # Real-time 150m Overpass verifier
 │   ├── batch_manager.js      # Staging queue & multi-item changeset manager
-│   ├── history_manager.js    # Activity log, KPI stats, & CSV/JSON export
+│   ├── history_manager.js    # Activity history & CSV/JSON export
+│   ├── live_verify.js        # On-demand micro-query verifier
 │   ├── map.js                # Leaflet map engine & marker clustering
-│   └── app.js                # State controller & UI wiring
-├── index.html                # Main application interface
+│   ├── osm_oauth.js          # OSM OAuth 2.0 PKCE & Changeset API 0.6
+│   ├── tag_generator.js      # P31 -> OSM tag preset generator
+│   ├── tools.js              # JOSM 8111, iD Editor & QuickStatements tools
+│   ├── translations.js       # Bilingual Arabic (RTL) & English localizations
+│   ├── wikidata_auth.js      # Wikimedia OAuth 2.0 PKCE auth controller
+│   ├── wikidata_edit.js      # Wikidata API statement writer & EditGroups
+│   └── wikidata_labels.js    # Client-side QID/PID label cache
+├── pipeline/                 # Offline data pipeline & conflation engine
+│   ├── arabic_normalizer.py  # Arabic NLP normalizer & string similarity
+│   ├── config.py             # GCC metadata, bounding boxes & P31 ontology
+│   ├── country_boundaries.py # GCC admin_level=2 boundary extractor
+│   ├── matcher.py            # Spatial join & candidate POI matcher
+│   ├── ml_matcher.py         # ML conflation model prediction
+│   ├── pbf_extractor.py      # pyosmium PBF scanner with SQLite caching
+│   ├── physicality_filter.py # Filter for non-physical Wikidata items
+│   ├── reverse_matcher.py    # Reverse QA classification & confidence engine
+│   └── wikidata_fetcher.py   # SPARQL client with backoff & SQLite caching
+├── tests/                    # Automated test suites
+│   ├── test_backend_api.py   # FastAPI endpoint, rate limit & validation tests
+│   ├── test_country_boundaries.py # GCC polygon extraction & point-in-poly tests
+│   └── test_reverse_matcher.py    # Reverse QA classification & bucket tests
+├── vendor/                   # Self-hosted frontend dependencies (Zero CDN)
+│   ├── fonts/                # Cairo, Outfit, Plus Jakarta Sans, JetBrains Mono
+│   ├── leaflet/              # Leaflet 1.9.4 CSS, JS & images
+│   └── markercluster/        # Leaflet.markercluster 1.4.1 CSS & JS
+├── Dockerfile                # Multi-stage production web container (Brotli + Caddy)
+├── HANDOFF.md                # Engineering handoff & operational runbook
+├── index.html                # Single-page application entrypoint
+├── LEVEL_UP_PLAN.md          # Engineering parity roadmap with Manara
 ├── OSM_IMPORT_GUIDELINES.md  # Official OSM Import Policy & Compliance Guide
-├── update_data.py            # Master pipeline runner
-└── README.md
+├── pytest.ini                # Pytest configuration
+├── requirements.txt          # Root Python dependencies (pipeline + tests)
+├── serve_ssl.py              # Local HTTPS dev server with production CSP enforcement
+└── update_data.py            # Master pipeline runner
 ```
 
 ---
 
-## ⚠️ Important: OSM Import Guidelines Compliance
+## 🚀 Getting Started
 
-Adding missing features or bulk data from Wikidata into OpenStreetMap is officially classified as an **Import** under the **[OSMF Import Guidelines](https://wiki.openstreetmap.org/wiki/Import/Guidelines)**.
+### 1. Prerequisites & Dependencies
 
-Before using the **Add Node in JOSM** feature or uploading new nodes to OpenStreetMap:
-* Please read **[`OSM_IMPORT_GUIDELINES.md`](OSM_IMPORT_GUIDELINES.md)**.
-* Follow the 6 mandatory steps: Community Consultation, OSM Wiki documentation, dedicated import account, small pilot test, mandatory changeset tags, and imagery ground-truth verification.
+Python 3.12+ is required. Install dependencies for both the pipeline and backend:
 
+```bash
+# Pipeline & testing dependencies
+pip install -r requirements.txt
+
+# Backend API dependencies
+pip install -r backend/requirements.txt
+```
+
+### 2. Running Automated Tests
+
+Run the full Python test suite (37 tests, runs completely offline):
+
+```bash
+python -m pytest tests/ -q
+```
+
+### 3. Running Locally
+
+#### Option A: Local Web Server with Production CSP Enforcement
+To test OAuth callbacks and CSP headers with local HTTPS:
+```bash
+python serve_ssl.py 8000
+```
+Open `https://localhost:8000` (accept the self-signed developer certificate).
+
+#### Option B: Running the Backend API Locally
+```bash
+uvicorn backend.app.main:app --host 127.0.0.1 --port 8010 --reload
+```
+Interactive OpenAPI documentation is available at:
+`http://127.0.0.1:8010/api/docs`
 
 ---
 
-## 🚀 Running the Data Pipeline Locally
+## 🔄 Running the Data Pipeline
 
-### Prerequisites
-```bash
-pip install requests shapely osmium scikit-learn joblib numpy
-```
+The data pipeline runs **off the VPS** (either locally or in GitHub Actions) to keep VPS memory usage minimal.
 
-### Run for a Specific Country (e.g. Bahrain or Kuwait)
+### Prerequisites for Pipeline Run
+Place a recent Geofabrik extract (`gcc-states-latest.osm.pbf`) in the root directory or configure `OSM_PBF=/path/to/extract.osm.pbf`.
+
 ```bash
+# Run for a specific country (e.g. Bahrain or Saudi Arabia)
 python update_data.py --country bh
-```
+python update_data.py --country sa
 
-### Run for All GCC Countries
-```bash
+# Run for all 6 GCC countries
 python update_data.py --country all
-```
 
-### Force Refresh from Wikidata SPARQL
-```bash
+# Force refresh from Wikidata SPARQL & entity caches
 python update_data.py --refresh-wikidata
 ```
 
+The pipeline writes output to `data/<cc>.json`, `data/reverse_<cc>.json`, and updates `data/summary.json`.
+
+> [!IMPORTANT]
+> **Upstream Contract with Manara (`manara.saudiosm.org`):**
+> Manara downloads `data/sa.json` nightly. Never alter the 15-element tuple layout `[0..14]` of `data/sa.json`.
+
 ---
 
-## 🔗 Master Updater Integration
+## 🐳 Production Deployment (Coolify)
 
-This project can be integrated as part of a multi-project OSM pipeline updater (such as `update_projects.py` in your local OSM workspace).
-Whenever you drop a new `.osm.pbf` file into your local PBF directory and run:
+Production runs on a Debian VPS (`159.195.192.148`) managed by **Coolify 4.5**.
 
 ```bash
-python update_projects.py
+# Build and run with Docker Compose
+docker compose -f deploy/docker-compose.coolify.yml up -d --build
 ```
 
-All connected regional mapping projects update their datasets concurrently!
+### Resource Allocations
+* `osmwd-web`: Caddy 2.11 on `:80` (memory cap `128 MiB`).
+* `osmwd-api`: FastAPI on `:8010` (memory cap `256 MiB`).
+* Traefik (`coolify-proxy`) owns host ports 80/443 and terminates TLS for `wikidata.saudiosm.org`.
 
 ---
 
-## 🌐 Running the Web Application Locally
+## ⚠️ OpenStreetMap & Wikimedia Policy Compliance
 
-Serve the workspace directory with any static server:
-
-```bash
-# Python built-in HTTP server
-python -m http.server 8000
-```
-Then open `http://localhost:8000` in your browser.
+* **OSM Ground Truth Rule**: All candidate matches must be verified visually via aerial imagery or on-the-ground knowledge before uploading.
+* **No Blind Automated Edits**: Edits are staged for explicit human review. No automated bots.
+* **OSM Import Guidelines**: Adding missing features from Wikidata is governed by the [OSMF Import Guidelines](https://wiki.openstreetmap.org/wiki/Import/Guidelines). Read **[`OSM_IMPORT_GUIDELINES.md`](OSM_IMPORT_GUIDELINES.md)** before performing batch edits.
+* **Wikimedia Edit Policy**: All Wikidata edits use authenticated OAuth 2.0 PKCE with `maxlag=5` and `baserevid` collision guards.
+* **Tile Usage**: Map tiles are sourced from CARTO Voyager and Esri World Imagery. **Zero traffic is routed to `tile.openstreetmap.org`**.
 
 ---
 
-## 🛠️ JOSM Remote Control Setup
-
-1. Open **JOSM**.
-2. Go to **Preferences** (F12) &rarr; **Remote Control** (tower icon).
-3. Check **Enable remote control**.
-4. Ensure port `8111` is open.
-5. In the web app, click **Load & Zoom in JOSM** or **Push Tag to JOSM**.
-
----
-
-## 👤 Maintainer, Community Feedback & DWG Compliance
+## 👤 Maintainer & Community Feedback
 
 * **Maintainer**: **[Alshowaiey](https://www.openstreetmap.org/user/Alshowaiey)** (OpenStreetMap Profile)
 * **Direct OSM Message**: Send inquiries or feedback via **[OpenStreetMap Messages](https://www.openstreetmap.org/message/new/Alshowaiey)**.
-* **GitHub Issues**: Report false positive conflation matches or tag suggestions on **[GitHub Issues](https://github.com/Abdullah201x/osm-x-wikidata/issues)**.
-* **Saudi OSM Community**: Chat with regional contributors on Telegram: **[@OSMSaudi](https://t.me/OSMSaudi)**.
-* **DWG & OSMF Notice**: This application operates strictly as an **assisted manual conflation workbench** requiring individual mapper authentication, visual aerial confirmation, and explicit user consent. We perform **no blind automated bot imports**. If you are a member of the Data Working Group (DWG) or local mapping community and have questions, suggestions, or concerns regarding tagging schemes or workflows, please reach out directly and we will gladly collaborate.
+* **GitHub Issues**: Report issues or suggestions on **[GitHub Issues](https://github.com/Abdullah201x/osm-x-wikidata/issues)**.
+* **Saudi OSM Community**: Join regional contributors on Telegram: **[@OSMSaudi](https://t.me/OSMSaudi)**.
