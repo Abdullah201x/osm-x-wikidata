@@ -5,34 +5,16 @@ Stateless, memory-capped, rate-limited backend for reverse QA and edit validatio
 
 from contextlib import asynccontextmanager
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
 
 from app.config import ALLOWED_ORIGINS, USER_AGENT
+from app.limiter import limiter, get_real_client_ip  # noqa: F401 (re-exported)
 from app.store import DatasetStore
 from app.routers import reverse, verify, preview, healthz
-
-def get_real_client_ip(request: Request) -> str:
-    """
-    Extracts the true mapper client IP from Caddy's X-Real-IP header,
-    with fallback to X-Forwarded-For and request.client.host.
-    """
-    real_ip = request.headers.get("X-Real-IP")
-    if real_ip:
-        return real_ip.split(",")[0].strip()
-
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-
-    if request.client and request.client.host:
-        return request.client.host
-
-    return "127.0.0.1"
-
-limiter = Limiter(key_func=get_real_client_ip, default_limits=["120/minute"])
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -57,6 +39,7 @@ app = FastAPI(
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # CORS Middleware
 app.add_middleware(

@@ -10,6 +10,7 @@ import httpx
 from fastapi import APIRouter, Request, HTTPException
 
 from app.config import USER_AGENT
+from app.limiter import limiter
 
 router = APIRouter(prefix="/api/v1", tags=["preview"])
 
@@ -40,6 +41,7 @@ class EditPreviewRequest(BaseModel):
     osm_id: int = Field(..., gt=0, description="OSM element numeric ID")
 
 @router.post("/edits/preview")
+@limiter.limit("30/minute")
 async def preview_edit(request: Request, payload: EditPreviewRequest):
     qid = payload.qid.strip().upper()
     if not RE_QID.match(qid):

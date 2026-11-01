@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any, Tuple
 import httpx
 from fastapi import APIRouter, Request, HTTPException, Query
 from app.config import USER_AGENT
+from app.limiter import limiter
 
 router = APIRouter(prefix="/api/v1", tags=["verify"])
 
@@ -25,6 +26,7 @@ def get_key_lock(key: str) -> asyncio.Lock:
     return _LOCKS[key]
 
 @router.get("/verify/{qid}")
+@limiter.limit("20/minute")
 async def verify_qid(
     request: Request,
     qid: str,

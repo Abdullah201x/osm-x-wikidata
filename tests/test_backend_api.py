@@ -104,3 +104,22 @@ def test_get_real_client_ip_header_extraction():
     req4 = DummyRequest({})
     assert get_real_client_ip(req4) == "10.0.0.1"
 
+
+def test_verify_rate_limit_returns_429(client):
+    # Invalid QIDs return 400 before any upstream call, so this stays offline
+    # while still counting against the 20/minute per-route limit.
+    headers = {"X-Real-IP": "198.51.100.77"}
+    statuses = [client.get("/api/v1/verify/bad", headers=headers).status_code for _ in range(21)]
+    assert statuses[:20] == [400] * 20
+    assert statuses[20] == 429
+
+    # A different client IP is unaffected.
+    other = client.get("/api/v1/verify/bad", headers={"X-Real-IP": "198.51.100.78"})
+    assert other.status_code == 400
+
+def test_preview_rate_limit_returns_429(client):
+    headers = {"X-Real-IP": "198.51.100.79"}
+    bad = {"qid": "Q851", "property": "P10689", "osm_type": "node", "osm_id": 1}
+    statuses = [client.post("/api/v1/edits/preview", json=bad, headers=headers).status_code for _ in range(31)]
+    assert statuses[:30] == [400] * 30
+    assert statuses[30] == 429
