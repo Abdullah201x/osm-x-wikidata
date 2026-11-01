@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ربط أوبن ستريت ماب وويكي بيانات لدول الخليج</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗺️</text></svg>" />
+  
+  <!-- Leaflet & MarkerCluster CSS (Self-Hosted) -->
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=12" />
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css?v=12" />
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.Default.css?v=12" />
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="css/style.css?v=12" />
+</head>
+<body>
+
+  <div id="app-container">
+    
+    <!-- Sidebar Controls -->
+    <aside id="sidebar">
+      <header>
+        <div class="brand-row">
+          <div class="brand-title">
+            <div class="logo-glow"></div>
+            <h1 data-i18n="mainTitle">ربط OSM × ويكي بيانات</h1>
+          </div>
+          <div class="header-right-actions">
+            <button id="btn-about-modal" class="shortcuts-btn" title="حول الأداة والتواصل / About & Contact">ℹ️</button>
+            <button id="btn-shortcuts-modal" class="shortcuts-btn" title="اختصارات لوحة المفاتيح / Keyboard Shortcuts">⌨️</button>
+            <button id="btn-toggle-lang" class="lang-btn" title="تبديل اللغة / Toggle Language">English</button>
+          </div>
+        </div>
+        <p class="subtitle" data-i18n="subtitle">أداة متقدمة لربط بيانات OpenStreetMap بـ Wikidata، وكشف العناصر المفقودة في OSM لدول الخليج العربي.</p>
+        
+        <!-- Quick Nav Actions: Batch Staging & History Page -->
+        <div class="quick-nav-bar">
+          <button id="btn-header-batch" class="nav-pill-btn batch-pill-btn btn-open-batch-modal" title="سلة التعديلات المجمعة (B)">
+            <span class="pill-icon">📦</span>
+            <span data-i18n="batchQueueBtn">سلة التعديلات</span>
+            <span class="batch-counter">0</span>
+          </button>
+          <button id="btn-header-history" class="nav-pill-btn history-pill-btn btn-open-history-modal" title="سجل العمليات ومجموعات التعديل (H)">
+            <span class="pill-icon">📜</span>
+            <span data-i18n="historyPageTitle">سجل الإنجازات</span>
+            <span class="history-counter">0</span>
+          </button>
+        </div>
+
+        <!-- Dual Auth Bar (OSM & Wikidata) -->
+        <div class="auth-bar">
+          <div class="auth-chip-group">
+            <span id="osm-user-badge" style="display: none;"></span>
+            <button id="btn-osm-login" class="osm-btn" data-i18n="loginOsm">تسجيل الدخول بـ OSM</button>
+          </div>
+          <div class="auth-chip-group">
+            <span id="wd-user-badge" style="display: none;"></span>
+            <button id="btn-wd-login" class="wd-btn" data-i18n="loginWd">تسجيل الدخول بـ Wikidata</button>
+          </div>
+        </div>
+
+        <!-- Direction Mode Switcher -->
+        <div class="mode-switcher-wrap">
+          <button id="btn-mode-forward" class="mode-btn active" data-mode="forward" title="ويكي بيانات ← OSM (الوضع الافتراضي)">
+            <span class="mode-icon">➡️</span>
+            <span data-i18n="modeForward">Wikidata → OSM</span>
+          </button>
+          <button id="btn-mode-reverse" class="mode-btn" data-mode="reverse" title="تدقيق معالم OSM الموسومة بـ wikidata=* وربطها بويكي بيانات">
+            <span class="mode-icon">🔄</span>
+            <span data-i18n="modeReverse">OSM → Wikidata (Reverse QA)</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="sidebar-body">
+        
+        <!-- Country Selector -->
+        <div class="control-group">
+          <label class="section-label" data-i18n="filterCountry">الدولة</label>
+          <select id="country-select" class="select-custom">
+            <option value="sa" selected>🇸🇦 المملكة العربية السعودية (Saudi Arabia)</option>
+            <option value="ae">🇦🇪 الإمارات (UAE)</option>
+            <option value="kw">🇰🇼 الكويت (Kuwait)</option>
+            <option value="qa">🇶🇦 قطر (Qatar)</option>
+            <option value="om">🇴🇲 سلطنة عمان (Oman)</option>
+            <option value="bh">🇧🇭 البحرين (Bahrain)</option>
+          </select>
+        </div>
+
+        <!-- Search Box -->
+        <div class="control-group">
+          <input type="text" id="search-input" class="search-box" placeholder="بحث بالاسم العربي أو الإنجليزي أو رمز QID..." />
+        </div>
+
+        <!-- Stats Section with Viewport Toggle -->
+        <div class="control-group">
+          <div class="stats-header-row">
+            <label class="section-label" data-i18n="statTotal">الإحصائيات</label>
+            <button id="btn-toggle-viewport-stats" class="viewport-toggle-btn" title="حساب الإحصائيات لمجال الرؤية الحالي فقط">
+              <span class="vp-dot"></span>
+              <span data-i18n="toggleViewportStats">نطاق الرؤية</span>
+            </button>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-val" id="stat-total-val">0</span>
+              <span class="stat-sub-inview" id="stat-total-inview"></span>
+              <span class="stat-lbl" id="stat-total-lbl" data-i18n="statTotal">إجمالي العناصر</span>
+            </div>
+            <div class="stat-card" id="stat-missing-card">
+              <span class="stat-val missing" id="stat-missing-val">0</span>
+              <span class="stat-sub-inview" id="stat-missing-inview"></span>
+              <span class="stat-lbl" id="stat-missing-lbl" data-i18n="statMissing">مفقود في OSM</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-val candidates" id="stat-candidates-val">0</span>
+              <span class="stat-sub-inview" id="stat-candidates-inview"></span>
+              <span class="stat-lbl" id="stat-candidates-lbl" data-i18n="statCandidates">مرشح للربط</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-val linked" id="stat-linked-val">0</span>
+              <span class="stat-sub-inview" id="stat-linked-inview"></span>
+              <span class="stat-lbl" id="stat-linked-lbl" data-i18n="statLinked">مرتبط مسبقاً</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Forward Linker Controls (Visible in Forward Mode) -->
+        <div id="forward-controls-panel">
+          <!-- Status Filter Buttons -->
+          <div class="control-group">
+            <label class="section-label" data-i18n="filterStatus">حالة الربط</label>
+            <div class="status-pill-group">
+              <button class="status-filter-btn active" data-status="all" data-i18n="statusAll">الكل</button>
+              <button class="status-filter-btn" data-status="0" data-import-only hidden>🔴 مفقود</button>
+              <button class="status-filter-btn" data-status="1">🟡 مرشح</button>
+              <button class="status-filter-btn" data-status="2">🟢 مرتبط</button>
+            </div>
+            <p id="import-restricted-note" class="import-note" data-i18n="importRestrictedNote" hidden>مواقع ويكي بيانات غير الموجودة في OSM متاحة فقط للمستوردين المعتمدين.</p>
+          </div>
+
+          <!-- Quick Quality Filter Chips -->
+          <div class="control-group">
+            <div class="filter-chips-container">
+              <button id="chip-wiki" class="filter-chip" data-filter="wiki" data-i18n="chipHasWiki">📖 مقال ويكيبيديا</button>
+              <button id="chip-photo" class="filter-chip" data-filter="photo" data-i18n="chipHasPhoto">📷 صورة كومنز</button>
+              <button id="chip-demolished" class="filter-chip active" data-filter="demolished" data-i18n="chipHideDemolished">🚫 إخفاء المهدم</button>
+              <button id="chip-mosques" class="filter-chip" data-filter="mosques" data-i18n="chipHideMosques">🕌 إخفاء المساجد</button>
+              <button id="chip-hide-linked" class="filter-chip" data-filter="linked" data-i18n="chipHideLinked">🟢 إخفاء المرتبط</button>
+            </div>
+          </div>
+
+          <!-- Category Filter Checkboxes -->
+          <div class="control-group">
+            <div class="section-title-row">
+              <label class="section-label" data-i18n="filterCategory">التصنيفات</label>
+              <span class="text-caption-muted">
+                (<span id="visible-count">0</span> معروض)
+              </span>
+            </div>
+            <div class="category-grid">
+              <label class="cat-item">
+                <input type="checkbox" class="cat-checkbox" data-cat="1" checked />
+                <span>🏙️ المدن والتجمعات</span>
+              </label>
+              <label class="cat-item">
+                <input type="checkbox" class="cat-checkbox" data-cat="2" checked />
+                <span>🏛️ التراث والتاريخ</span>
+              </label>
+              <label class="cat-item">
+                <input type="checkbox" class="cat-checkbox" data-cat="3" checked />
+                <span>⛰️ المعالم الطبيعية</span>
+              </label>
+              <label class="cat-item">
+                <input type="checkbox" class="cat-checkbox" data-cat="4" checked />
+                <span>🏥 التعليم والصحة</span>
+              </label>
+              <label class="cat-item">
+                <input type="checkbox" class="cat-checkbox" data-cat="5" checked />
+                <span>🏨 السياحة والتجارة</span>
+              </label>
+              <label class="cat-item">
+                <input type="checkbox" class="cat-checkbox" data-cat="6" checked />
+                <span>🕌 المساجد والعبادة</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reverse QA Controls (Visible in Reverse Mode) -->
+        <div id="reverse-controls-panel" style="display: none;">
+          <!-- Reverse Kind Filter Pills -->
+          <div class="control-group">
+            <label class="section-label" data-i18n="reverseFilterKind">نوع التدقيق العكسي</label>
+            <div class="status-pill-group reverse-kind-pill-group">
+              <button class="reverse-filter-btn active" data-kind="all" data-i18n="kindAll">الكل</button>
+              <button class="reverse-filter-btn" data-kind="missing_backlink" data-i18n="kindMissingBacklink">🟢 روابط خلفية</button>
+              <button class="reverse-filter-btn" data-kind="broken_osm_tag" data-i18n="kindBrokenTag">🔴 وسوم تالفة</button>
+              <button class="reverse-filter-btn" data-kind="conflict" data-i18n="kindConflict">⚠️ تعارضات</button>
+              <button class="reverse-filter-btn" data-kind="review_gap" data-i18n="kindReviewGap">ℹ️ فجوات</button>
+            </div>
+          </div>
+
+          <!-- Reverse Confidence Chips -->
+          <div class="control-group">
+            <label class="section-label" data-i18n="reverseConfidence">مستوى الدقة والثقة</label>
+            <div class="filter-chips-container">
+              <button id="chip-rev-high" class="filter-chip active" data-conf="high" data-i18n="confHigh">⭐ دقة عالية (≥ 85%)</button>
+              <button id="chip-rev-med" class="filter-chip active" data-conf="medium" data-i18n="confMedium">دقة متوسطة</button>
+              <button id="chip-rev-low" class="filter-chip" data-conf="low" data-i18n="confLow">دقة منخفضة</button>
+            </div>
+          </div>
+
+          <!-- Quick Action: Export Filtered Backlinks to QuickStatements -->
+          <div class="control-group">
+            <button id="btn-export-qs-batch" class="btn btn-export-qs-batch" title="تصدير جميع الروابط الخلفية عالية الدقة لـ QuickStatements بنقرة واحدة">
+              <span data-i18n="btnExportQsBatch">⚡ تصدير الروابط عالية الدقة لـ QuickStatements</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Export Center -->
+        <div class="control-group export-center-group">
+          <div class="export-btn-grid">
+            <button id="btn-export-mr" class="btn btn-export-mini" data-import-only hidden title="MapRoulette GeoJSON">
+              🎯 MapRoulette
+            </button>
+            <button id="btn-export-josm-presets" class="btn btn-export-mini" data-import-only hidden title="تصدير قوالب ووسوم JOSM الرسمية بصيغة XML">
+              📥 JOSM XML
+            </button>
+            <button id="btn-export-csv" class="btn btn-export-mini btn-export-csv" title="CSV Spreadsheet">
+              📊 CSV
+            </button>
+            <button id="btn-export-qs" class="btn btn-export-mini" title="QuickStatements v2 Export">
+              ⚡ QS v2
+            </button>
+          </div>
+        <!-- Maintainer & Community Contact Footer -->
+        <footer class="sidebar-footer">
+          <div class="footer-maintainer">
+            <span>👤 <strong data-i18n="maintainerLabel">المطور:</strong> <a href="https://www.openstreetmap.org/user/Alshowaiey" target="_blank" rel="noopener">Alshowaiey</a></span>
+            <span class="sep-dot">·</span>
+            <a href="https://github.com/Abdullah201x/osm-x-wikidata" target="_blank" rel="noopener" title="GitHub Repository">GitHub ↗</a>
+          </div>
+          <div class="footer-links">
+            <a href="https://www.openstreetmap.org/message/new/Alshowaiey" target="_blank" rel="noopener" class="footer-contact-link">✉️ <span data-i18n="contactOsmMsg">رسالة OSM</span></a>
+            <a href="https://t.me/OSMSaudi" target="_blank" rel="noopener" class="footer-contact-link">💬 Telegram</a>
+            <button id="link-open-dwg-policy" class="footer-contact-link footer-policy-btn">🛡️ <span data-i18n="policyLabel">السياسات وDWG</span></button>
+          </div>
+        </footer>
+
+      </div>
+    </aside>
+
+    <!-- Map Viewport -->
+    <main id="map"></main>
+
+    <!-- Floating Basemap Bar -->
+    <nav class="floating-basemap-bar" aria-label="خريطة الأساس">
+      <button class="basemap-btn active" data-bm="dark" data-i18n="bmDark">داكن</button>
+      <button class="basemap-btn" data-bm="satellite" data-i18n="bmSatellite">قمر صناعي</button>
+      <button class="basemap-btn" data-bm="streets" data-i18n="bmStreets">شوارع</button>
+    </nav>
+
+    <!-- Floating Batch Dock Trigger (Shown when items are staged) -->
+    <div id="floating-batch-btn" class="floating-batch-dock btn-open-batch-modal" style="display: none;" title="فتح سلة التعديلات المجمعة (B)">
+      <span class="pulse-indicator"></span>
+      <span>📦 <strong data-i18n="batchQueueBtn">سلة التعديلات</strong> (<span class="batch-counter">0</span>)</span>
+    </div>
+
+    <!-- Inspector Drawer -->
+    <aside id="inspector-drawer">
+      <div id="inspector-content">
+        <div class="empty-state">
+          <div class="empty-icon">📍</div>
+          <h3 data-i18n="inspectorTitle">لوحة الفحص والمعاينة المتقدمة</h3>
+          <p data-i18n="inspectorEmpty">انقر على أي عنصر على الخريطة لعرض تفاصيله وأدوات الربط والرسم.</p>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Keyboard Shortcuts Modal -->
+  <div id="shortcuts-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card shortcuts-modal-card">
+      <div class="modal-header-row">
+        <h3 data-i18n="shortcutsTitle">اختصارات لوحة المفاتيح</h3>
+        <button class="btn-close-modal" id="btn-close-shortcuts">&times;</button>
+      </div>
+      <div class="shortcuts-grid">
+        <div class="shortcut-row"><kbd>B</kbd> <span data-i18n="shortcutBatch">فتح سلة التعديلات المجمعة</span></div>
+        <div class="shortcut-row"><kbd>H</kbd> <span data-i18n="shortcutHistory">فتح سجل الإنجازات والتعديلات</span></div>
+        <div class="shortcut-row"><kbd>J</kbd> <span data-i18n="shortcutJosmZoom">فتح وتكبير في JOSM</span></div>
+        <div class="shortcut-row"><kbd>L</kbd> <span data-i18n="shortcutDirectLink">ربط مباشر بـ OSM</span></div>
+        <div class="shortcut-row"><kbd>T</kbd> <span data-i18n="shortcutJosmTags">إرسال الوسم إلى JOSM</span></div>
+        <div class="shortcut-row"><kbd>I</kbd> <span data-i18n="shortcutId">فتح في محرر iD</span></div>
+        <div class="shortcut-row"><kbd>O</kbd> <span data-i18n="shortcutOverpass">فتح استعلام Overpass Turbo</span></div>
+        <div class="shortcut-row"><kbd>V</kbd> <span data-i18n="shortcutVerify">التحقق المباشر في خوادم OSM</span></div>
+        <div class="shortcut-row"><kbd>N</kbd> <span data-i18n="shortcutNext">الانتقال للمعلم التالي</span></div>
+        <div class="shortcut-row"><kbd>P</kbd> <span data-i18n="shortcutPrev">الانتقال للمعلم السابق</span></div>
+        <div class="shortcut-row"><kbd>[</kbd> / <kbd>]</kbd> <span data-i18n="shortcutBasemap">تبديل خريطة الأساس</span></div>
+        <div class="shortcut-row"><kbd>?</kbd> <span data-i18n="shortcutHelp">عرض نافذة الاختصارات</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- About & Community / DWG Contact Modal -->
+  <div id="about-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card about-modal-card">
+      <div class="modal-header-row">
+        <h3 data-i18n="aboutModalTitle">حول المشروع، التواصل، وسياسات فريق البيانات (DWG)</h3>
+        <button class="btn-close-modal" id="btn-close-about">&times;</button>
+      </div>
+      <div class="about-content">
+        <p class="about-lead-text" data-i18n="aboutLead">
+          أداة مساعدة لمجتمع OpenStreetMap لدول الخليج لربط المعالم القائمة بمعرفات Wikidata المقابلة لها (Assisted Conflation).
+        </p>
+
+        <div class="about-contact-box">
+          <h4 data-i18n="aboutContactHeading">👤 قنوات التواصل والمطور:</h4>
+          <ul>
+            <li><strong>OpenStreetMap:</strong> <a href="https://www.openstreetmap.org/user/Alshowaiey" target="_blank" rel="noopener">Alshowaiey ↗</a></li>
+            <li><strong>Direct OSM Message:</strong> <a href="https://www.openstreetmap.org/message/new/Alshowaiey" target="_blank" rel="noopener" data-i18n="aboutSendMsg">إرسال رسالة مباشرة على OSM ↗</a></li>
+            <li><strong>GitHub Repository:</strong> <a href="https://github.com/Abdullah201x/osm-x-wikidata" target="_blank" rel="noopener">Abdullah201x/osm-x-wikidata ↗</a></li>
+            <li><strong>Saudi OSM Community:</strong> <a href="https://t.me/OSMSaudi" target="_blank" rel="noopener">Telegram @OSMSaudi ↗</a></li>
+            <li><strong>Official Import & Compliance Guide:</strong> <a href="https://github.com/Abdullah201x/osm-x-wikidata/blob/main/OSM_IMPORT_GUIDELINES.md" target="_blank" rel="noopener">OSM_IMPORT_GUIDELINES.md ↗</a></li>
+          </ul>
+        </div>
+
+        <div class="dwg-statement-box">
+          <h4 data-i18n="dwgHeading">🛡️ التزام سياسة المجتمع وفريق العمل (DWG Compliance):</h4>
+          <p data-i18n="dwgText">
+            نحن نحترم قواعد OpenStreetMap وفريق البيانات (DWG) بشكل تام. هذه الأداة لا تقوم بأي تعديلات آلية غير مراقبة. جميع التعديلات تتطلب تسجيل دخول المستخدم، وتتم على عناصر قائمة تم التحقق منها بشرياً، وتخضع للمراجعة الكاملة. إذا كان لديك أي ملاحظات أو كنت عضواً في مجتمع الخريطة أو فريق DWG ولديك أي استفسار أو اعتراض، يرجى التواصل مباشرة عبر الرسائل أو GitHub وسنتعاون فوراً.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Lightbox Modal -->
+  <div id="image-lightbox-modal" class="modal-overlay lightbox-overlay" style="display: none;">
+    <div class="lightbox-content">
+      <button class="btn-close-modal lightbox-close" id="btn-close-lightbox">&times;</button>
+      <img id="lightbox-img" src="" alt="Enlarged preview" />
+      <div class="lightbox-meta">
+        <span id="lightbox-caption"></span>
+        <a id="lightbox-commons-link" href="#" target="_blank" rel="noopener" class="btn btn-wiki" data-i18n="openCommons">فتح في ويكيميديا كومنز ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- OSM Note Modal -->
+  <div id="note-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <h3 data-i18n="noteModalTitle">إرسال ملاحظة إلى OpenStreetMap</h3>
+      <div class="note-modal-hint">
+        الإحداثيات: <code id="note-coords"></code>
+      </div>
+      <textarea id="note-text-input" placeholder="اكتب تفاصيل الملاحظة هنا..."></textarea>
+      <div class="modal-actions-right">
+        <button id="btn-cancel-note" class="btn btn-secondary-cancel" data-i18n="btnCancel">إلغاء</button>
+        <button id="btn-submit-note-confirm" class="btn btn-josm-action" data-i18n="btnSubmitNote">إرسال الملاحظة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Single OSM Link Confirmation & Comment Review Modal -->
+  <div id="single-link-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card single-link-card">
+      <div class="modal-header-row">
+        <h3 data-i18n="singleLinkTitle">مراجعة وتأكيد الربط الفردي</h3>
+        <button class="btn-close-modal" id="btn-close-single-link">&times;</button>
+      </div>
+      <p class="modal-sub-desc" data-i18n="singleLinkDesc">إنشاء مجموعة تعديل مستقلة لهذا المعلم وتحديث وسومه في خوادم OpenStreetMap.</p>
+      
+      <div class="single-link-target-box">
+        <div class="target-title-row">
+          <span class="target-feature-name" id="single-link-feature-name"></span>
+        </div>
+        <div class="target-tags-row">
+          <span class="target-tag-badge">Wikidata: <code id="single-link-qid"></code></span>
+          <span class="batch-sep">➔</span>
+          <span class="target-tag-badge">OSM: <code id="single-link-osmref"></code></span>
+        </div>
+      </div>
+
+      <div class="comment-field-group">
+        <div class="comment-field-header">
+          <label class="section-label" data-i18n="changesetCommentLabel">تعليق مجموعة التعديل (Changeset Comment):</label>
+          <span class="char-counter"><span id="single-link-char-count">0</span> حرف</span>
+        </div>
+        <textarea id="single-link-comment-input" class="comment-textarea" rows="3" placeholder="اكتب تعليقاً يوضح التعديل..."></textarea>
+        
+        <div class="preset-chips-row">
+          <span class="preset-label" data-i18n="quickInsertPresets">إضافات سريعة:</span>
+          <button type="button" class="preset-chip single-preset-chip" data-preset="#osm-wikidata-gcc">🏷️ #osm-wikidata-gcc</button>
+          <button type="button" class="preset-chip single-preset-chip" data-preset="Verified with aerial imagery">🛰️ صور جوية</button>
+          <button type="button" class="preset-chip single-preset-chip" data-preset="Name match confirmed">🔍 مطابقة أسماء مؤكدة</button>
+        </div>
+      </div>
+
+      <div class="modal-actions-footer">
+        <button id="btn-cancel-single-link" class="btn btn-modal-cancel" data-i18n="btnCancel">إلغاء</button>
+        <button id="btn-confirm-single-link" class="btn btn-direct-link" data-i18n="btnConfirmLinkNow">🚀 تأكيد ونشر التعديل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Changeset Batch Staging Queue Modal -->
+  <div id="batch-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card batch-modal-card">
+      <div class="modal-header-row">
+        <div class="batch-title-wrap">
+          <h3 data-i18n="batchModalTitle">مجموعة التعديل المجمعة (Batch Changeset)</h3>
+          <span class="batch-count-pill"><span id="batch-modal-count">0</span> عناصر مجهزة</span>
+        </div>
+        <button class="btn-close-modal" id="btn-close-batch-modal">&times;</button>
+      </div>
+
+      <div id="batch-modal-empty" class="batch-empty-view" style="display: none;">
+        <div class="empty-icon">📦</div>
+        <h4 data-i18n="batchEmptyTitle">سلة التعديلات فارغة</h4>
+        <p data-i18n="batchEmptyDesc">اختر أي عنصر مرشح واضغط 'إضافة للمجموعة' لتجميع عدة معالم ونشرها في مجموعة تعديل (Changeset) واحدة وفق معايير مجتمع OSM.</p>
+      </div>
+
+      <div id="batch-items-list" class="batch-items-scroll">
+        <!-- Rendered dynamically by BatchManager -->
+      </div>
+
+      <div id="batch-config-section" class="batch-config-wrap">
+        <div class="comment-field-group">
+          <div class="comment-field-header">
+            <label class="section-label" data-i18n="changesetCommentLabel">تعليق مجموعة التعديل (Changeset Comment):</label>
+            <span class="char-counter"><span id="batch-comment-char-count">0</span> حرف</span>
+          </div>
+          <textarea id="batch-comment-input" class="comment-textarea" rows="2" placeholder="تعليق مجموعة التعديل المجمعة..."></textarea>
+          
+          <div class="preset-chips-row">
+            <span class="preset-label" data-i18n="quickInsertPresets">إضافات سريعة:</span>
+            <button type="button" class="preset-chip batch-preset-chip" data-preset="#osm-wikidata-gcc">🏷️ #osm-wikidata-gcc</button>
+            <button type="button" class="preset-chip batch-preset-chip" data-preset="Verified with aerial imagery">🛰️ صور جوية</button>
+            <button type="button" class="preset-chip batch-preset-chip" data-preset="Arabic name match verified">🔍 تطابق أسماء</button>
+          </div>
+        </div>
+
+        <div class="batch-guidelines-tip">
+          ℹ️ <strong>ملاحظة للمحرر:</strong> يتم رفع جميع هذه المعالم في مجموعة تعديل رسمية واحدة، مع إغلاق المجموعة تلقائياً وتسجيلها في سجل الإنجازات.
+        </div>
+      </div>
+
+      <div id="batch-progress-box" class="batch-progress-container" style="display: none;">
+        <div class="batch-progress-header">
+          <span id="batch-progress-text">جارٍ التحضير...</span>
+        </div>
+        <div class="batch-progress-bar-track">
+          <div id="batch-progress-bar-fill" class="batch-progress-bar-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <div class="modal-actions-footer">
+        <button id="btn-batch-clear-all" class="btn btn-modal-cancel" data-i18n="btnClearBatch">تفريغ السلة</button>
+        <button id="btn-batch-upload-confirm" class="btn btn-direct-link" data-i18n="btnBatchUpload">🚀 رفع ونشر مجموعة التعديل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- What Has Been Done: Full Changeset History & Activity Page -->
+  <div id="history-page-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card history-page-card">
+      <div class="modal-header-row">
+        <div class="history-page-title-group">
+          <div class="brand-title">
+            <span class="history-title-icon">📜</span>
+            <h3 data-i18n="historyPageTitle">سجل التعديلات والإنجازات</h3>
+          </div>
+          <p class="history-page-subtitle" data-i18n="historyPageSubtitle">جميع مجموعات التعديل والعناصر التي تم ربطها ونشرها في OpenStreetMap عبر الأداة</p>
+        </div>
+        <button class="btn-close-modal" id="btn-close-history-modal">&times;</button>
+      </div>
+
+      <!-- History Tabs (OSM vs Wikidata) -->
+      <div class="history-tabs-row">
+        <button id="btn-hist-tab-osm" class="history-tab-btn active" data-tab="osm" data-i18n="histTabOsm">🗺️ تعديلات OSM</button>
+        <button id="btn-hist-tab-wd" class="history-tab-btn" data-tab="wikidata" data-i18n="histTabWd">🏛️ تعديلات ويكي بيانات (EditGroups)</button>
+      </div>
+
+      <!-- KPI Metrics Strip -->
+      <div class="history-kpis-grid">
+        <div class="history-kpi-card">
+          <span class="kpi-val" id="history-kpi-changesets">0</span>
+          <span class="kpi-lbl" data-i18n="statTotalChangesets">إجمالي مجموعات التعديل</span>
+        </div>
+        <div class="history-kpi-card highlight-cyan">
+          <span class="kpi-val" id="history-kpi-elements">0</span>
+          <span class="kpi-lbl" data-i18n="statTotalLinkedItems">إجمالي المعالم المرتبطة</span>
+        </div>
+        <div class="history-kpi-card">
+          <span class="kpi-val" id="history-kpi-batch">0</span>
+          <span class="kpi-lbl" data-i18n="statBatchChangesets">مجموعات مجمعة</span>
+        </div>
+        <div class="history-kpi-card">
+          <span class="kpi-val" id="history-kpi-single">0</span>
+          <span class="kpi-lbl" data-i18n="statSingleChangesets">تعديلات مفردة</span>
+        </div>
+      </div>
+
+      <!-- Controls & Search Toolbar -->
+      <div class="history-toolbar-row">
+        <div class="history-search-wrap">
+          <input type="text" id="history-search-input" class="search-box" placeholder="بحث في السجل بالاسم، رمز QID، أو رقم المجموعة..." />
+        </div>
+        <div class="history-filter-pills">
+          <button class="history-filter-btn active" data-filter="all" data-i18n="historyFilterAll">الكل</button>
+          <button class="history-filter-btn" data-filter="batch" data-i18n="historyFilterBatch">📦 مجمعة</button>
+          <button class="history-filter-btn" data-filter="single" data-i18n="historyFilterSingle">⚡ مفردة</button>
+        </div>
+        <div class="history-export-btns">
+          <button id="btn-history-export-csv" class="btn btn-history-action" title="تصدير جدول اكسل CSV">📥 CSV</button>
+          <button id="btn-history-export-json" class="btn btn-history-action" title="تصدير بيانات كاملة JSON">📥 JSON</button>
+          <button id="btn-history-clear" class="btn btn-history-action btn-danger-action" title="مسح السجل المحلي">🗑️</button>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div id="history-empty-state" class="history-empty-view" style="display: none;">
+        <div class="empty-icon">🗺️</div>
+        <h4 data-i18n="historyEmptyTitle">لم يتم تسجيل أي تعديلات حتى الآن</h4>
+        <p data-i18n="historyEmptyDesc">عند قيامك بربط أي معالم (سواء فردياً أو عبر سلة التعديلات)، ستظهر جميع مجموعات التعديل هنا مع تفاصيلها وروابطها الرسمية في OSM.</p>
+      </div>
+
+      <!-- Timeline & Feed Container -->
+      <div id="history-timeline-container" class="history-timeline-scroll">
+        <!-- Rendered dynamically by HistoryManager -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loading-indicator" style="display: none;">
+    <div class="spinner"></div>
+    <div class="loading-indicator-label">جارٍ تحميل البيانات...</div>
+  </div>
+
+  <!-- Leaflet & MarkerCluster JS (Self-Hosted) -->
+  <script src="vendor/leaflet/leaflet.js?v=12"></script>
+  <script src="vendor/markercluster/leaflet.markercluster.js?v=12"></script>
+
+  <!-- Application Modules -->
+  <script src="js/translations.js?v=12"></script>
+  <script src="js/arabic_utils.js?v=12"></script>
+  <script src="js/tag_generator.js?v=12"></script>
+  <script src="js/wikidata_labels.js?v=12"></script>
+  <script src="js/tools.js?v=12"></script>
+  <script src="js/osm_oauth.js?v=12"></script>
+  <script src="js/import_access.js?v=12"></script>
+  <script src="js/wikidata_auth.js?v=12"></script>
+  <script src="js/wikidata_edit.js?v=12"></script>
+  <script src="js/live_verify.js?v=12"></script>
+  <script src="js/batch_manager.js?v=12"></script>
+  <script src="js/history_manager.js?v=12"></script>
+  <script src="js/map.js?v=12"></script>
+  <script src="js/app.js?v=12"></script>
+
+</body>
+</html>
