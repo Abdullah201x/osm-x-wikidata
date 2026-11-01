@@ -173,7 +173,7 @@ const WikidataAuth = {
       }
 
       // 2. Fallback to Action API userinfo
-      const apiRes = await fetch(`${endpoints.wikidataApi}?action=query&meta=userinfo&format=json&origin=*`, {
+      const apiRes = await fetch(`${endpoints.wikidataApi}?action=query&meta=userinfo&format=json&crossorigin=1`, {
         headers: {
           "Authorization": `Bearer ${accessToken}`,
           "Api-User-Agent": "OSMxWikidataLinker/2.0 (https://wikidata.saudiosm.org)"
@@ -198,15 +198,95 @@ const WikidataAuth = {
     return null;
   },
 
+  // Refresh a minute early so a token never expires mid-request.
+  TOKEN_SKEW_MS: 60 * 1000,
+
+  getRefreshToken() {
+    return localStorage.getItem("wd_refresh_token");
+  },
+
+  /**
+   * Synchronous read of the current access token. Returns null when it has
+   * expired. Only forces a logout when there is no refresh token to fall back
+   * on; otherwise ensureAccessToken() can still renew the session.
+   */
   getAccessToken() {
     const expiresAt = parseInt(localStorage.getItem("wd_token_expires_at") || "0", 10);
     if (expiresAt && Date.now() > expiresAt) {
       console.warn("Wikidata access token expired.");
-      // If expired, clear token
-      this.logout();
+      if (!this.getRefreshToken()) this.logout();
       return null;
     }
     return localStorage.getItem("wd_access_token");
+  },
+
+  /**
+   * Returns a usable access token, exchanging the stored refresh token first
+   * if the current one is expired or about to be. Resolves null (and logs out)
+   * when no valid session can be recovered.
+   */
+  async ensureAccessToken() {
+    const expiresAt = parseInt(localStorage.getItem("wd_token_expires_at") || "0", 10);
+    const stillValid = !expiresAt || Date.now() < expiresAt - this.TOKEN_SKEW_MS;
+    if (stillValid) {
+      const token = localStorage.getItem("wd_access_token");
+      if (token) return token;
+    }
+    if (!this.getRefreshToken()) {
+      this.logout();
+      return null;
+    }
+    return this.refreshAccessToken();
+  },
+
+  /**
+   * RFC 6749 refresh_token grant. Concurrent callers share one request so a
+   * rotating refresh token is never redeemed twice.
+   */
+  refreshAccessToken() {
+    if (this._refreshPromise) return this._refreshPromise;
+
+    this._refreshPromise = (async () => {
+      try {
+        const body = new URLSearchParams({
+          grant_type: "refresh_token",
+          client_id: this.CLIENT_ID,
+          refresh_token: this.getRefreshToken()
+        });
+        const res = await fetch(this.getEndpoints().tokenUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: body.toString()
+        });
+
+        if (!res.ok) {
+          // A 4xx means the grant itself is dead; a 5xx may be transient, so
+          // keep the session and let the caller report the failure.
+          if (res.status >= 400 && res.status < 500) this.logout();
+          console.warn(`Wikidata token refresh failed: HTTP ${res.status}`);
+          return null;
+        }
+
+        const tokenData = await res.json();
+        if (!tokenData.access_token) {
+          this.logout();
+          return null;
+        }
+        localStorage.setItem("wd_access_token", tokenData.access_token);
+        if (tokenData.refresh_token) {
+          localStorage.setItem("wd_refresh_token", tokenData.refresh_token);
+        }
+        localStorage.setItem("wd_token_expires_at", (Date.now() + (tokenData.expires_in || 14400) * 1000).toString());
+        return tokenData.access_token;
+      } catch (e) {
+        console.warn("Wikidata token refresh error:", e);
+        return null;
+      } finally {
+        this._refreshPromise = null;
+      }
+    })();
+
+    return this._refreshPromise;
   },
 
   getUser() {
@@ -220,7 +300,8 @@ const WikidataAuth = {
   },
 
   isAuthenticated() {
-    return !!this.getAccessToken();
+    // A refresh token means the session can still be renewed on the next write.
+    return !!this.getAccessToken() || !!this.getRefreshToken();
   },
 
   logout() {

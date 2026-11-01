@@ -33,12 +33,14 @@ const WikidataEdit = {
   /**
    * Fetches a CSRF token from MediaWiki API.
    */
-  async getCsrfToken() {
-    const token = WikidataAuth.getAccessToken();
+  async getCsrfToken(accessToken = null) {
+    const token = accessToken || await WikidataAuth.ensureAccessToken();
     if (!token) throw new Error("Not authenticated with Wikidata");
 
     const endpoints = WikidataAuth.getEndpoints();
-    const url = `${endpoints.wikidataApi}?action=query&meta=tokens&type=csrf&format=json&origin=*`;
+    // crossorigin=1 (not origin=*) keeps the Bearer-authenticated session on CORS
+    // requests; origin=* would silently make them anonymous.
+    const url = `${endpoints.wikidataApi}?action=query&meta=tokens&type=csrf&format=json&crossorigin=1`;
 
     const res = await fetch(url, {
       method: "GET",
@@ -62,6 +64,47 @@ const WikidataEdit = {
     return csrfToken;
   },
 
+  // Wikimedia asks write clients to back off when replication lag is high.
+  MAXLAG_SECONDS: 5,
+  MAX_ATTEMPTS: 4,
+  MAX_RETRY_WAIT_SECONDS: 60,
+
+  _sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  },
+
+  /** Seconds to wait before retry: the server's Retry-After if sent, else 5s/10s/20s... */
+  _retryDelayMs(res, attempt) {
+    const header = parseInt(res.headers?.get?.("Retry-After") ?? "", 10);
+    const seconds = Number.isFinite(header) && header > 0 ? header : Math.min(5 * 2 ** attempt, 30);
+    return Math.min(seconds, this.MAX_RETRY_WAIT_SECONDS) * 1000;
+  },
+
+  /**
+   * Action API request that waits and retries on `maxlag` errors and on
+   * HTTP 429/503, honouring Retry-After. Resolves the parsed JSON body.
+   */
+  async _actionApiRequest(url, init) {
+    for (let attempt = 0; ; attempt++) {
+      const res = await fetch(url, init);
+      const throttled = res.status === 429 || res.status === 503;
+      const json = res.ok ? await res.json() : null;
+      const lagged = json?.error?.code === "maxlag";
+
+      if ((throttled || lagged) && attempt < this.MAX_ATTEMPTS - 1) {
+        await this._sleep(this._retryDelayMs(res, attempt));
+        continue;
+      }
+      if (throttled || lagged) {
+        const err = new Error("Wikidata is busy right now. Please try again in a minute.");
+        err.busy = true;
+        throw err;
+      }
+      if (!res.ok) throw new Error(`Wikidata API request failed: HTTP ${res.status}`);
+      return json;
+    }
+  },
+
   /**
    * Adds an OpenStreetMap backlink statement to a Wikidata item.
    * Uses Action API wbcreateclaim with fallback to Wikibase REST API v1.
@@ -70,10 +113,12 @@ const WikidataEdit = {
    * @param {string} osmType - "node", "way", or "relation"
    * @param {string|number} osmId - OSM identifier
    * @param {string} [batchId] - Optional 8-char EditGroups batch hex
+   * @param {Object} [options]
+   * @param {number} [options.baserevid] - Revision the edit was prepared against
    * @returns {Promise<Object>} Result object
    */
-  async addOsmBacklink(qid, osmType, osmId, batchId = null) {
-    const token = WikidataAuth.getAccessToken();
+  async addOsmBacklink(qid, osmType, osmId, batchId = null, options = {}) {
+    const token = await WikidataAuth.ensureAccessToken();
     if (!token) {
       throw new Error("Not authenticated with Wikidata. Please sign in via the top bar.");
     }
@@ -95,8 +140,8 @@ const WikidataEdit = {
 
     // 1. Try Wikibase Action API: wbcreateclaim
     try {
-      const csrfToken = await this.getCsrfToken();
-      const bodyParams = new URLSearchParams({
+      const csrfToken = await this.getCsrfToken(token);
+      const fields = {
         action: "wbcreateclaim",
         format: "json",
         entity: cleanQid,
@@ -104,50 +149,51 @@ const WikidataEdit = {
         snaktype: "value",
         value: JSON.stringify(idStr), // Wikibase requires string value JSON-encoded: "\"12345\""
         summary: summary,
-        token: csrfToken,
-        origin: "*"
-      });
+        maxlag: String(this.MAXLAG_SECONDS),
+        token: csrfToken
+      };
+      if (options.baserevid > 0) fields.baserevid = String(options.baserevid);
 
-      const res = await fetch(endpoints.wikidataApi, {
+      // crossorigin must be in the URL (it is needed on the CORS preflight), not the body.
+      const json = await this._actionApiRequest(`${endpoints.wikidataApi}?crossorigin=1`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
           "Api-User-Agent": "OSMxWikidataLinker/2.0 (https://wikidata.saudiosm.org)",
           "Content-Type": "application/x-www-form-urlencoded"
         },
-        body: bodyParams.toString()
+        body: new URLSearchParams(fields).toString()
       });
 
-      if (res.ok) {
-        const json = await res.json();
-        if (json.error) {
-          throw new Error(json.error.info || json.error.code || "Wikidata API returned error");
-        }
-        if (json.claim) {
-          const editRecord = {
-            id: json.claim.id,
-            qid: cleanQid,
-            property: property,
-            osmType: type,
-            osmId: idStr,
-            batchId: activeBatch,
-            timestamp: Date.now(),
-            user: WikidataAuth.getUser()?.username || "You",
-            url: `https://www.wikidata.org/wiki/${cleanQid}`
-          };
-          this.logHistory(editRecord);
-          this.markReverseResolved(`${type}${idStr}:${cleanQid}:missing_backlink`, {
-            qid: cleanQid,
-            osm_type: type,
-            osm_id: idStr,
-            property: property,
-            action: "wikidata_backlink",
-            resolved_at: Date.now()
-          });
-          return { success: true, method: "wbcreateclaim", data: json };
-        }
+      if (json.error) {
+        throw new Error(json.error.info || json.error.code || "Wikidata API returned error");
+      }
+      if (json.claim) {
+        const editRecord = {
+          id: json.claim.id,
+          qid: cleanQid,
+          property: property,
+          osmType: type,
+          osmId: idStr,
+          batchId: activeBatch,
+          timestamp: Date.now(),
+          user: WikidataAuth.getUser()?.username || "You",
+          url: `https://www.wikidata.org/wiki/${cleanQid}`
+        };
+        this.logHistory(editRecord);
+        this.markReverseResolved(`${type}${idStr}:${cleanQid}:missing_backlink`, {
+          qid: cleanQid,
+          osm_type: type,
+          osm_id: idStr,
+          property: property,
+          action: "wikidata_backlink",
+          resolved_at: Date.now()
+        });
+        return { success: true, method: "wbcreateclaim", data: json };
       }
     } catch (err) {
+      // The server asked us to slow down; a second write path would ignore that.
+      if (err.busy) throw err;
       console.warn("wbcreateclaim attempt failed, trying REST API v1:", err);
       lastError = err;
     }
