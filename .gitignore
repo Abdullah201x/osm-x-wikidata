@@ -22,3 +22,6 @@ Thumbs.db
 pipeline/*.geojson
 sa_boundary.geojson
 .pytest_cache/
+node_modules/
+test-results/
+playwright-report/

@@ -1,0 +1,20 @@
+{
+  "name": "osm-x-wikidata-frontend-tooling",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Dev-only tooling (lint, unit tests, e2e smoke). The site itself ships as plain static files; nothing here is bundled or deployed.",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint js",
+    "test": "vitest run",
+    "smoke": "playwright test",
+    "smoke:fast": "playwright test --project=desktop"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
+    "jsdom": "^30.1.3",
+    "vitest": "^5.0.5"
+  }
+}
