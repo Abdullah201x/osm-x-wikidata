@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [Unreleased]
+
+### Added
+- **CI-gated production deploys:** `.github/workflows/deploy.yml` redeploys the Coolify Service through the Coolify API after a green CI or data-refresh run on `main`. A `verify-live` job then confirms the site serves the new commit, data is fresh and the reverse API is populated.
+- **`docker-build` CI job:** builds both images, runs `caddy validate`, and asserts the API image actually loads its datasets.
+
+### Fixed
+- Production was not redeploying on push (a Coolify Service has no git webhook), so the live site had none of the 2.1.0/2.2.0 changes. HANDOFF and runbooks now describe the real deploy path.
+
+---
+
 ## [2.2.0] - 2026-11-01
 
 ### Added

@@ -7,6 +7,7 @@ This document summarizes the architecture, live infrastructure, completed phases
 - **Level-Up Phase 0 (Audit Bug Fixes):** Complete across 13 commits (`ddc8b4f` … `a5f45cb`). SlowAPI rate limiting is enabled and tested, request bodies are capped at 16 KB, `cc` is strictly validated, real LRU caching and upstream 429 backoff are in place, Wikidata writes are authenticated and lag-aware with pre-flight `/api/v1/edits/preview`, all inline handlers are eliminated, UTC ISO-8601 timestamps are unified, and reverse datasets for all six GCC countries are generated.
 - **Level-Up Phase 1 (Documentation & Parity Architecture):** Complete. `HANDOFF.md`, `README.md`, `BACKEND_AND_REVERSE_LINKER_PLAN.md`, and project memory are synchronized with Manara (`C:\Users\abdul\Desktop\GCC20260707`) standards.
 - **Level-Up Phase 2 (Frontend Tooling):** Complete locally (`1576630`, `32e81e5`); not yet pushed. Dev-only `package.json` (eslint 10, Vitest + jsdom, Playwright), 237 Vitest cases in 12 suites, 66 Playwright smoke tests run against the production CSP with all third-party traffic stubbed, and a `frontend` job in `ci.yml`. The new suites found and fixed three real bugs (reverse-mode shortcuts threw `ReferenceError`, `#mode=reverse` deep links never switched mode, four strings had no English translation).
+- **Deploy reality check (2026-11-01, Next-level Phase A):** production was found stuck on a build from 12:45 UTC (`app.js?v=10`, empty API store, `/api/healthz/freshness` 503) because osmwd is a Coolify **Service** with no git webhook: pushes never deployed. `.github/workflows/deploy.yml` now redeploys through the Coolify API after green CI / data runs and then verifies the live site (see §3.0). Roadmap: `NEXT_LEVEL_PLAN.md` (Phases A–E).
 - **Python Test Suite:** 42 passed tests (`tests/test_backend_api.py`, `tests/test_country_boundaries.py`, `tests/test_reverse_matcher.py`, `tests/test_serve_ssl.py`). Zero network calls during test runs.
 
 ---
@@ -26,7 +27,7 @@ This document summarizes the architecture, live infrastructure, completed phases
 2. **Current git state:**
    Check `git status` and `git log -n 5 --oneline`. The local `main` branch holds the Phase 0 and Phase 1 commits.
    > [!IMPORTANT]
-   > **ASK BEFORE EVERY `git push`.** Pushing to `origin/main` triggers an automatic Coolify production build on the live VPS (`159.195.192.148`). Never push without explicit confirmation from the user.
+   > **ASK BEFORE EVERY `git push`.** A push to `origin/main` runs CI; green CI triggers `deploy.yml`, which redeploys production on the live VPS (`159.195.192.148`) via the Coolify API. Never push without explicit confirmation from the user.
 3. **Upstream contract with Manara (`C:\Users\abdul\Desktop\GCC20260707`):**
    Manara's nightly data pipeline downloads `https://raw.githubusercontent.com/Abdullah201x/osm-x-wikidata/main/data/sa.json` at 23:30 UTC and indexes `items` tuple slots `[0..7]`.
    **Hard rule:** `data/sa.json` must remain committed on `main` at that exact path with its 15-element tuple layout `[0..14]` intact.
@@ -83,7 +84,7 @@ Scans existing OpenStreetMap elements carrying `wikidata=*` tags to detect error
 ## 2. Hard Constraints (MUST RESPECT)
 
 ### 2.1 Standing Constraints
-- **Ask before every `git push`.** Pushing to `origin/main` triggers an automated Coolify rebuild and deployment on production.
+- **Ask before every `git push`.** Pushing to `origin/main` → green CI → `deploy.yml` rebuilds and redeploys production through the Coolify API.
 - **Secrets live only in Coolify environment variables.** Never write database credentials, tokens, or private keys into git, docs, logs, or chat.
 - **Commit style:** Conventional Commits (`type(scope): description`) with an explanatory body and `Co-Authored-By` trailer.
 - **Language policy:** Always respond in English by default. Preserve Arabic text in code, strings, and translations intact.
@@ -129,7 +130,18 @@ Scans existing OpenStreetMap elements carrying `wikidata=*` tags to detect error
 
 ## 3. Infrastructure & Resources
 
-### 3.1 Live Containers (Coolify Project: `osm-x-wikidata`, Network: `coolify`)
+### 3.0 How Deploys Actually Work
+- osmwd is a Coolify **Service** (raw docker-compose), uuid **`wxlmccgoeqyzdt9mhzd7ty1m`**, in Coolify at `https://coolify.rahmahealth.net`. Its build context is `https://github.com/Abdullah201x/osm-x-wikidata.git#main`, so every redeploy rebuilds from the current `main`.
+- A Service has **no git webhook**. Pushing alone deploys nothing.
+- `.github/workflows/deploy.yml` is the deploy path:
+  - it runs on `workflow_run` of **CI** (pushes to main) and **Update OSM x Wikidata Datasets** (bot data commits), only when they succeed;
+  - it calls `GET $COOLIFY_URL/api/v1/deploy?uuid=wxlmccgoeqyzdt9mhzd7ty1m`;
+  - its `verify-live` job then waits (≤ 12 min) until the live `index.html` byte-matches the commit, `/api/healthz/freshness` is 200, `/data/reverse_sa.json` is 200 and `/api/v1/reverse?cc=sa` is non-empty.
+- Required GitHub secrets: `COOLIFY_URL` (`https://coolify.rahmahealth.net`) and `COOLIFY_TOKEN` (a Coolify API token with *deploy* permission; Coolify Settings → Advanced → API Access must be on).
+- `ci.yml` job `docker-build` builds both images, runs `caddy validate`, and asserts the API image loads `summary.json` + `reverse_sa.json`. That is the exact failure that kept production broken.
+- Manual deploy: Coolify UI → the osmwd service → **Redeploy**, or GitHub → Actions → Deploy → *Run workflow*.
+
+### 3.1 Live Containers (Coolify Service `wxlmccgoeqyzdt9mhzd7ty1m`, Network: `coolify`)
 
 | Container / Service | Base Directory | Dockerfile | Internal Port | Memory Cap | Target Domain / Proxy |
 |---|---|---|---|---|---|
@@ -201,16 +213,15 @@ Scans existing OpenStreetMap elements carrying `wikidata=*` tags to detect error
 
 ### 5.1 Deployment Rollback
 If a newly pushed commit breaks production:
-1. Open Coolify (`https://159.195.192.148:8000` or configured Coolify domain).
-2. Navigate to **Projects &rarr; osm-x-wikidata &rarr; osmwd-web** (or `osmwd-api`).
-3. Under **Deployments**, locate the last known good commit (e.g. `813a848` or `a5f45cb`).
-4. Click **Redeploy**.
-5. Alternatively, locally revert the offending commit:
+The Service always builds from `main`, so rollback means making `main` good again:
+1. Locally revert the offending commit:
    ```bash
-   git revert HEAD
+   git revert <bad-commit>
    # Ask the user before pushing:
    git push origin main
    ```
+2. CI goes green, then `deploy.yml` redeploys and `verify-live` confirms the result.
+3. Emergency (CI itself broken): after the revert lands, use Coolify UI (`https://coolify.rahmahealth.net`) → osmwd service → **Redeploy**, or run *Deploy* from the Actions tab.
 
 ### 5.2 Bad Data Recovery
 If an automated weekly pipeline run in GitHub Actions publishes corrupted data or causes regression:
@@ -221,7 +232,7 @@ If an automated weekly pipeline run in GitHub Actions publishes corrupted data o
    # Ask user for push confirmation:
    git push origin main
    ```
-3. Coolify webhook immediately redeploys the previous valid datasets.
+3. Green CI triggers `deploy.yml`, which redeploys the previous valid datasets.
 
 ### 5.3 UptimeRobot Alert Response
 - **Alert on `/api/healthz/freshness` (HTTP 503):**

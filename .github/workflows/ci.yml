@@ -61,6 +61,33 @@ jobs:
       - name: Unit tests
         run: npm test
 
+  docker-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -f backend/Dockerfile -t osmwd-api:ci .
+
+      - name: Build web image
+        run: docker build -f Dockerfile -t osmwd-web:ci .
+
+      - name: Validate Caddyfile inside the web image
+        run: docker run --rm osmwd-web:ci caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      - name: API image finds its datasets
+        run: |
+          docker run --rm osmwd-api:ci python -c "
+          import sys; sys.path.insert(0, '/app')
+          from app.store import DatasetStore
+          s = DatasetStore()
+          assert s.summary.get('updated_at'), 'summary.json not loaded'
+          assert s.reverse_datasets.get('sa'), 'reverse_sa.json not loaded'
+          print('datasets:', sorted(s.reverse_datasets))
+          "
+
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 10
