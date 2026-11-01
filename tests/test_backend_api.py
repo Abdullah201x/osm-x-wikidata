@@ -138,3 +138,8 @@ def test_preview_body_cap_streamed_without_content_length(client):
         yield b'"}'
     r = client.post("/api/v1/edits/preview", content=chunks(), headers=headers)
     assert r.status_code == 413
+
+def test_reverse_rejects_unknown_country_code(client):
+    for bad in ("xx", "../sa", "SA ", ""):
+        r = client.get("/api/v1/reverse", params={"cc": bad})
+        assert r.status_code == 422, bad

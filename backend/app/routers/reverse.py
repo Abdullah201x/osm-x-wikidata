@@ -2,7 +2,7 @@
 Reverse QA Search and Filter Endpoint.
 """
 
-from typing import Optional, List
+from typing import Literal, Optional, List
 from fastapi import APIRouter, Request, Query, HTTPException
 
 router = APIRouter(prefix="/api/v1", tags=["reverse"])
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/v1", tags=["reverse"])
 @router.get("/reverse")
 def get_reverse_items(
     request: Request,
-    cc: str = Query("sa", description="GCC Country Code (sa, ae, kw, qa, bh, om)"),
+    cc: Literal["sa", "ae", "kw", "qa", "bh", "om"] = Query("sa", description="GCC Country Code (sa, ae, kw, qa, bh, om)"),
     kind: Optional[str] = Query(None, description="Comma-separated kinds: missing_backlink, broken_osm_tag, conflict, review_gap"),
     subkind: Optional[str] = Query(None, description="Specific subkind filter"),
     min_confidence: Optional[float] = Query(None, ge=0.0, le=1.0, description="Minimum confidence threshold (0.0 to 1.0)"),
