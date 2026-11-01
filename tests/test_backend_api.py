@@ -123,3 +123,18 @@ def test_preview_rate_limit_returns_429(client):
     statuses = [client.post("/api/v1/edits/preview", json=bad, headers=headers).status_code for _ in range(31)]
     assert statuses[:30] == [400] * 30
     assert statuses[30] == 429
+
+def test_preview_body_cap_returns_413(client):
+    headers = {"X-Real-IP": "198.51.100.80"}
+    big = {"qid": "Q851", "property": "P11693", "osm_type": "node", "osm_id": 1, "pad": "x" * 20000}
+    r = client.post("/api/v1/edits/preview", json=big, headers=headers)
+    assert r.status_code == 413
+
+def test_preview_body_cap_streamed_without_content_length(client):
+    headers = {"X-Real-IP": "198.51.100.81", "Content-Type": "application/json"}
+    def chunks():
+        yield b'{"qid": "Q851", "pad": "'
+        yield b"x" * 20000
+        yield b'"}'
+    r = client.post("/api/v1/edits/preview", content=chunks(), headers=headers)
+    assert r.status_code == 413

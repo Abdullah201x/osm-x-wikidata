@@ -11,6 +11,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
 
+from app.body_limit import BodySizeLimitMiddleware
 from app.config import ALLOWED_ORIGINS, USER_AGENT
 from app.limiter import limiter, get_real_client_ip  # noqa: F401 (re-exported)
 from app.store import DatasetStore
@@ -40,6 +41,7 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(BodySizeLimitMiddleware)
 
 # CORS Middleware
 app.add_middleware(
