@@ -19,6 +19,16 @@ updates:
         patterns:
           - "*"
 
+  # Frontend NPM Tooling (eslint, vitest, playwright)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      frontend-dependencies:
+        patterns:
+          - "*"
+
   # Docker Container Images
   - package-ecosystem: "docker"
     directory: "/"
