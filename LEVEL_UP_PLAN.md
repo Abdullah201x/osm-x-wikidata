@@ -154,6 +154,13 @@ All 13 items completed across commits `ddc8b4f` … `a5f45cb`:
 
 **Exit criteria:** `npm run lint` is clean (warnings allowed). `npm test` and `npm run smoke` are green locally on Windows and in CI.
 
+**Exit criteria achieved (locally, 2026-11-01):** lint clean (0 warnings), `npm test` 237 passed in 12 files, `npm run smoke` 66 passed, pytest 42 passed. The CI `frontend` job is added but unproven until the first push. Deviations from the plan:
+- `tests/js/load-script.js` (the `eval`-style helper) was used, so no production file needed `module.exports`.
+- `keyboard`/`filters` suites load the real `app.js` through `tests/js/app-harness.js`, which appends a state accessor inside the same scope.
+- The 25-item cap and 600 ms spacing live only in `WikidataEdit.addBatchOsmBacklinks`; the OSM staging queue (`BatchManager`) has no cap, so `batch.test.js` covers both as they are.
+- Playwright uses its own port (8765) and `reuseExistingServer: false` so a stray dev server without the CSP can never be reused.
+- Bugs found and fixed on the way: reverse-mode `selectedReverseItem` ReferenceError, `#mode=reverse` deep link no-op, four missing English strings.
+
 ---
 
 ## Phase 3 — Python test hardening (D4)

@@ -6,7 +6,8 @@ This document summarizes the architecture, live infrastructure, completed phases
 - **Original Plan (Phases 1–5):** Reverse analysis engine, FastAPI backend (`osmwd-api`), Docker/Caddy deployment stack (`osmwd-web`), Leaflet reverse QA UI, and dual OAuth PKCE are implemented.
 - **Level-Up Phase 0 (Audit Bug Fixes):** Complete across 13 commits (`ddc8b4f` … `a5f45cb`). SlowAPI rate limiting is enabled and tested, request bodies are capped at 16 KB, `cc` is strictly validated, real LRU caching and upstream 429 backoff are in place, Wikidata writes are authenticated and lag-aware with pre-flight `/api/v1/edits/preview`, all inline handlers are eliminated, UTC ISO-8601 timestamps are unified, and reverse datasets for all six GCC countries are generated.
 - **Level-Up Phase 1 (Documentation & Parity Architecture):** Complete. `HANDOFF.md`, `README.md`, `BACKEND_AND_REVERSE_LINKER_PLAN.md`, and project memory are synchronized with Manara (`C:\Users\abdul\Desktop\GCC20260707`) standards.
-- **Python Test Suite:** 37 passed tests (`tests/test_backend_api.py`, `tests/test_country_boundaries.py`, `tests/test_reverse_matcher.py`). Zero network calls during test runs.
+- **Level-Up Phase 2 (Frontend Tooling):** Complete locally (`1576630`, `32e81e5`); not yet pushed. Dev-only `package.json` (eslint 10, Vitest + jsdom, Playwright), 237 Vitest cases in 12 suites, 66 Playwright smoke tests run against the production CSP with all third-party traffic stubbed, and a `frontend` job in `ci.yml`. The new suites found and fixed three real bugs (reverse-mode shortcuts threw `ReferenceError`, `#mode=reverse` deep links never switched mode, four strings had no English translation).
+- **Python Test Suite:** 42 passed tests (`tests/test_backend_api.py`, `tests/test_country_boundaries.py`, `tests/test_reverse_matcher.py`, `tests/test_serve_ssl.py`). Zero network calls during test runs.
 
 ---
 
@@ -16,7 +17,12 @@ This document summarizes the architecture, live infrastructure, completed phases
    ```bash
    python -m pytest tests/ -q
    ```
-   Must report **37 passed** in ~8–9 seconds with zero failures. (Once Phase 2 frontend tooling lands: also run `npm run lint`, `npm test`, and `npm run smoke`).
+   Must report **42 passed** in ~10 seconds with zero failures. Then, after `npm ci` (first time only; the smoke tests also need Chrome locally, or `npx playwright install chromium`):
+   ```bash
+   npm run lint     # 0 errors, 0 warnings
+   npm test         # 12 files, 237 passed
+   npm run smoke    # 66 passed (desktop + mobile), ~1.5 min
+   ```
 2. **Current git state:**
    Check `git status` and `git log -n 5 --oneline`. The local `main` branch holds the Phase 0 and Phase 1 commits.
    > [!IMPORTANT]
@@ -25,11 +31,8 @@ This document summarizes the architecture, live infrastructure, completed phases
    Manara's nightly data pipeline downloads `https://raw.githubusercontent.com/Abdullah201x/osm-x-wikidata/main/data/sa.json` at 23:30 UTC and indexes `items` tuple slots `[0..7]`.
    **Hard rule:** `data/sa.json` must remain committed on `main` at that exact path with its 15-element tuple layout `[0..14]` intact.
 4. **Immediate next work:**
-   Proceed with **Phase 2 (Frontend Tooling)** of `LEVEL_UP_PLAN.md`:
-   - Initialize root dev-only `package.json` (`eslint@10`, `vitest`, `jsdom`, `@playwright/test`).
-   - Flat `eslint.config.js` matching browser globals and cross-file state.
-   - Vitest unit suites for translations, sanitization, exports, batch throttling, and OAuth helpers.
-   - Playwright E2E smoke tests enforcing the production Caddy CSP locally.
+   Proceed with **Phase 3 (Python test hardening)** of `LEVEL_UP_PLAN.md`, then Phase 4 (CI/CD refinement; the `frontend` job added in Phase 2 is a single job that Phase 4 may split into `frontend` + `smoke`).
+   The Phase 2 commits are local only: **ask the user before pushing** (the push also exercises the new CI job for the first time).
 
 - **Repository:** `github.com/Abdullah201x/osm-x-wikidata` (branch `main` auto-deploys via Coolify)
 - **Local checkout:** `C:\Users\abdul\Desktop\osm x wikidata`
@@ -181,6 +184,9 @@ Scans existing OpenStreetMap elements carrying `wikidata=*` tags to detect error
 | `5ec45de` | 2026-11-01 | Level-Up P0.11 | Make Wikidata writes authenticated, lag-aware (`maxlag=5`), and refreshable |
 | `2b4878a` | 2026-11-01 | Level-Up P0.12 | Run `/api/v1/edits/preview` before every in-app Wikidata write |
 | `a5f45cb` | 2026-11-01 | Level-Up P0.13 | Generate reverse QA datasets for all six GCC countries |
+| `254bdee` | 2026-11-01 | Level-Up P1 | Establish HANDOFF.md, README rewrite, and ADR planning parity |
+| `1576630` | 2026-11-01 | Level-Up P2 (fixes) | Fix reverse-mode shortcuts / URL hash `ReferenceError`, `#mode=reverse` deep links, and 4 missing English strings |
+| `32e81e5` | 2026-11-01 | Level-Up P2 (tooling) | eslint + Vitest + Playwright (production CSP), `serve_ssl.py --http --csp`, CI `frontend` job |
 
 ---
 
@@ -242,17 +248,20 @@ If an automated weekly pipeline run in GitHub Actions publishes corrupted data o
 
 ### Local Testing & Linting
 ```bash
-# 1. Run all Python unit tests (37 tests, offline, mocked):
+# 1. Run all Python unit tests (42 tests, offline, mocked):
 python -m pytest tests/ -q
 
-# 2. Local SSL Preview server with production CSP enforcement:
-python serve_ssl.py 8000
-# Accessible at https://localhost:8000 (accept self-signed cert)
+# 2. Local preview server with the production CSP (copied from deploy/Caddyfile.container):
+python serve_ssl.py --csp                  # https://localhost:8000 (needs cert.pem/key.pem; accept self-signed cert)
+python serve_ssl.py --http --csp --port 8765   # plain HTTP, no certs (what Playwright uses)
+#   --api http://127.0.0.1:8010 proxies /api/* to a local uvicorn; without it /api/* answers 503.
 
-# 3. Future Node commands (Phase 2):
-npm run lint
-npm test
-npm run smoke
+# 3. Frontend checks (dev-only tooling; the site itself needs no build):
+npm ci                # first time
+npm run lint          # eslint js
+npm test              # Vitest + jsdom, loads js/*.js unmodified via tests/js/load-script.js
+npm run smoke         # Playwright, desktop 1280x800 + mobile 390x844; Chrome locally, Chromium in CI
+npm run smoke:fast    # desktop project only
 ```
 
 ### Production Health Checks

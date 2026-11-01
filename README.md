@@ -130,9 +130,10 @@ The workbench operates seamlessly in two specialized modes via a top navigation 
 ├── index.html                # Single-page application entrypoint
 ├── LEVEL_UP_PLAN.md          # Engineering parity roadmap with Manara
 ├── OSM_IMPORT_GUIDELINES.md  # Official OSM Import Policy & Compliance Guide
+├── package.json              # Dev-only frontend tooling (eslint, vitest, playwright)
 ├── pytest.ini                # Pytest configuration
 ├── requirements.txt          # Root Python dependencies (pipeline + tests)
-├── serve_ssl.py              # Local HTTPS dev server with production CSP enforcement
+├── serve_ssl.py              # Local dev/e2e server (HTTPS or --http) with production CSP enforcement (--csp)
 └── update_data.py            # Master pipeline runner
 ```
 
@@ -154,20 +155,31 @@ pip install -r backend/requirements.txt
 
 ### 2. Running Automated Tests
 
-Run the full Python test suite (37 tests, runs completely offline):
+Run the full Python test suite (42 tests, runs completely offline):
 
 ```bash
 python -m pytest tests/ -q
 ```
+
+Frontend checks use dev-only Node tooling (the site itself ships as plain static files, nothing is bundled):
+
+```bash
+npm ci
+npm run lint     # ESLint over js/
+npm test         # Vitest + jsdom unit tests (12 files, 237 cases, no network)
+npm run smoke    # Playwright: desktop + mobile, production CSP, third-party traffic stubbed
+```
+
+`npm run smoke` uses your installed Chrome locally; in CI it uses `npx playwright install --with-deps chromium`.
 
 ### 3. Running Locally
 
 #### Option A: Local Web Server with Production CSP Enforcement
 To test OAuth callbacks and CSP headers with local HTTPS:
 ```bash
-python serve_ssl.py 8000
+python serve_ssl.py --csp
 ```
-Open `https://localhost:8000` (accept the self-signed developer certificate).
+Open `https://localhost:8000` (accept the self-signed developer certificate). `--csp` sends the exact Content-Security-Policy from `deploy/Caddyfile.container`; `--http` serves plain HTTP without certificates (used by the Playwright tests); `--api http://127.0.0.1:8010` proxies `/api/*` to a local backend.
 
 #### Option B: Running the Backend API Locally
 ```bash
