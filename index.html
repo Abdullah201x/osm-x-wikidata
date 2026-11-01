@@ -26,7 +26,7 @@
             <div class="logo-glow"></div>
             <h1 data-i18n="mainTitle">ربط OSM × ويكي بيانات</h1>
           </div>
-          <div style="display: flex; gap: 6px; align-items: center;">
+          <div class="header-right-actions">
             <button id="btn-about-modal" class="shortcuts-btn" title="حول الأداة والتواصل / About & Contact">ℹ️</button>
             <button id="btn-shortcuts-modal" class="shortcuts-btn" title="اختصارات لوحة المفاتيح / Keyboard Shortcuts">⌨️</button>
             <button id="btn-toggle-lang" class="lang-btn" title="تبديل اللغة / Toggle Language">English</button>
@@ -154,7 +154,7 @@
           <div class="control-group">
             <div class="section-title-row">
               <label class="section-label" data-i18n="filterCategory">التصنيفات</label>
-              <span style="font-size: 0.72rem; color: var(--color-text-muted);">
+              <span class="text-caption-muted">
                 (<span id="visible-count">0</span> معروض)
               </span>
             </div>
@@ -220,18 +220,18 @@
         </div>
 
         <!-- Export Center -->
-        <div class="control-group" style="margin-top: auto; padding-top: 10px; border-top: 1px solid var(--panel-border);">
-          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-            <button id="btn-export-mr" class="btn" style="flex: 1; min-width: 80px; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;" title="MapRoulette GeoJSON">
+        <div class="control-group export-center-group">
+          <div class="export-btn-grid">
+            <button id="btn-export-mr" class="btn btn-export-mini" title="MapRoulette GeoJSON">
               🎯 MapRoulette
             </button>
-            <button id="btn-export-josm-presets" class="btn" style="flex: 1; min-width: 80px; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;" title="تصدير قوالب ووسوم JOSM الرسمية بصيغة XML">
+            <button id="btn-export-josm-presets" class="btn btn-export-mini" title="تصدير قوالب ووسوم JOSM الرسمية بصيغة XML">
               📥 JOSM XML
             </button>
-            <button id="btn-export-csv" class="btn" style="flex: 1; min-width: 60px; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;" title="CSV Spreadsheet">
+            <button id="btn-export-csv" class="btn btn-export-mini btn-export-csv" title="CSV Spreadsheet">
               📊 CSV
             </button>
-            <button id="btn-export-qs" class="btn" style="flex: 1; min-width: 80px; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;" title="QuickStatements v2 Export">
+            <button id="btn-export-qs" class="btn btn-export-mini" title="QuickStatements v2 Export">
               ⚡ QS v2
             </button>
           </div>
@@ -354,12 +354,12 @@
   <div id="note-modal" class="modal-overlay" style="display: none;">
     <div class="modal-card">
       <h3 data-i18n="noteModalTitle">إرسال ملاحظة إلى OpenStreetMap</h3>
-      <div style="font-size: 0.78rem; color: var(--color-text-muted);">
+      <div class="note-modal-hint">
         الإحداثيات: <code id="note-coords"></code>
       </div>
       <textarea id="note-text-input" placeholder="اكتب تفاصيل الملاحظة هنا..."></textarea>
-      <div style="display: flex; gap: 8px; justify-content: flex-end;">
-        <button id="btn-cancel-note" class="btn" style="background: rgba(255,255,255,0.08); color: #fff;" data-i18n="btnCancel">إلغاء</button>
+      <div class="modal-actions-right">
+        <button id="btn-cancel-note" class="btn btn-secondary-cancel" data-i18n="btnCancel">إلغاء</button>
         <button id="btn-submit-note-confirm" class="btn btn-josm-action" data-i18n="btnSubmitNote">إرسال الملاحظة</button>
       </div>
     </div>
@@ -539,7 +539,7 @@
   <!-- Loading Overlay -->
   <div id="loading-indicator" style="display: none;">
     <div class="spinner"></div>
-    <div style="color: #fff; font-size: 0.9rem; font-weight: 600;">جارٍ تحميل البيانات...</div>
+    <div class="loading-indicator-label">جارٍ تحميل البيانات...</div>
   </div>
 
   <!-- Leaflet & MarkerCluster JS (Self-Hosted) -->

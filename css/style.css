@@ -2549,3 +2549,62 @@ kbd, .kbd-inline {
   border-color: var(--color-primary);
   color: #fff;
 }
+
+/* Accessibility & Layout Utilities (Parity Audit) */
+.header-right-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.text-caption-muted {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.export-center-group {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.export-btn-grid {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-export-mini {
+  flex: 1;
+  min-width: 80px;
+  font-size: 0.72rem;
+  background: var(--color-surface);
+  border: 1px solid var(--panel-border);
+  color: #fff;
+}
+
+.btn-export-mini.btn-export-csv {
+  min-width: 60px;
+}
+
+.note-modal-hint {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.modal-actions-right {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn-secondary-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.loading-indicator-label {
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+}

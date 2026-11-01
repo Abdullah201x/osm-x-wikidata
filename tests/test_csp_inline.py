@@ -61,3 +61,11 @@ def test_caddyfile_enforces_script_src_self():
     assert "script-src 'self'" in csp
     assert "default-src 'self'" in csp
     assert "object-src 'none'" in csp
+
+
+def test_caddyfile_security_headers():
+    caddy_text = CADDYFILE.read_text(encoding="utf-8")
+    assert 'Strict-Transport-Security "max-age=31536000; includeSubDomains"' in caddy_text
+    assert 'Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"' in caddy_text
+    assert 'X-Content-Type-Options "nosniff"' in caddy_text
+    assert 'X-Frame-Options "SAMEORIGIN"' in caddy_text
