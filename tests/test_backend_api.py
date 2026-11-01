@@ -12,8 +12,17 @@ backend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
+import httpx
 from app.main import app, get_real_client_ip
 from app.store import DatasetStore
+from app.routers import verify as verify_mod
+
+def _install_mock_upstream(client, handler):
+    client.app.state.http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+def _wd_entity(qid="Q851"):
+    return {"entities": {qid: {"lastrevid": 99, "labels": {"en": {"value": "Saudi Arabia"}},
+                               "descriptions": {}, "claims": {}}}}
 
 @pytest.fixture
 def client():
@@ -59,13 +68,13 @@ def test_verify_endpoint_validation(client):
     r_bad = client.get("/api/v1/verify/invalid_qid")
     assert r_bad.status_code == 400
 
-    # Valid QID syntax (Q851)
-    r_good = client.get("/api/v1/verify/Q851")
-    assert r_good.status_code in (200, 502) # 200 if reachable, 502 if live network fails
-    if r_good.status_code == 200:
-        data = r_good.json()
-        assert data["qid"] == "Q851"
-        assert "wikidata" in data
+    # Valid QID syntax (Q851) - mocked so it never hits the real network
+    _install_mock_upstream(client, lambda req: httpx.Response(200, json=_wd_entity("Q851")))
+    r_good = client.get("/api/v1/verify/Q851", headers={"X-Real-IP": "198.51.100.201"})
+    assert r_good.status_code == 200
+    data = r_good.json()
+    assert data["qid"] == "Q851"
+    assert "wikidata" in data
 
 def test_preview_endpoint_validation(client):
     # Property mismatch: node with P10689 (which is for ways)
@@ -146,19 +155,6 @@ def test_reverse_rejects_unknown_country_code(client):
 
 
 # --- verify.py: cache, locks, upstream rate limiting (all offline) ---
-
-import httpx
-from app.routers import verify as verify_mod
-
-
-def _install_mock_upstream(client, handler):
-    client.app.state.http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-
-
-def _wd_entity(qid="Q851"):
-    return {"entities": {qid: {"lastrevid": 99, "labels": {"en": {"value": "Saudi Arabia"}},
-                               "descriptions": {}, "claims": {}}}}
-
 
 @pytest.fixture(autouse=True)
 def _clean_verify_state():

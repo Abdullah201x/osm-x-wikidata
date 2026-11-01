@@ -118,11 +118,13 @@ const TRANSLATIONS = {
     shortcutJosmZoom: "فتح وتكبير في JOSM",
     shortcutJosmTags: "إرسال الوسم إلى JOSM",
     shortcutId: "فتح في محرر iD",
+    shortcutOverpass: "فتح استعلام Overpass Turbo",
     shortcutVerify: "التحقق المباشر في خوادم OSM",
     shortcutNext: "الانتقال للمعلم التالي",
     shortcutPrev: "الانتقال للمعلم السابق",
     shortcutBasemap: "تبديل خريطة الأساس",
     shortcutHelp: "عرض نافذة الاختصارات",
+    shortcutDirectLink: "الربط المباشر في OSM",
 
     // Direct 1-Click OSM Linking
     btnDirectLinkOsm: "🔗 ربط بـ OSM مباشرة",
@@ -138,6 +140,12 @@ const TRANSLATIONS = {
     contactOsmMsg: "رسالة OSM",
     policyLabel: "السياسات وDWG",
     aboutModalTitle: "حول المشروع، التواصل، وسياسات فريق البيانات (DWG)",
+    aboutLead: "أداة مساعدة لمجتمع OpenStreetMap لدول الخليج لربط المعالم القائمة بمعرفات Wikidata المقابلة لها (Assisted Conflation).",
+    aboutContactHeading: "👤 قنوات التواصل والمطور:",
+    aboutSendMsg: "إرسال رسالة مباشرة على OSM ↗",
+    dwgHeading: "🛡️ التزام سياسة المجتمع وفريق العمل (DWG Compliance):",
+    dwgText: "نحن نحترم قواعد OpenStreetMap وفريق البيانات (DWG) بشكل تام. هذه الأداة لا تقوم بأي تعديلات آلية غير مراقبة. جميع التعديلات تتطلب تسجيل دخول المستخدم، وتتم على عناصر قائمة تم التحقق منها بشرياً، وتخضع للمراجعة الكاملة. إذا كان لديك أي ملاحظات أو كنت عضواً في مجتمع الخريطة أو فريق DWG ولديك أي استفسار أو اعتراض، يرجى التواصل مباشرة عبر الرسائل أو GitHub وسنتعاون فوراً.",
+    openCommons: "فتح في ويكيميديا كومنز ↗",
     // Batch & Multi-Item Changesets
     batchQueueTitle: "سلة التعديلات المجمعة",
     batchQueueBtn: "سلة التعديلات",
@@ -347,6 +355,7 @@ const TRANSLATIONS = {
     shortcutJosmZoom: "Load & Zoom in JOSM",
     shortcutJosmTags: "Push Tag to JOSM",
     shortcutId: "Edit in iD Editor",
+    shortcutOverpass: "Open Overpass Turbo query",
     shortcutVerify: "Live Overpass Verify",
     shortcutNext: "Next POI in List",
     shortcutPrev: "Previous POI in List",
@@ -368,6 +377,12 @@ const TRANSLATIONS = {
     contactOsmMsg: "Message on OSM",
     policyLabel: "Policies & DWG",
     aboutModalTitle: "About, Contact & Data Working Group (DWG) Policies",
+    aboutLead: "An assisted conflation workbench for the GCC OpenStreetMap community to couple existing features with reciprocal Wikidata identifiers.",
+    aboutContactHeading: "👤 Contact Channels & Maintainer:",
+    aboutSendMsg: "Send direct message on OSM ↗",
+    dwgHeading: "🛡️ Community Policy & Data Working Group (DWG) Compliance:",
+    dwgText: "We fully adhere to OpenStreetMap rules and Data Working Group (DWG) guidelines. This workbench executes zero automated or unmonitored edits. All changes require mapper authentication, operate on human-verified existing features, and undergo full pre-flight inspection. If you are an OSM community contributor or DWG member with questions or concerns, please reach out via direct message or GitHub and we will collaborate immediately.",
+    openCommons: "Open in Wikimedia Commons ↗",
 
     // Batch & Multi-Item Changesets
     batchQueueTitle: "Changeset Batch Queue",
