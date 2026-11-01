@@ -5,6 +5,8 @@ services:
       dockerfile: backend/Dockerfile
     container_name: osmwd-api
     restart: unless-stopped
+    environment:
+      - OSMWD_DATA_DIR=/app/data
     expose:
       - "8010"
     deploy:

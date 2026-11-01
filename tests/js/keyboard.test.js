@@ -7,8 +7,8 @@ beforeAll(() => {
   app.setupKeyboardShortcuts();
 });
 
-const press = (key, target = window) => {
-  const e = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+const press = (key, target = window, init = {}) => {
+  const e = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
   target.dispatchEvent(e);
   return e;
 };
@@ -172,5 +172,38 @@ describe('URL hash in reverse mode', () => {
     app.updateUrlHash();
     expect(replace.mock.calls[0][2]).toContain('qid=Q42');
     expect(replace.mock.calls[0][2]).toContain('mode=reverse');
+  });
+});
+
+
+describe('Arabic layout shortcuts (physical key code fallback)', () => {
+  it('Arabic question mark ؟ toggles the shortcuts modal', () => {
+    press('؟');
+    expect(document.getElementById('shortcuts-modal').style.display).toBe('flex');
+    press('؟');
+    expect(document.getElementById('shortcuts-modal').style.display).toBe('none');
+  });
+
+  it('Arabic layout B key (لا with code KeyB) opens the batch modal', () => {
+    press('لا', window, { code: 'KeyB' });
+    expect(globalThis.BatchManager.openModal).toHaveBeenCalledOnce();
+  });
+
+  it('Arabic layout H key (ا with code KeyH) opens the history modal', () => {
+    press('ا', window, { code: 'KeyH' });
+    expect(globalThis.HistoryManager.openModal).toHaveBeenCalledOnce();
+  });
+
+  it('Arabic layout J key (ت with code KeyJ) sends selected item to JOSM', () => {
+    app.__app.set({ selectedItem: [123, 24.5, 46.5, 5, 1, 'ا', 'A', '', 'w9'] });
+    press('ت', window, { code: 'KeyJ' });
+    expect(globalThis.MappingTools.josmLoadAndZoom).toHaveBeenCalledWith(24.5, 46.5, 'w9');
+  });
+
+  it('Arabic layout physical brackets (BracketRight / BracketLeft) cycle basemap', () => {
+    press('د', window, { code: 'BracketRight' });
+    expect(globalThis.MapController.switchBasemap).toHaveBeenLastCalledWith('satellite');
+    press('ج', window, { code: 'BracketLeft' });
+    expect(globalThis.MapController.switchBasemap).toHaveBeenLastCalledWith('dark');
   });
 });

@@ -1529,6 +1529,41 @@ function setupViewportStatsListener() {
   mapInstance.on("zoomend", scheduleViewportStats);
 }
 
+const ARABIC_INDIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
+const NAMED_KEY = /^[A-Z][A-Za-z0-9]+$/;
+
+function shortcutKey(e) {
+  if (!e) return "";
+  const key = e.key || "";
+  if (NAMED_KEY.test(key)) return key;
+  if (key === "?" || key === "؟") return "?";
+
+  const lower = key.toLowerCase();
+  if (/^[a-z0-9]$/.test(lower)) return lower;
+
+  let digit = ARABIC_INDIC_DIGITS.indexOf(key);
+  if (digit < 0) digit = PERSIAN_DIGITS.indexOf(key);
+  if (key.length === 1 && digit >= 0) return String(digit);
+
+  const code = e.code || "";
+  const letter = code.match(/^Key([A-Z])$/);
+  if (letter) return letter[1].toLowerCase();
+
+  const number = code.match(/^(?:Digit|Numpad)(\d)$/);
+  if (number) return number[1];
+
+  if (code === "Slash" && e.shiftKey) return "?";
+  if (code === "BracketLeft") return "[";
+  if (code === "BracketRight") return "]";
+
+  return lower;
+}
+
+if (typeof window !== "undefined") {
+  window.shortcutKey = shortcutKey;
+}
+
 function setupKeyboardShortcuts() {
   window.addEventListener("keydown", (e) => {
     // Ignore keystrokes if the user is typing in an input or textarea
@@ -1537,7 +1572,7 @@ function setupKeyboardShortcuts() {
       return;
     }
 
-    const key = e.key;
+    const key = shortcutKey(e);
 
     // '?' -> Open/Close shortcuts modal
     if (key === "?") {

@@ -191,6 +191,7 @@ Scans existing OpenStreetMap elements carrying `wikidata=*` tags to detect error
 | `77f5919` | 2026-11-01 | Level-Up P4 | CI/CD parity with Manara: split 3-job workflow (python-tests, frontend, smoke), npm dependabot, and `.gitattributes` |
 | `e2d160a` | 2026-11-01 | Level-Up P5 | Data safety: port `pipeline/validate_data.py` shrink guard (<20% drop) and atomic writes (`.tmp` + `os.replace`) |
 | `5614b67` | 2026-11-01 | Level-Up P6 | Security & CSS: Caddy HSTS and Permissions-Policy headers, refactor inline styles to CSS utility classes |
+| `4c2dc73` | 2026-11-01 | Docs | Record Level-Up phases 3-6 commits and verification counts in HANDOFF |
 
 ---
 
@@ -252,7 +253,7 @@ If an automated weekly pipeline run in GitHub Actions publishes corrupted data o
 
 ### Local Testing & Linting
 ```bash
-# 1. Run all Python unit & integration tests (125 tests across 17 test files, offline, mocked):
+# 1. Run all Python unit & integration tests (126 tests across 17 test files, offline, mocked):
 python -m pytest tests/ -q
 
 # 2. Local preview server with the production CSP (copied from deploy/Caddyfile.container):

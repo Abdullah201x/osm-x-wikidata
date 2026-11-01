@@ -292,3 +292,19 @@ def test_freshness_accepts_both_formats(client, monkeypatch, fmt):
     monkeypatch.setattr(client.app.state.store, "summary", {"updated_at": stale})
     r = client.get("/api/healthz/freshness")
     assert r.status_code == 503 and r.json()["status"] == "stale"
+
+
+def test_resolve_data_dir_hierarchy(tmp_path, monkeypatch):
+    from app.config import resolve_data_dir
+
+    # 1. Custom env var takes precedence
+    custom_dir = tmp_path / "custom_data"
+    custom_dir.mkdir()
+    monkeypatch.setenv("OSMWD_DATA_DIR", str(custom_dir))
+    assert resolve_data_dir() == str(custom_dir)
+
+    # 2. When env var is cleared, resolves to existing local dev or container candidate
+    monkeypatch.delenv("OSMWD_DATA_DIR", raising=False)
+    resolved = resolve_data_dir()
+    assert os.path.isdir(resolved)
+    assert os.path.exists(os.path.join(resolved, "summary.json"))
