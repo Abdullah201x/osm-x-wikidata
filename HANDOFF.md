@@ -185,8 +185,12 @@ Scans existing OpenStreetMap elements carrying `wikidata=*` tags to detect error
 | `2b4878a` | 2026-11-01 | Level-Up P0.12 | Run `/api/v1/edits/preview` before every in-app Wikidata write |
 | `a5f45cb` | 2026-11-01 | Level-Up P0.13 | Generate reverse QA datasets for all six GCC countries |
 | `254bdee` | 2026-11-01 | Level-Up P1 | Establish HANDOFF.md, README rewrite, and ADR planning parity |
-| `1576630` | 2026-11-01 | Level-Up P2 (fixes) | Fix reverse-mode shortcuts / URL hash `ReferenceError`, `#mode=reverse` deep links, and 4 missing English strings |
+| `1576630` | 2026-11-01 | Level-Up P2 (fixes) | Fix reverse-mode shortcuts / URL hash `ReferenceError`, `#mode=reverse` deep links, and missing translations |
 | `32e81e5` | 2026-11-01 | Level-Up P2 (tooling) | eslint + Vitest + Playwright (production CSP), `serve_ssl.py --http --csp`, CI `frontend` job |
+| `2602086` | 2026-11-01 | Level-Up P3 | Harden Python test suite with offline mocks, dataset integrity checks, and 16 test files (118 tests) |
+| `77f5919` | 2026-11-01 | Level-Up P4 | CI/CD parity with Manara: split 3-job workflow (python-tests, frontend, smoke), npm dependabot, and `.gitattributes` |
+| `e2d160a` | 2026-11-01 | Level-Up P5 | Data safety: port `pipeline/validate_data.py` shrink guard (<20% drop) and atomic writes (`.tmp` + `os.replace`) |
+| `5614b67` | 2026-11-01 | Level-Up P6 | Security & CSS: Caddy HSTS and Permissions-Policy headers, refactor inline styles to CSS utility classes |
 
 ---
 
@@ -248,7 +252,7 @@ If an automated weekly pipeline run in GitHub Actions publishes corrupted data o
 
 ### Local Testing & Linting
 ```bash
-# 1. Run all Python unit tests (42 tests, offline, mocked):
+# 1. Run all Python unit & integration tests (125 tests across 17 test files, offline, mocked):
 python -m pytest tests/ -q
 
 # 2. Local preview server with the production CSP (copied from deploy/Caddyfile.container):
