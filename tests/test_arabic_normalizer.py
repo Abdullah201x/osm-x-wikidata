@@ -13,7 +13,6 @@ Covers:
 - Disambiguation serial suffix stripping
 """
 
-import pytest
 from pipeline.arabic_normalizer import (
     normalize_arabic,
     string_similarity,

@@ -9,7 +9,6 @@ Tests the Forward Conflation engine:
 - 15-element tuple layout contract [0..14]
 """
 
-import os
 import sqlite3
 import pytest
 from pipeline.matcher import match_country_items

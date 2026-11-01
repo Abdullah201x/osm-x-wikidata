@@ -11,7 +11,6 @@ Verifies:
 
 import re
 from pathlib import Path
-import pytest
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 TRANSLATIONS_JS = ROOT_DIR / "js" / "translations.js"

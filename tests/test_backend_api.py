@@ -14,7 +14,6 @@ if backend_dir not in sys.path:
 
 import httpx
 from app.main import app, get_real_client_ip
-from app.store import DatasetStore
 from app.routers import verify as verify_mod
 
 def _install_mock_upstream(client, handler):

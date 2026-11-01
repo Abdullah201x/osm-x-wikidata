@@ -10,7 +10,6 @@ Covers:
 
 import time
 import argparse
-import pytest
 from pipeline.config import GCC_COUNTRIES
 
 

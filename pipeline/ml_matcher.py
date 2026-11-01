@@ -12,7 +12,7 @@ import joblib
 import numpy as np
 from typing import Dict, List, Any, Optional, Tuple
 
-from pipeline.config import BASE_DIR, PIPELINE_DIR
+from pipeline.config import PIPELINE_DIR
 from pipeline.arabic_normalizer import normalize_arabic, strip_generic_noise, string_similarity
 from pipeline.pbf_extractor import OSM_CACHE_DB
 from pipeline.wikidata_fetcher import CACHE_DB as WIKIDATA_CACHE_DB

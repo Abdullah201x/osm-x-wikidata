@@ -3,7 +3,6 @@ Health Check and Freshness Monitoring Endpoints for UptimeRobot.
 Both declare methods=["GET", "HEAD"].
 """
 
-import os
 from datetime import datetime, timezone
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse

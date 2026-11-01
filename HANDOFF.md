@@ -192,6 +192,8 @@ Scans existing OpenStreetMap elements carrying `wikidata=*` tags to detect error
 | `e2d160a` | 2026-11-01 | Level-Up P5 | Data safety: port `pipeline/validate_data.py` shrink guard (<20% drop) and atomic writes (`.tmp` + `os.replace`) |
 | `5614b67` | 2026-11-01 | Level-Up P6 | Security & CSS: Caddy HSTS and Permissions-Policy headers, refactor inline styles to CSS utility classes |
 | `4c2dc73` | 2026-11-01 | Docs | Record Level-Up phases 3-6 commits and verification counts in HANDOFF |
+| `e790549` | 2026-11-01 | Fix | Resolve container DATA_DIR hierarchy and support Arabic layout keyboard shortcuts |
+| `Phase 8` | 2026-11-01 | Level-Up P8 | Surpass Manara: Ruff linter/formatter, pyproject.toml, pytest-cov, SECURITY.md, CHANGELOG.md |
 
 ---
 

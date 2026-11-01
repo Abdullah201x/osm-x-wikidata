@@ -7,7 +7,6 @@ P31 classes, Wikipedia links, and Commons images. Includes SQLite caching.
 import os
 import re
 import time
-import json
 import sqlite3
 import requests
 from typing import Dict, List, Any, Optional

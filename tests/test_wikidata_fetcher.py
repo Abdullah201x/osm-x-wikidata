@@ -8,9 +8,6 @@ Covers:
 - Mocked SPARQL execution via fetch_sparql: success, retries, 429 backoff
 """
 
-import json
-import sqlite3
-import pytest
 import responses
 from pipeline.wikidata_fetcher import (
     parse_point_coords,

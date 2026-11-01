@@ -2,7 +2,7 @@
 Reverse QA Search and Filter Endpoint.
 """
 
-from typing import Literal, Optional, List
+from typing import Literal, Optional
 from fastapi import APIRouter, Request, Query, HTTPException
 
 router = APIRouter(prefix="/api/v1", tags=["reverse"])

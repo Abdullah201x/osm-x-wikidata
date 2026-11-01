@@ -8,7 +8,6 @@ Categorizes linked objects into 4 actionable queues:
 """
 
 import os
-import sys
 import re
 import json
 import time
@@ -17,9 +16,9 @@ import sqlite3
 from typing import Dict, List, Any, Optional, Tuple, Set
 import requests
 
-from pipeline.config import BASE_DIR, PIPELINE_DIR, DATA_DIR, GCC_COUNTRIES, P31_ONTOLOGY, QID_TO_COUNTRY_CODE
-from pipeline.arabic_normalizer import string_similarity, match_names_composite, strip_serial_suffix, normalize_arabic
-from pipeline.physicality_filter import NON_MAPPABLE_P31, is_physical_mappable
+from pipeline.config import PIPELINE_DIR, DATA_DIR, GCC_COUNTRIES, P31_ONTOLOGY
+from pipeline.arabic_normalizer import match_names_composite, normalize_arabic
+from pipeline.physicality_filter import NON_MAPPABLE_P31
 from pipeline.country_boundaries import get_country_matcher
 
 WIKIDATA_CACHE_DB = os.path.join(PIPELINE_DIR, "wikidata_cache.db")
@@ -161,7 +160,7 @@ def fetch_tagged_qids_batch(
                 if resp.status_code == 200:
                     resp_data = resp.json()
                     break
-            except Exception as e:
+            except Exception:
                 time.sleep(1.5 * (attempt + 1))
 
         if not resp_data:
@@ -523,7 +522,6 @@ class ReverseAnalyzer:
         norm_qid = normalize_malformed_qid(raw_qid)
         otype = obj["osm_type"]
         oid = obj["osm_id"]
-        osm_ref = f"{otype}{oid}"
 
         # Target external ID property on Wikidata
         target_prop = "P11693" if otype == 'n' else ("P10689" if otype == 'w' else "P402")

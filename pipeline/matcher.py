@@ -8,16 +8,12 @@ Determines status for each item:
 Applies Machine Learning candidate conflation and filters non-physical entities.
 """
 
-import os
-import math
 import sqlite3
-import json
 from typing import Dict, List, Any, Tuple
-from pipeline.config import BASE_DIR, DATA_DIR, GCC_COUNTRIES
-from pipeline.arabic_normalizer import string_similarity, normalize_arabic
+from pipeline.config import GCC_COUNTRIES
 from pipeline.pbf_extractor import OSM_CACHE_DB
 from pipeline.physicality_filter import is_physical_mappable
-from pipeline.ml_matcher import load_or_train_matcher, find_ml_candidate, lat_lon_distance_m
+from pipeline.ml_matcher import load_or_train_matcher, find_ml_candidate
 
 def match_country_items(country_code: str, wd_items: List[Dict[str, Any]]) -> Dict[str, Any]:
     """

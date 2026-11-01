@@ -31,6 +31,10 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt -r backend/requirements.txt httpx
 
+      - name: Lint with Ruff
+        run: |
+          python -m ruff check
+
       - name: Run unit & integration tests
         run: |
           python -m pytest

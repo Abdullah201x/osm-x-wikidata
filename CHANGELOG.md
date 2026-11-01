@@ -1,0 +1,64 @@
+# Changelog
+
+All notable changes to the **OpenStreetMap × Wikidata GCC Conflation & Reverse QA Workbench** are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [2.2.0] - 2026-11-01
+
+### Added
+- **Arabic Keyboard Layout Support:** Ported layout-independent `shortcutKey(e)` engine supporting Arabic layout keypresses (`؟`, `KeyB`, `KeyH`, `KeyJ`, `BracketRight`/`BracketLeft`).
+- **Multi-Tier Container Resolution:** Self-healing dataset discovery in `backend/app/config.py` checking `OSMWD_DATA_DIR` &rarr; `/app/data` &rarr; local `data/`.
+- **Engineering Excellence Tooling:** Added `ruff` static analysis, `pytest-cov` test coverage reports, and unified `pyproject.toml`.
+- **Data Validation & Shrink Guard:** Added `pipeline/validate_data.py` blocking publish if any dataset shrinks >20% or violates the 15-element schema.
+- **Atomic Data Writes:** Switched `update_data.py` and `reverse_matcher.py` to atomic writes (`.tmp` + `os.replace`).
+- **Comprehensive Test Suite:** 126 offline Python tests (17 modules) and 242 Vitest frontend tests across 12 suites.
+- **E2E Playwright Smoke Suite:** 66 tests (41 desktop + 25 mobile) enforcing production Caddy CSP locally.
+- **Split CI Workflow:** 3-job GitHub Actions workflow (`python-tests`, `frontend`, `smoke`) with concurrency cancellation.
+- **Security Headers:** Added `Strict-Transport-Security` and `Permissions-Policy` to `deploy/Caddyfile.container`.
+- **Security Policy:** Added `SECURITY.md` defining vulnerability disclosure and client-side PKCE token guarantees.
+
+### Changed
+- Refactored 28 inline HTML styling attributes into clean CSS classes in `css/style.css`.
+- Cleaned up unused imports across all Python pipeline and backend modules via Ruff.
+
+---
+
+## [2.1.0] - 2026-11-01
+
+### Added
+- Reverse QA anomaly datasets for all six GCC countries (`reverse_*.json`).
+- `SlowAPIMiddleware` with per-route rate limits (20/min verify, 30/min preview).
+- Strict 16 KB request body cap middleware on POST endpoints.
+- Upstream 429 backoff and `Retry-After` propagation.
+- Lag-aware authenticated Wikidata writes (`maxlag=5`, `baserevid`).
+- Comprehensive operations runbook and verify block in `HANDOFF.md`.
+
+### Fixed
+- Replaced naive cache flush with bounded `OrderedDict` LRU cache.
+- Added `redirects=yes` on edit preview to prevent editing redirected Wikidata entities.
+- Replaced inline `onclick` handlers in batch manager with `addEventListener`.
+
+---
+
+## [2.0.0] - 2026-10-29
+
+### Added
+- Dual-mode architecture: Forward Conflation + Reverse QA Workbench.
+- Dedicated FastAPI backend service (`osmwd-api`) in Docker with health & freshness endpoints.
+- Full Wikidata OAuth 2.0 PKCE authentication flow with in-app statement authoring.
+- Self-hosted vendor assets (Leaflet, MarkerCluster) behind Caddy reverse proxy container.
+- MapRoulette, JOSM XML Presets, and QuickStatements v2 batch export centers.
+
+---
+
+## [1.0.0] - 2026-10-01
+
+### Added
+- Initial release of OpenStreetMap × Wikidata GCC Conflation Workbench.
+- Forward conflation pipeline linking Wikidata items to GCC OpenStreetMap features.
+- High-speed PBF POI extraction using `pyosmium`.
+- Machine-learning matching heuristics using composite Arabic/English name normalization.
+- Bilingual interface (Arabic / English) with interactive map clustering.

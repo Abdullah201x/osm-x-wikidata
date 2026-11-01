@@ -10,7 +10,6 @@ Verifies:
 
 import re
 from pathlib import Path
-import pytest
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 INDEX_HTML = ROOT_DIR / "index.html"

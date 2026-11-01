@@ -5,13 +5,12 @@ Uses shapely.prepared for microsecond point-in-polygon assignment.
 """
 
 import os
-import sys
 import json
 import time
-from typing import Optional, Dict, Tuple, Any
+from typing import Optional, Dict, Any
 
 import osmium
-from shapely.geometry import Point, LineString, Polygon, MultiPolygon, shape, mapping
+from shapely.geometry import Point, LineString, shape, mapping
 from shapely.ops import polygonize, unary_union
 from shapely.prepared import prep, PreparedGeometry
 
@@ -66,7 +65,7 @@ def extract_and_cache_gcc_boundaries(pbf_path: Optional[str] = None, force: bool
     if not pbf_path:
         pbf_path = find_pbf(BASE_DIR)
     if not pbf_path or not os.path.exists(pbf_path):
-        raise FileNotFoundError(f"Could not find valid PBF file to extract boundaries.")
+        raise FileNotFoundError("Could not find valid PBF file to extract boundaries.")
 
     pbf_mtime = os.path.getmtime(pbf_path)
     if not force and os.path.exists(BOUNDARIES_GEOJSON):

@@ -4,7 +4,7 @@ Validates potential statement additions before client-side submission to Wikidat
 """
 
 import re
-from typing import Optional, List, Dict, Any
+from typing import List
 from pydantic import BaseModel, Field
 import httpx
 from fastapi import APIRouter, Request, HTTPException

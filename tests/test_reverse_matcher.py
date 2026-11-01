@@ -3,18 +3,15 @@ Comprehensive Unit Tests for Reverse Matcher Engine.
 Uses in-memory SQLite fixtures with explicit UTF-8 string encoding.
 """
 
-import json
 import sqlite3
 import pytest
 
 from pipeline.reverse_matcher import (
     ReverseAnalyzer,
     normalize_malformed_qid,
-    haversine_distance_m,
     init_tagged_qid_cache
 )
 from pipeline.arabic_normalizer import match_names_composite, strip_serial_suffix
-from pipeline.country_boundaries import CountryMatcher
 
 @pytest.fixture
 def in_memory_dbs():

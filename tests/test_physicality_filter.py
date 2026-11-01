@@ -9,7 +9,6 @@ Tests the OpenStreetMap Ground Truth rule enforcement:
 - Valid physical entities (mosques, hospitals, schools, mountains, settlements)
 """
 
-import pytest
 from pipeline.physicality_filter import (
     is_physical_mappable,
     NON_MAPPABLE_P31,

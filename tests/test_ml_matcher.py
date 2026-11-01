@@ -10,7 +10,6 @@ Covers:
 """
 
 import os
-import pytest
 from pipeline.ml_matcher import (
     lat_lon_distance_m,
     compute_category_compatibility,

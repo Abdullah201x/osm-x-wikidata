@@ -6,7 +6,6 @@ spatial bounding box sanity checks, and entity extraction logic.
 
 import sqlite3
 import pytest
-from unittest.mock import patch
 
 from pipeline import pbf_extractor
 from pipeline.pbf_extractor import (

@@ -8,13 +8,11 @@ Enforces Decision D4:
 """
 
 import json
-import os
 import socket
 import sys
 from pathlib import Path
 import pytest
 import respx
-import responses
 from fastapi.testclient import TestClient
 
 ROOT_DIR = Path(__file__).resolve().parent.parent

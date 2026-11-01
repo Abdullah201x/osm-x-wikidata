@@ -8,11 +8,10 @@ Stores results in local SQLite cache (`pipeline/osm_cache.db`).
 """
 
 import os
-import sys
 import time
 import json
 import sqlite3
-from typing import Dict, List, Any, Optional, Tuple
+from typing import List, Optional, Tuple
 import osmium
 
 from pipeline.config import find_pbf, BASE_DIR

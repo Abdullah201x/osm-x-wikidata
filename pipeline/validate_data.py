@@ -15,7 +15,7 @@ import sys
 # Ensure repository root is on sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 from pipeline.config import BASE_DIR, DATA_DIR, GCC_COUNTRIES
 
 # Minimum fraction of the previously published count a dataset may drop to (20% maximum drop)

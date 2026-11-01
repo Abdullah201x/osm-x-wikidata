@@ -8,7 +8,6 @@ from pipeline.validate_data import (
     validate_forward_dataset,
     validate_reverse_dataset,
     validate_all_datasets,
-    MIN_RATIO,
 )
 
 
