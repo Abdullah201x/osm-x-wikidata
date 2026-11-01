@@ -105,6 +105,46 @@ const WikidataEdit = {
     }
   },
 
+  PREVIEW_URL: "/api/v1/edits/preview",
+  PREVIEW_MAX_ATTEMPTS: 3,
+
+  /**
+   * Asks the backend to dry-run the edit (zero writes). Retries on 429.
+   * Throws if the backend is unreachable: the preview is a safety gate, so
+   * we refuse to write blind rather than skip it.
+   */
+  async previewEdit(qid, osmType, osmId, property) {
+    const body = JSON.stringify({ qid, property, osm_type: osmType, osm_id: Number(osmId) });
+
+    for (let attempt = 0; ; attempt++) {
+      let res;
+      try {
+        res = await fetch(this.PREVIEW_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body
+        });
+      } catch (e) {
+        throw new Error("Could not run the pre-flight check (backend unreachable); nothing was written. Use QuickStatements as a fallback.");
+      }
+
+      if (res.status === 429 && attempt < this.PREVIEW_MAX_ATTEMPTS - 1) {
+        await this._sleep(this._retryDelayMs(res, attempt));
+        continue;
+      }
+      if (!res.ok) {
+        throw new Error(`Pre-flight check failed (HTTP ${res.status}); nothing was written.`);
+      }
+      return res.json();
+    }
+  },
+
+  // The backend only knows production Wikidata, so sandbox (test.wikidata.org)
+  // QIDs would all read as missing; sandbox writes skip the preview.
+  _previewApplies(endpoints) {
+    return endpoints.wikidataBase === "https://www.wikidata.org";
+  },
+
   /**
    * Adds an OpenStreetMap backlink statement to a Wikidata item.
    * Uses Action API wbcreateclaim with fallback to Wikibase REST API v1.
@@ -136,6 +176,32 @@ const WikidataEdit = {
     const summary = `Link OpenStreetMap ${type} ${idStr} (${property}) via OSMxWikidata GCC Linker ([[:toolforge:editgroups/b/CB/${activeBatch}|details]])`;
     const endpoints = WikidataAuth.getEndpoints();
 
+    // 0. Pre-flight: dry-run on the backend before anything is written.
+    let baserevid = options.baserevid;
+    let warnings = [];
+    if (this._previewApplies(endpoints)) {
+      const preview = await this.previewEdit(cleanQid, type, idStr, property);
+      warnings = preview.warnings || [];
+
+      if (!preview.valid) {
+        const err = new Error(warnings.join(" ") || `Edit rejected by pre-flight check (${preview.status}).`);
+        err.previewStatus = preview.status;
+        throw err;
+      }
+      if (preview.status === "already_linked") {
+        this.markReverseResolved(`${type}${idStr}:${cleanQid}:missing_backlink`, {
+          qid: cleanQid,
+          osm_type: type,
+          osm_id: idStr,
+          property: property,
+          action: "already_linked",
+          resolved_at: Date.now()
+        });
+        return { success: true, skipped: true, method: "already_linked", warnings };
+      }
+      if (baserevid === undefined && preview.baserevid > 0) baserevid = preview.baserevid;
+    }
+
     let lastError = null;
 
     // 1. Try Wikibase Action API: wbcreateclaim
@@ -152,7 +218,7 @@ const WikidataEdit = {
         maxlag: String(this.MAXLAG_SECONDS),
         token: csrfToken
       };
-      if (options.baserevid > 0) fields.baserevid = String(options.baserevid);
+      if (baserevid > 0) fields.baserevid = String(baserevid);
 
       // crossorigin must be in the URL (it is needed on the CORS preflight), not the body.
       const json = await this._actionApiRequest(`${endpoints.wikidataApi}?crossorigin=1`, {
@@ -189,7 +255,7 @@ const WikidataEdit = {
           action: "wikidata_backlink",
           resolved_at: Date.now()
         });
-        return { success: true, method: "wbcreateclaim", data: json };
+        return { success: true, method: "wbcreateclaim", data: json, warnings };
       }
     } catch (err) {
       // The server asked us to slow down; a second write path would ignore that.
@@ -244,7 +310,7 @@ const WikidataEdit = {
           action: "wikidata_backlink",
           resolved_at: Date.now()
         });
-        return { success: true, method: "rest_v1", data: restJson };
+        return { success: true, method: "rest_v1", data: restJson, warnings };
       } else {
         const errText = await restRes.text();
         throw new Error(`REST API failed: HTTP ${restRes.status} ${errText}`);

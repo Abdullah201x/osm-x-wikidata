@@ -524,8 +524,15 @@ function selectReverseItem(item, marker = null, skipFly = false) {
       wdClaimBtn.innerText = currentLang === "ar" ? "جارٍ الإضافة إلى ويكي بيانات..." : "Adding statement to Wikidata...";
 
       try {
-        await WikidataEdit.addOsmBacklink(qid, fullOsmType, osmId);
+        const result = await WikidataEdit.addOsmBacklink(qid, fullOsmType, osmId);
         window.dispatchEvent(new CustomEvent("osm-history-updated"));
+        if (result.skipped) {
+          alert(currentLang === "ar"
+            ? `الإفادة ${fullOsmType}/${osmId} موجودة بالفعل في ويكي بيانات (${qid}). لم يتم إجراء أي تعديل.`
+            : `Statement ${fullOsmType}/${osmId} already exists on Wikidata (${qid}). Nothing was changed.`);
+          refreshReverseViewAfterPush();
+          return;
+        }
         alert(currentLang === "ar"
           ? `✓ تمت إضافة المعرف ${fullOsmType}/${osmId} إلى ويكي بيانات (${qid}) بنجاح!\n\nحزمة التوثيق في EditGroups:\nhttps://editgroups.toolforge.org/b/CB/${WikidataEdit.getBatchId()}/`
           : `✓ Statement ${fullOsmType}/${osmId} added to Wikidata (${qid}) successfully!\n\nEditGroups batch details:\nhttps://editgroups.toolforge.org/b/CB/${WikidataEdit.getBatchId()}/`);
