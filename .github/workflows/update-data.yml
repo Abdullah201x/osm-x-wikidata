@@ -8,15 +8,13 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
-  group: "pages"
+  group: update-data
   cancel-in-progress: false
 
 jobs:
-  update-and-deploy:
+  update-data:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -25,7 +23,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: 'pip'
 
       - name: Install dependencies
@@ -44,9 +42,6 @@ jobs:
         env:
           PYTHONUNBUFFERED: "1"
 
-      - name: Remove local pipeline caches from the Pages artifact
-        run: rm -f pipeline/*.db pipeline/*.db-wal pipeline/*.db-shm
-
       - name: Commit and push updated datasets
         run: |
           git config --global user.name "github-actions[bot]"
@@ -58,15 +53,3 @@ jobs:
             git commit -m "Auto-update GCC OSM x Wikidata datasets"
             git push
           fi
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: '.'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
