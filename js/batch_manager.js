@@ -317,7 +317,7 @@ const BatchManager = {
               <a href="${res.changesetUrl}" target="_blank" rel="noopener" class="btn btn-direct-link">
                 OSM Changeset #${res.changesetId} ↗
               </a>
-              <button class="btn btn-secondary-batch" onclick="BatchManager.closeModal(); HistoryManager.openModal();">
+              <button class="btn btn-secondary-batch" id="batch-view-history-btn">
                 📜 ${t.viewChangesetInHistory || "View in History"}
               </button>
             </div>
@@ -327,6 +327,14 @@ const BatchManager = {
             </div>
           </div>
         `;
+        // Wired here, not inline: the CSP (script-src 'self') blocks inline event handlers.
+        const historyBtn = progressBox.querySelector("#batch-view-history-btn");
+        if (historyBtn) {
+          historyBtn.addEventListener("click", () => {
+            BatchManager.closeModal();
+            HistoryManager.openModal();
+          });
+        }
       }
 
     } catch (err) {
