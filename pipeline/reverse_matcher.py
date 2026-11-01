@@ -1032,10 +1032,12 @@ def run_reverse_analysis(
         "items": items
     }
 
-    # Write out data/reverse_<cc>.json
+    # Write out data/reverse_<cc>.json atomically
     out_file = os.path.join(DATA_DIR, f"reverse_{country_code}.json")
-    with open(out_file, "w", encoding="utf-8") as f:
+    tmp_file = out_file + ".tmp"
+    with open(tmp_file, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, separators=(',', ':'))
+    os.replace(tmp_file, out_file)
 
     file_size_kb = os.path.getsize(out_file) / 1024
     print(f"  [Reverse QA] Wrote {out_file} ({file_size_kb:.1f} KB | {counts['missing_backlink_high']:,} high back-links, {counts['broken_osm_tag']:,} broken tags, {counts['conflict']:,} conflicts).")

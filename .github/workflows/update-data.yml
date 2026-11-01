@@ -42,6 +42,10 @@ jobs:
         env:
           PYTHONUNBUFFERED: "1"
 
+      - name: Validate dataset schema and shrink guard
+        run: |
+          python pipeline/validate_data.py
+
       - name: Commit and push updated datasets
         run: |
           git config --global user.name "github-actions[bot]"

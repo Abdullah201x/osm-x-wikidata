@@ -117,10 +117,12 @@ def main():
         print(f"  [Matching] Running spatial join & Arabic fuzzy matching for {c_code}...")
         matched_result = match_country_items(c_code, wd_items)
 
-        # Save country JSON file
+        # Save country JSON file atomically
         out_file = os.path.join(DATA_DIR, f"{c_code.lower()}.json")
-        with open(out_file, "w", encoding="utf-8") as f:
+        tmp_file = out_file + ".tmp"
+        with open(tmp_file, "w", encoding="utf-8") as f:
             json.dump(matched_result, f, ensure_ascii=False, separators=(',', ':'))
+        os.replace(tmp_file, out_file)
 
         file_size_kb = os.path.getsize(out_file) / 1024
         print(f"  [Export] Wrote {out_file} ({file_size_kb:.1f} KB, {matched_result['counts']['total']:,} items)")
@@ -163,10 +165,12 @@ def main():
             "review_gap": sum(rc.get("review_gap", 0) for rc in rev_counts_list),
         }
 
-    # Write summary.json
+    # Write summary.json atomically
     summary_file = os.path.join(DATA_DIR, "summary.json")
-    with open(summary_file, "w", encoding="utf-8") as f:
+    tmp_summary = summary_file + ".tmp"
+    with open(tmp_summary, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
+    os.replace(tmp_summary, summary_file)
 
     elapsed = time.time() - start_time
     print("\n==================================================")
