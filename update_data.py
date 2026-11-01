@@ -100,7 +100,7 @@ def main():
     else:
         summary = {"countries": {}}
 
-    summary["updated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    summary["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     summary["pbf_file"] = os.path.basename(pbf_file)
     if "countries" not in summary:
         summary["countries"] = {}

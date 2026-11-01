@@ -271,3 +271,28 @@ def test_preview_requests_redirects_yes_and_flags_redirect_items(client):
     assert data["redirect_to"] == "Q7809164"
     assert seen[0].params["redirects"] == "yes"
     assert len(seen) == 1  # no OSM lookup for an unwritable item
+
+
+# --- healthz freshness: both timestamp formats ---
+
+from datetime import datetime, timedelta, timezone
+from app.routers.healthz import parse_summary_timestamp
+
+
+@pytest.mark.parametrize("value", ["2026-10-29T20:51:55Z", "2026-10-29 20:51:55", "2026-10-29T20:51:55"])
+def test_parse_summary_timestamp_is_utc(value):
+    dt = parse_summary_timestamp(value)
+    assert dt == datetime(2026, 10, 29, 20, 51, 55, tzinfo=timezone.utc)
+
+
+@pytest.mark.parametrize("fmt", ["%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%d %H:%M:%S"])
+def test_freshness_accepts_both_formats(client, monkeypatch, fmt):
+    fresh = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime(fmt)
+    stale = (datetime.now(timezone.utc) - timedelta(hours=500)).strftime(fmt)
+
+    monkeypatch.setattr(client.app.state.store, "summary", {"updated_at": fresh})
+    assert client.get("/api/healthz/freshness").status_code == 200
+
+    monkeypatch.setattr(client.app.state.store, "summary", {"updated_at": stale})
+    r = client.get("/api/healthz/freshness")
+    assert r.status_code == 503 and r.json()["status"] == "stale"

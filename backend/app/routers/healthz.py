@@ -12,6 +12,18 @@ from app.config import MAX_DATASET_AGE_HOURS
 
 router = APIRouter(tags=["health"])
 
+
+def parse_summary_timestamp(value: str) -> datetime:
+    """
+    Parse summary.json `updated_at` as an aware UTC datetime.
+    Accepts the current "2026-10-29T20:51:55Z" and the legacy
+    "2026-10-29 20:51:55" (both are UTC; the legacy form carried no marker).
+    """
+    dt = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
 @router.api_route("/api/healthz", methods=["GET", "HEAD"])
 def healthz():
     return {"status": "ok"}
@@ -31,12 +43,7 @@ def freshness(request: Request):
         return JSONResponse(status_code=503, content={"status": "stale", "detail": "No updated_at timestamp in summary."})
 
     try:
-        # Try parsing ISO or standard date formats: "2026-10-29 20:51:55" or "2026-10-29T20:51:55Z"
-        if "T" in updated_at_str:
-            clean_str = updated_at_str.replace("Z", "+00:00")
-            dt = datetime.fromisoformat(clean_str)
-        else:
-            dt = datetime.strptime(updated_at_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        dt = parse_summary_timestamp(updated_at_str)
 
         now = datetime.now(timezone.utc)
         age_hours = (now - dt).total_seconds() / 3600.0
