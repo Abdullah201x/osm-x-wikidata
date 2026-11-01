@@ -1,11 +1,27 @@
+{
+    admin off
+    auto_https off
+    servers {
+        # Traefik sits in front on the private Docker network: trust its
+        # X-Forwarded-For so {client_ip} is the visitor, not Traefik.
+        trusted_proxies static private_ranges
+        client_ip_headers X-Forwarded-For
+    }
+}
+
 :80 {
-    # Trust reverse proxy / Traefik
-    trusted_proxies static private_ranges
-    client_ip_headers X-Forwarded-For
+    # Security Headers & Content Security Policy
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://server.arcgisonline.com https://*.basemaps.cartocdn.com https://commons.wikimedia.org https://upload.wikimedia.org; connect-src 'self' https://api.openstreetmap.org https://www.openstreetmap.org https://master.apis.dev.openstreetmap.org https://www.wikidata.org https://test.wikidata.org https://meta.wikimedia.org https://query.wikidata.org https://overpass-api.de https://overpass.kumi.systems https://lz4.overpass-api.de http://127.0.0.1:8111; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none';"
+        -Server
+    }
 
     # Health check for Coolify & UptimeRobot
     handle /healthz {
-        respond "OK" 200
+        respond 200
     }
 
     # Same-origin Umami analytics proxy (avoids ad-blockers & third-party cookies)
@@ -66,14 +82,6 @@
         # Cache-bust HTML entrypoint
         @html path / /index.html
         header @html Cache-Control "no-cache, no-store, must-revalidate"
-
-        # Security Headers & Content Security Policy
-        header {
-            X-Content-Type-Options "nosniff"
-            X-Frame-Options "SAMEORIGIN"
-            Referrer-Policy "strict-origin-when-cross-origin"
-            Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://server.arcgisonline.com https://*.basemaps.cartocdn.com https://commons.wikimedia.org https://upload.wikimedia.org; connect-src 'self' https://api.openstreetmap.org https://www.openstreetmap.org https://master.apis.dev.openstreetmap.org https://www.wikidata.org https://test.wikidata.org https://meta.wikimedia.org https://query.wikidata.org https://overpass-api.de https://overpass.kumi.systems https://lz4.overpass-api.de http://127.0.0.1:8111; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none';"
-        }
 
         file_server {
             precompressed br gzip
