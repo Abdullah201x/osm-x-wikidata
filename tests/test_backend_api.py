@@ -143,3 +143,108 @@ def test_reverse_rejects_unknown_country_code(client):
     for bad in ("xx", "../sa", "SA ", ""):
         r = client.get("/api/v1/reverse", params={"cc": bad})
         assert r.status_code == 422, bad
+
+
+# --- verify.py: cache, locks, upstream rate limiting (all offline) ---
+
+import httpx
+from app.routers import verify as verify_mod
+
+
+def _install_mock_upstream(client, handler):
+    client.app.state.http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+
+def _wd_entity(qid="Q851"):
+    return {"entities": {qid: {"lastrevid": 99, "labels": {"en": {"value": "Saudi Arabia"}},
+                               "descriptions": {}, "claims": {}}}}
+
+
+@pytest.fixture(autouse=True)
+def _clean_verify_state():
+    verify_mod._CACHE.clear()
+    verify_mod._LOCKS.clear()
+    yield
+    verify_mod._CACHE.clear()
+    verify_mod._LOCKS.clear()
+
+
+def test_verify_success_is_cached(client):
+    calls = []
+
+    def handler(request):
+        calls.append(str(request.url))
+        return httpx.Response(200, json=_wd_entity())
+
+    _install_mock_upstream(client, handler)
+    h = {"X-Real-IP": "198.51.100.90"}
+    r1 = client.get("/api/v1/verify/Q851", headers=h)
+    r2 = client.get("/api/v1/verify/Q851", headers=h)
+    assert r1.status_code == r2.status_code == 200
+    assert r1.json()["wikidata"]["name_en"] == "Saudi Arabia"
+    assert len(calls) == 1
+
+
+def test_verify_upstream_429_becomes_503_with_retry_after(client):
+    _install_mock_upstream(client, lambda req: httpx.Response(429, headers={"Retry-After": "42"}))
+    r = client.get("/api/v1/verify/Q851", headers={"X-Real-IP": "198.51.100.91"})
+    assert r.status_code == 503
+    assert r.headers["Retry-After"] == "42"
+    assert verify_mod._CACHE == {}  # failures are never cached
+
+
+def test_verify_upstream_429_retry_after_defaults_and_clamps(client):
+    _install_mock_upstream(client, lambda req: httpx.Response(429, headers={"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"}))
+    r = client.get("/api/v1/verify/Q851", headers={"X-Real-IP": "198.51.100.92"})
+    assert r.status_code == 503
+    assert r.headers["Retry-After"] == str(verify_mod._DEFAULT_RETRY_AFTER)
+
+    _install_mock_upstream(client, lambda req: httpx.Response(429, headers={"Retry-After": "99999"}))
+    r = client.get("/api/v1/verify/Q852", headers={"X-Real-IP": "198.51.100.92"})
+    assert r.headers["Retry-After"] == str(verify_mod._MAX_RETRY_AFTER)
+
+
+def test_verify_osm_429_becomes_503(client):
+    def handler(request):
+        if "wikidata.org" in request.url.host:
+            return httpx.Response(200, json=_wd_entity())
+        return httpx.Response(429, headers={"Retry-After": "7"})
+
+    _install_mock_upstream(client, handler)
+    r = client.get("/api/v1/verify/Q851?osm_type=node&osm_id=1", headers={"X-Real-IP": "198.51.100.93"})
+    assert r.status_code == 503
+    assert r.headers["Retry-After"] == "7"
+
+
+def test_cache_is_true_lru_not_clear_all(monkeypatch):
+    monkeypatch.setattr(verify_mod, "_CACHE_MAX", 3)
+    for k in ("a", "b", "c"):
+        verify_mod.cache_put(k, {"k": k})
+    assert verify_mod.cache_get("a") == {"k": "a"}  # touch a -> b is now oldest
+    verify_mod.cache_put("d", {"k": "d"})
+    assert verify_mod.cache_get("b") is None
+    assert {k for k in verify_mod._CACHE} == {"a", "c", "d"}
+
+
+def test_cache_entries_expire(monkeypatch):
+    verify_mod.cache_put("x", {"k": "x"})
+    ts, data = verify_mod._CACHE["x"]
+    verify_mod._CACHE["x"] = (ts - verify_mod._CACHE_TTL - 1, data)
+    assert verify_mod.cache_get("x") is None
+    assert "x" not in verify_mod._CACHE
+
+
+def test_lock_table_is_bounded_and_keeps_held_locks(monkeypatch):
+    import asyncio
+
+    async def scenario():
+        monkeypatch.setattr(verify_mod, "_LOCKS_MAX", 3)
+        held = verify_mod.get_key_lock("held")
+        await held.acquire()
+        for k in ("k1", "k2", "k3", "k4"):
+            verify_mod.get_key_lock(k)
+        assert len(verify_mod._LOCKS) <= 3
+        assert verify_mod._LOCKS["held"] is held
+        held.release()
+
+    asyncio.run(scenario())
