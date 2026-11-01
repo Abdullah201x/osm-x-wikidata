@@ -12,9 +12,9 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code and static data
+# Copy backend code and only the datasets the API serves (not the 8.9 MB sa.json)
 COPY backend/app ./app
-COPY data ./data
+COPY data/summary.json data/reverse_*.json ./data/
 
 RUN chown -R appuser:appuser /app
 
