@@ -2620,3 +2620,24 @@ kbd, .kbd-inline {
   line-height: 1.4;
   color: var(--color-text-muted);
 }
+
+/* Keyboard focus ring for every interactive control (mouse clicks do not trigger it). */
+:focus-visible {
+  outline: 2px solid #4da3ff;
+  outline-offset: 2px;
+}
+.modal-card:focus,
+.lightbox-content:focus {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

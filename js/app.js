@@ -1413,6 +1413,7 @@ function openImageLightbox(imageUrl, title, qid) {
   // Clean URL to high resolution if thumbnail
   const highResUrl = imageUrl ? imageUrl.split("?")[0] : "";
   imgEl.src = highResUrl;
+  imgEl.alt = title ? `${title} (${qid})` : "Enlarged preview";
   if (captionEl) captionEl.innerText = `${title} (${qid})`;
 
   if (commonsLink) {

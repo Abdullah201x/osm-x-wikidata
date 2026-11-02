@@ -12,7 +12,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
 
 from app.body_limit import BodySizeLimitMiddleware
-from app.config import ALLOWED_ORIGINS, USER_AGENT
+from app.config import ALLOWED_ORIGINS, IS_PRODUCTION, USER_AGENT
 from app.limiter import limiter, get_real_client_ip  # noqa: F401 (re-exported)
 from app.store import DatasetStore
 from app.routers import reverse, verify, preview, healthz, me
@@ -34,8 +34,9 @@ app = FastAPI(
     description="High-speed reverse analysis and edit validation API for OpenStreetMap and Wikidata",
     version="2.0.0",
     lifespan=lifespan,
-    docs_url="/api/docs",
-    openapi_url="/api/openapi.json"
+    docs_url=None if IS_PRODUCTION else "/api/docs",
+    redoc_url=None,
+    openapi_url=None if IS_PRODUCTION else "/api/openapi.json",
 )
 
 app.state.limiter = limiter
@@ -49,7 +50,7 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
     allow_methods=["GET", "POST", "HEAD", "OPTIONS"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Attach Routers

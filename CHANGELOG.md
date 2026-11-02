@@ -13,10 +13,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - **`docker-build` CI job:** builds both images, runs `caddy validate`, and asserts the API image actually loads its datasets.
 - **Import gate:** `GET /api/v1/me` verifies the OSM token server-side against `OSMWD_IMPORT_ALLOWLIST`. Only approved users load the full datasets and see missing items, new-node creation, JOSM presets and the MapRoulette export; everyone else gets `data/<cc>_linkable.json` (SA: 8.9 MB → 1.1 MB) and a short explanatory note.
 - `pipeline/linkable.py`, `update_data.py --derive-linkable`, and validator checks (no status-0 items, consistent counts, size budget, not stale).
+- **Modal accessibility:** `js/modal_a11y.js` moves focus into each dialog when it opens, keeps Tab inside the topmost one and restores focus to the opener on close. Dialogs now have `role="dialog"`, `aria-modal` and an accessible name; close buttons are labelled; the lightbox image alt follows its caption; the results count and loading indicator are live regions. CSS adds `:focus-visible` outlines and a `prefers-reduced-motion` block.
+- `OSMWD_ENV=production` (set in `deploy/docker-compose.coolify.yml`) turns off `/api/docs` and `/api/openapi.json`.
+- Tests: `tests/test_backend_errors.py` (upstream failures, 429s, input validation, search corpus) and `tests/js/modal_a11y.test.js`, `tests/js/live_verify.test.js`.
 
 ### Changed
 - `SECURITY.md` now documents that the OSM token is relayed once to OpenStreetMap by `/api/v1/me`.
-- Asset version bumped to `?v=12`.
+- Asset version bumped to `?v=13`.
+- **Backend hardening:** `/api/v1/edits/preview` and `/api/v1/verify` no longer return upstream exception text (it is logged instead), `preview` now maps upstream 429s to 503 + `Retry-After` and rejects non-200/non-JSON Wikidata responses with 502, and both routers share `app/routers/_common.py` and the app's single HTTP client (the unclosed fallback client is gone; a missing client is a 503).
+- `osm_type` is validated (`node|way|relation|n|w|r`, case-insensitive) and `osm_id` must be positive, so junk values can no longer fill the verify cache and lock tables; short and long type spellings share one cache entry.
+- `/api/v1/reverse` returns 400 for an unknown `kind` or a `bbox` without exactly four numbers (it was silently ignored), and `q` is capped at 100 characters. The search text per item is built once at dataset load instead of on every request, and the store logs through `logging` instead of `print`.
+- CORS `allow_headers` narrowed from `*` to `Authorization, Content-Type`.
 
 ### Fixed
 - **Direct OSM Tag Repair button in reverse mode:** Fixed uncaught `TypeError: OsmAuth.isAuthenticated is not a function` on clicking the orange repair button, added missing `fromTag` migration handling (e.g. migrating `wikidata` to `brand:wikidata`), standardized OSM API 0.6 element XML serialization, guaranteed changeset closure via `finally`, and recorded repairs in persistent history.

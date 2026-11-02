@@ -6,16 +6,34 @@ Hot-reloads atomically if summary.json mtime changes (checked at most once per 6
 
 import os
 import json
+import logging
 import time
 from typing import Dict, List, Any, Optional
 
 from app.config import DATA_DIR
+
+logger = logging.getLogger(__name__)
+
+KNOWN_KINDS = frozenset({"missing_backlink", "broken_osm_tag", "conflict", "review_gap"})
+
+
+def _search_corpus(it: Dict[str, Any]) -> str:
+    """Lowercased text matched by the `q` search: QID, OSM id and every name field."""
+    osm_info = it.get("osm") or {}
+    wd_info = it.get("wikidata") or {}
+    return (
+        f"{it.get('qid', '')} {it.get('osm_id', '')} "
+        f"{osm_info.get('name', '')} {osm_info.get('name_ar', '')} {osm_info.get('name_en', '')} "
+        f"{wd_info.get('name_ar', '')} {wd_info.get('name_en', '')}"
+    ).lower()
 
 class DatasetStore:
     def __init__(self, data_dir: str = DATA_DIR):
         self.data_dir = data_dir
         self.summary: Dict[str, Any] = {}
         self.reverse_datasets: Dict[str, Dict[str, Any]] = {}
+        # id(item) -> search corpus, built once per reload instead of once per request.
+        self._corpus: Dict[int, str] = {}
         self.last_mtime: float = 0.0
         self.last_check_time: float = 0.0
         self.reload()
@@ -25,6 +43,7 @@ class DatasetStore:
         if not os.path.exists(summary_path):
             self.summary = {"countries": {}, "updated_at": ""}
             self.reverse_datasets = {}
+            self._corpus = {}
             return
 
         try:
@@ -39,13 +58,18 @@ class DatasetStore:
                     with open(rev_path, "r", encoding="utf-8") as rf:
                         new_reverse[cc] = json.load(rf)
 
+            new_corpus = {id(it): _search_corpus(it) for ds in new_reverse.values() for it in ds.get("items", [])}
+
+            # Swap all three together so a concurrent request never sees a corpus
+            # that does not belong to the datasets it is filtering.
             self.summary = new_summary
             self.reverse_datasets = new_reverse
+            self._corpus = new_corpus
             self.last_mtime = mtime
             self.last_check_time = time.time()
-            print(f"[DatasetStore] Loaded datasets: {list(self.reverse_datasets.keys())} (summary mtime: {mtime})")
-        except Exception as e:
-            print(f"[DatasetStore ERROR] Failed to reload datasets: {e}")
+            logger.info("Loaded datasets: %s (summary mtime: %s)", list(new_reverse.keys()), mtime)
+        except Exception:
+            logger.exception("Failed to reload datasets")
 
     def maybe_reload(self):
         now = time.time()
@@ -58,7 +82,7 @@ class DatasetStore:
         if os.path.exists(summary_path):
             current_mtime = os.path.getmtime(summary_path)
             if current_mtime > self.last_mtime:
-                print(f"[DatasetStore] summary.json changed on disk ({current_mtime} > {self.last_mtime}). Reloading...")
+                logger.info("summary.json changed on disk (%s > %s); reloading", current_mtime, self.last_mtime)
                 self.reload()
 
     def query_reverse(
@@ -87,6 +111,7 @@ class DatasetStore:
             }
 
         all_items = dataset.get("items", [])
+        corpus = self._corpus
         filtered = []
 
         q_clean = (search_query or "").strip().lower()
@@ -106,20 +131,8 @@ class DatasetStore:
                 continue
 
             # 4. Text search (matches QID, OSM ID, Arabic/English name)
-            if q_clean:
-                qid = it.get("qid", "").lower()
-                osm_id_str = str(it.get("osm_id", ""))
-                osm_info = it.get("osm") or {}
-                wd_info = it.get("wikidata") or {}
-
-                text_corpus = (
-                    f"{qid} {osm_id_str} "
-                    f"{osm_info.get('name', '')} {osm_info.get('name_ar', '')} {osm_info.get('name_en', '')} "
-                    f"{wd_info.get('name_ar', '')} {wd_info.get('name_en', '')}"
-                ).lower()
-
-                if q_clean not in text_corpus:
-                    continue
+            if q_clean and q_clean not in corpus.get(id(it), ""):
+                continue
 
             # 5. Bounding box filter [minLon, minLat, maxLon, maxLat]
             if bbox and len(bbox) == 4:

@@ -2,19 +2,19 @@
 Live Real-Time Verification Endpoint for Wikidata and Single OSM Objects.
 """
 
-import re
 import time
 import asyncio
+import logging
 from collections import OrderedDict
 from typing import Optional, Dict, Any, Tuple
 import httpx
 from fastapi import APIRouter, Request, HTTPException, Query
-from app.config import USER_AGENT
 from app.limiter import limiter
+from app.routers._common import RE_QID, OSM_TYPES, get_http_client, claim_values, claim_item_ids
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["verify"])
-
-RE_QID = re.compile(r"^Q[1-9][0-9]*$")
 
 # In-memory LRU TTL cache: key -> (timestamp, data). Most recently used last.
 _CACHE: "OrderedDict[str, Tuple[float, Dict[str, Any]]]" = OrderedDict()
@@ -85,13 +85,19 @@ async def verify_qid(
     request: Request,
     qid: str,
     osm_type: Optional[str] = Query(None, description="Optional OSM element type: node, way, relation (or n, w, r)"),
-    osm_id: Optional[int] = Query(None, description="Optional OSM element numeric ID")
+    osm_id: Optional[int] = Query(None, gt=0, description="Optional OSM element numeric ID")
 ):
     qid = qid.strip().upper()
     if not RE_QID.match(qid):
         raise HTTPException(status_code=400, detail="Invalid QID format. Expected ^Q[1-9][0-9]*$")
 
-    cache_key = f"{qid}:{osm_type}:{osm_id}"
+    type_norm = None
+    if osm_type is not None:
+        type_norm = OSM_TYPES.get(osm_type.strip().lower())
+        if type_norm is None:
+            raise HTTPException(status_code=400, detail="Unsupported osm_type. Expected node, way or relation.")
+
+    cache_key = f"{qid}:{type_norm}:{osm_id}"
     cached = cache_get(cache_key)
     if cached is not None:
         return cached
@@ -103,21 +109,21 @@ async def verify_qid(
         if cached is not None:
             return cached
 
-        client: httpx.AsyncClient = getattr(request.app.state, "http_client", None)
-        if not client:
-            client = httpx.AsyncClient(timeout=8.0, headers={"User-Agent": USER_AGENT})
+        client = get_http_client(request)
 
         # 1. Fetch live Wikidata entity
         wd_url = f"https://www.wikidata.org/w/api.php?action=wbgetentities&ids={qid}&props=info|labels|descriptions|claims|sitelinks&languages=ar|en&format=json"
         try:
             wd_resp = await client.get(wd_url)
-        except Exception as e:
-            raise HTTPException(status_code=502, detail=f"Failed to reach Wikidata API: {str(e)}")
+        except Exception:
+            logger.exception("Wikidata request failed for %s", qid)
+            raise HTTPException(status_code=502, detail="Failed to reach Wikidata API.")
         raise_if_rate_limited(wd_resp, "Wikidata")
         try:
             wd_data = wd_resp.json()
-        except Exception as e:
-            raise HTTPException(status_code=502, detail=f"Invalid response from Wikidata API: {str(e)}")
+        except Exception:
+            logger.exception("Invalid Wikidata response for %s", qid)
+            raise HTTPException(status_code=502, detail="Invalid response from Wikidata API.")
 
         entities = wd_data.get("entities", {})
         entity = entities.get(qid)
@@ -136,21 +142,7 @@ async def verify_qid(
         labels = {k: v["value"] for k, v in entity.get("labels", {}).items() if "value" in v}
         descs = {k: v["value"] for k, v in entity.get("descriptions", {}).items() if "value" in v}
 
-        def get_prop_values(p: str):
-            vals = []
-            for c in claims.get(p, []):
-                try:
-                    vals.append(str(c["mainsnak"]["datavalue"]["value"]).strip())
-                except Exception:
-                    pass
-            return vals
-
-        p31_ids = []
-        for c in claims.get("P31", []):
-            try:
-                p31_ids.append(c["mainsnak"]["datavalue"]["value"]["id"])
-            except Exception:
-                pass
+        p31_ids = claim_item_ids(claims, "P31")
 
         lat, lon = None, None
         for c in claims.get("P625", []):
@@ -173,49 +165,49 @@ async def verify_qid(
             "p31": p31_ids,
             "lat": lat,
             "lon": lon,
-            "p11693": get_prop_values("P11693"), # node
-            "p10689": get_prop_values("P10689"), # way
-            "p402": get_prop_values("P402"),     # relation
+            "p11693": claim_values(claims, "P11693"), # node
+            "p10689": claim_values(claims, "P10689"), # way
+            "p402": claim_values(claims, "P402"),     # relation
         }
 
         # 2. Check live OSM element if provided
         osm_summary = None
-        if osm_type and osm_id:
-            type_norm = {"n": "node", "w": "way", "r": "relation"}.get(osm_type.lower(), osm_type.lower())
-            if type_norm in ("node", "way", "relation"):
-                osm_url = f"https://api.openstreetmap.org/api/0.6/{type_norm}/{osm_id}.json"
-                try:
-                    osm_resp = await client.get(osm_url)
-                except Exception as e:
-                    osm_resp = None
-                    osm_summary = {"type": type_norm, "id": osm_id, "error": str(e)}
-                if osm_resp is not None:
-                    raise_if_rate_limited(osm_resp, "OpenStreetMap")
-                    if osm_resp.status_code == 200:
-                        try:
-                            elements = osm_resp.json().get("elements", [])
-                        except Exception as e:
-                            elements = []
-                            osm_summary = {"type": type_norm, "id": osm_id, "error": str(e)}
-                        if elements:
-                            el = elements[0]
-                            tags = el.get("tags", {})
-                            osm_summary = {
-                                "type": type_norm,
-                                "id": osm_id,
-                                "exists": True,
-                                "version": el.get("version"),
-                                "tags": tags,
-                                "current_wikidata": tags.get("wikidata", ""),
-                                "matches_requested_qid": (tags.get("wikidata", "").strip() == qid)
-                            }
-                    elif osm_resp.status_code in (404, 410):
+        if type_norm and osm_id:
+            osm_url = f"https://api.openstreetmap.org/api/0.6/{type_norm}/{osm_id}.json"
+            try:
+                osm_resp = await client.get(osm_url)
+            except Exception:
+                logger.exception("OSM request failed for %s/%s", type_norm, osm_id)
+                osm_resp = None
+                osm_summary = {"type": type_norm, "id": osm_id, "error": "Could not reach OpenStreetMap API."}
+            if osm_resp is not None:
+                raise_if_rate_limited(osm_resp, "OpenStreetMap")
+                if osm_resp.status_code == 200:
+                    try:
+                        elements = osm_resp.json().get("elements", [])
+                    except Exception:
+                        logger.exception("Invalid OSM response for %s/%s", type_norm, osm_id)
+                        elements = []
+                        osm_summary = {"type": type_norm, "id": osm_id, "error": "Invalid response from OpenStreetMap API."}
+                    if elements:
+                        el = elements[0]
+                        tags = el.get("tags", {})
                         osm_summary = {
                             "type": type_norm,
                             "id": osm_id,
-                            "exists": False,
-                            "status": "deleted"
+                            "exists": True,
+                            "version": el.get("version"),
+                            "tags": tags,
+                            "current_wikidata": tags.get("wikidata", ""),
+                            "matches_requested_qid": (tags.get("wikidata", "").strip() == qid)
                         }
+                elif osm_resp.status_code in (404, 410):
+                    osm_summary = {
+                        "type": type_norm,
+                        "id": osm_id,
+                        "exists": False,
+                        "status": "deleted"
+                    }
 
         result = {
             "qid": qid,

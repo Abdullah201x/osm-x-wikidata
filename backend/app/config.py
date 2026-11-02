@@ -33,6 +33,10 @@ DATA_DIR = resolve_data_dir()
 # Maximum dataset freshness before health freshness alerts (default 216 hours = 9 days)
 MAX_DATASET_AGE_HOURS = float(os.environ.get("OSMWD_MAX_DATASET_AGE_HOURS", "216"))
 
+# "production" hides the interactive API docs and the OpenAPI schema.
+ENVIRONMENT = os.environ.get("OSMWD_ENV", "development").strip().lower()
+IS_PRODUCTION = ENVIRONMENT == "production"
+
 DOMAIN = os.environ.get("OSMWD_DOMAIN", "https://wikidata.saudiosm.org")
 
 ALLOWED_ORIGINS = [

@@ -3,26 +3,23 @@ Safe Pre-Flight Edit Validation Endpoint (Zero Writes, Zero Tokens).
 Validates potential statement additions before client-side submission to Wikidata.
 """
 
-import re
+import logging
 from typing import List
 from pydantic import BaseModel, Field
-import httpx
 from fastapi import APIRouter, Request, HTTPException
 
-from app.config import USER_AGENT
 from app.limiter import limiter
+from app.routers._common import RE_QID, normalize_osm_type, get_http_client, claim_values, claim_item_ids
+from app.routers.verify import raise_if_rate_limited
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["preview"])
 
-RE_QID = re.compile(r"^Q[1-9][0-9]*$")
-
 PROP_MAP = {
     "node": "P11693",
-    "n": "P11693",
     "way": "P10689",
-    "w": "P10689",
     "relation": "P402",
-    "r": "P402"
 }
 
 DISALLOWED_P31 = {
@@ -47,11 +44,8 @@ async def preview_edit(request: Request, payload: EditPreviewRequest):
     if not RE_QID.match(qid):
         raise HTTPException(status_code=400, detail="Invalid QID format.")
 
-    norm_type = payload.osm_type.lower()
+    norm_type = normalize_osm_type(payload.osm_type)
     expected_prop = PROP_MAP.get(norm_type)
-    if not expected_prop:
-        raise HTTPException(status_code=400, detail=f"Unsupported osm_type: {payload.osm_type}")
-
     if payload.property != expected_prop:
         raise HTTPException(
             status_code=400,
@@ -59,17 +53,24 @@ async def preview_edit(request: Request, payload: EditPreviewRequest):
         )
 
     warnings: List[str] = []
-    client: httpx.AsyncClient = getattr(request.app.state, "http_client", None)
-    if not client:
-        client = httpx.AsyncClient(timeout=8.0, headers={"User-Agent": USER_AGENT})
+    client = get_http_client(request)
 
     # 1. Fetch live Wikidata entity
     wd_url = f"https://www.wikidata.org/w/api.php?action=wbgetentities&ids={qid}&props=info|claims&redirects=yes&format=json"
     try:
         wd_resp = await client.get(wd_url)
+    except Exception:
+        logger.exception("Wikidata request failed for %s", qid)
+        raise HTTPException(status_code=502, detail="Failed to fetch Wikidata entity.")
+    raise_if_rate_limited(wd_resp, "Wikidata")
+    if wd_resp.status_code != 200:
+        logger.warning("Wikidata returned HTTP %s for %s", wd_resp.status_code, qid)
+        raise HTTPException(status_code=502, detail="Wikidata returned an unexpected response.")
+    try:
         wd_data = wd_resp.json()
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Failed to fetch Wikidata entity: {e}")
+    except Exception:
+        logger.exception("Invalid Wikidata response for %s", qid)
+        raise HTTPException(status_code=502, detail="Invalid response from Wikidata API.")
 
     entities = wd_data.get("entities", {})
     entity = entities.get(qid)
@@ -98,12 +99,7 @@ async def preview_edit(request: Request, payload: EditPreviewRequest):
     baserevid = entity.get("lastrevid", 0)
 
     # Check disallowed P31
-    p31_ids = []
-    for c in claims.get("P31", []):
-        try:
-            p31_ids.append(c["mainsnak"]["datavalue"]["value"]["id"])
-        except Exception:
-            pass
+    p31_ids = claim_item_ids(claims, "P31")
 
     for bad_class in DISALLOWED_P31:
         if bad_class in p31_ids:
@@ -114,13 +110,7 @@ async def preview_edit(request: Request, payload: EditPreviewRequest):
             }
 
     # Check existing statements for target property
-    existing_claims = claims.get(payload.property, [])
-    existing_vals = []
-    for c in existing_claims:
-        try:
-            existing_vals.append(str(c["mainsnak"]["datavalue"]["value"]).strip())
-        except Exception:
-            pass
+    existing_vals = claim_values(claims, payload.property)
 
     str_oid = str(payload.osm_id)
     if str_oid in existing_vals:
@@ -136,10 +126,11 @@ async def preview_edit(request: Request, payload: EditPreviewRequest):
         warnings.append(f"Wikidata already has a different {payload.property} statement: {', '.join(existing_vals)}.")
 
     # 2. Check live OSM element
-    api_type = {"node": "node", "n": "node", "way": "way", "w": "way", "relation": "relation", "r": "relation"}[norm_type]
+    api_type = norm_type
     osm_url = f"https://api.openstreetmap.org/api/0.6/{api_type}/{payload.osm_id}.json"
     try:
         osm_resp = await client.get(osm_url)
+        raise_if_rate_limited(osm_resp, "OpenStreetMap")
         if osm_resp.status_code == 200:
             osm_elements = osm_resp.json().get("elements", [])
             if osm_elements:
@@ -155,8 +146,11 @@ async def preview_edit(request: Request, payload: EditPreviewRequest):
                 "status": "deleted_in_osm",
                 "warnings": [f"OSM element {api_type}/{payload.osm_id} has been deleted from OpenStreetMap."]
             }
-    except Exception as e:
-        warnings.append(f"Could not reach OpenStreetMap API: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("OSM request failed for %s/%s", api_type, payload.osm_id)
+        warnings.append("Could not reach OpenStreetMap API.")
 
     statement_json = {
         "mainsnak": {
