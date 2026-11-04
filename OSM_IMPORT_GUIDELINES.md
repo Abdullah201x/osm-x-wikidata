@@ -276,7 +276,7 @@ When linking existing OSM features to Wikidata via the web workbench (OAuth 2.0 
 | `source` | `Wikidata; OpenStreetMap` | Documents external reference and existing OSM data |
 | `conflation` | `assisted_wikidata` | Identifies assisted tag matching |
 | `wikidata` | `Q123456` | The QID or semicolon-separated QIDs involved |
-| `created_by` | `OSM x Wikidata GCC Linker (https://abdullah201x.github.io/osm-x-wikidata)` | Tool identifier with link to repository |
+| `created_by` | `OSM x Wikidata GCC Linker (https://wikidata.saudiosm.org)` | Tool identifier with link to repository |
 | `hashtags` | `#osm-wikidata-gcc` | Community tracking hashtag |
 
 *(Note: The workbench's OAuth 2.0 Single Link and Batch Queue automatically apply these tags).*
