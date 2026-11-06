@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <!-- Old GitHub Pages URL -> wikidata.saudiosm.org -->
-  <script src="js/pages_redirect.js?v=17"></script>
+  <script src="js/pages_redirect.js?v=18"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ربط أوبن ستريت ماب وويكي بيانات لدول الخليج</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗺️</text></svg>" />
   
   <!-- Leaflet & MarkerCluster CSS (Self-Hosted) -->
-  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=17" />
-  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css?v=17" />
-  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.Default.css?v=17" />
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=18" />
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css?v=18" />
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.Default.css?v=18" />
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="css/style.css?v=17" />
+  <link rel="stylesheet" href="css/style.css?v=18" />
 </head>
 <body>
 
@@ -531,10 +531,27 @@
         <button type="button" class="btn-close-modal" id="btn-close-history-modal" aria-label="إغلاق / Close">&times;</button>
       </div>
 
-      <!-- History Tabs (OSM vs Wikidata) -->
-      <div class="history-tabs-row">
-        <button id="btn-hist-tab-osm" class="history-tab-btn active" data-tab="osm" data-i18n="histTabOsm">🗺️ تعديلات OSM</button>
-        <button id="btn-hist-tab-wd" class="history-tab-btn" data-tab="wikidata" data-i18n="histTabWd">🏛️ تعديلات ويكي بيانات (EditGroups)</button>
+      <!-- History Tabs: OSM changesets | Wikidata edits | Reverse fixes -->
+      <div class="history-tabs-row" role="tablist">
+        <button id="btn-hist-tab-osm" class="history-tab-btn active" role="tab" aria-selected="true" data-tab="osm" data-i18n="histTabOsm">🗺️ تعديلات OSM</button>
+        <button id="btn-hist-tab-wd" class="history-tab-btn" role="tab" aria-selected="false" data-tab="wikidata" data-i18n="histTabWd">🏛️ تعديلات ويكي بيانات (EditGroups)</button>
+        <button id="btn-hist-tab-fixes" class="history-tab-btn" role="tab" aria-selected="false" data-tab="fixes" data-i18n="histTabFixes">🛠️ إصلاحات الفحص العكسي</button>
+      </div>
+
+      <!-- Daily editing pace (local history only) -->
+      <div id="history-pace" class="history-pace">
+        <div class="history-pace-text">
+          <div class="history-pace-head">
+            <span class="history-pace-label" data-i18n="histPaceToday">تعديلات اليوم</span>
+            <strong id="history-pace-today-val" class="history-pace-val">0</strong>
+            <span id="history-pace-breakdown" class="history-pace-breakdown"></span>
+          </div>
+          <p id="history-pace-hint" class="history-pace-hint" aria-live="polite"></p>
+        </div>
+        <div class="history-pace-chart-wrap">
+          <svg id="history-pace-chart" class="history-pace-chart" viewBox="0 0 140 32" role="img" aria-label="Last 7 days"></svg>
+          <span class="history-pace-caption" data-i18n="histPaceLast7">آخر 7 أيام</span>
+        </div>
       </div>
 
       <!-- KPI Metrics Strip -->
@@ -595,26 +612,26 @@
   </div>
 
   <!-- Leaflet & MarkerCluster JS (Self-Hosted) -->
-  <script src="vendor/leaflet/leaflet.js?v=17"></script>
-  <script src="vendor/markercluster/leaflet.markercluster.js?v=17"></script>
+  <script src="vendor/leaflet/leaflet.js?v=18"></script>
+  <script src="vendor/markercluster/leaflet.markercluster.js?v=18"></script>
 
   <!-- Application Modules -->
-  <script src="js/translations.js?v=17"></script>
-  <script src="js/arabic_utils.js?v=17"></script>
-  <script src="js/tag_generator.js?v=17"></script>
-  <script src="js/wikidata_labels.js?v=17"></script>
-  <script src="js/tools.js?v=17"></script>
-  <script src="js/osm_oauth.js?v=17"></script>
-  <script src="js/import_access.js?v=17"></script>
-  <script src="js/wikidata_auth.js?v=17"></script>
-  <script src="js/wikidata_edit.js?v=17"></script>
-  <script src="js/live_verify.js?v=17"></script>
-  <script src="js/batch_manager.js?v=17"></script>
-  <script src="js/history_manager.js?v=17"></script>
-  <script src="js/map.js?v=17"></script>
-  <script src="js/tag_repair_dialog.js?v=17"></script>
-  <script src="js/modal_a11y.js?v=17"></script>
-  <script src="js/app.js?v=17"></script>
+  <script src="js/translations.js?v=18"></script>
+  <script src="js/arabic_utils.js?v=18"></script>
+  <script src="js/tag_generator.js?v=18"></script>
+  <script src="js/wikidata_labels.js?v=18"></script>
+  <script src="js/tools.js?v=18"></script>
+  <script src="js/osm_oauth.js?v=18"></script>
+  <script src="js/import_access.js?v=18"></script>
+  <script src="js/wikidata_auth.js?v=18"></script>
+  <script src="js/wikidata_edit.js?v=18"></script>
+  <script src="js/live_verify.js?v=18"></script>
+  <script src="js/batch_manager.js?v=18"></script>
+  <script src="js/history_manager.js?v=18"></script>
+  <script src="js/map.js?v=18"></script>
+  <script src="js/tag_repair_dialog.js?v=18"></script>
+  <script src="js/modal_a11y.js?v=18"></script>
+  <script src="js/app.js?v=18"></script>
 
 </body>
 </html>

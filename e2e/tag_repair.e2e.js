@@ -79,6 +79,14 @@ test.describe('reverse tag repair', () => {
     expect(osm.updateBody).not.toContain('k="wikidata"');
     await expect(page.locator('#inspector-content .done-state a[href$="/changeset/777"]')).toBeVisible();
 
+    // The repair lands in History > Reverse fixes (not the linking tab) and counts toward today's pace.
+    await page.locator('#btn-header-history').click();
+    await expect(page.locator('#history-page-modal')).toBeVisible();
+    await expect(page.locator('#history-pace-today-val')).toHaveText('1');
+    await expect(page.locator('.history-card[data-csid="777"]')).toHaveCount(0);
+    await page.locator('#btn-hist-tab-fixes').click();
+    await expect(page.locator('.history-card[data-csid="777"] .history-type-pill.repair')).toContainText('migrate');
+
     expect(guard.seen.pageErrors).toEqual([]);
     expect(await guard.collectCsp()).toEqual([]);
   });

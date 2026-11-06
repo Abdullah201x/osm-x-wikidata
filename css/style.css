@@ -2554,6 +2554,38 @@ kbd, .kbd-inline {
   color: #fff;
 }
 
+/* History: daily editing pace */
+.history-pace {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+.history-pace.is-high { border-color: rgba(255, 183, 3, 0.6); background: rgba(255, 183, 3, 0.08); }
+.history-pace-text { min-width: 0; }
+.history-pace-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+.history-pace-label { font-size: 0.78rem; color: var(--color-text-muted); }
+.history-pace-val { font-size: 1.2rem; color: #fff; }
+.history-pace-breakdown { font-size: 0.72rem; color: var(--color-text-muted); }
+.history-pace-hint { margin: 4px 0 0; font-size: 0.74rem; color: var(--color-text-muted); }
+.history-pace.is-high .history-pace-hint { color: var(--color-candidate); }
+.history-pace-chart-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; }
+.history-pace-chart { width: 140px; height: 32px; }
+.history-pace-caption { font-size: 0.66rem; color: var(--color-text-muted); }
+.pace-bar { fill: rgba(0, 242, 254, 0.45); }
+.pace-bar.is-today { fill: var(--color-primary); }
+.pace-bar.is-empty { fill: rgba(255, 255, 255, 0.12); }
+.history-type-pill.repair { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.4); }
+@media (max-width: 600px) {
+  .history-pace { flex-direction: column; align-items: stretch; }
+  .history-pace-chart-wrap { align-items: flex-start; }
+}
+
 /* Accessibility & Layout Utilities (Parity Audit) */
 .header-right-actions {
   display: flex;
