@@ -4,7 +4,7 @@ import globals from 'globals';
 // no-undef must know every cross-file name (see the <script> order in index.html).
 const crossFile = Object.fromEntries([
   // js/translations.js, arabic_utils.js, tag_generator.js, wikidata_labels.js, tools.js
-  'TRANSLATIONS', 'ArabicUtils', 'TagGenerator', 'WikidataLabels', 'MappingTools', 'escapeHtml', 'safeUrl',
+  'TRANSLATIONS', 'ArabicUtils', 'TagGenerator', 'WikidataLabels', 'MappingTools', 'escapeHtml', 'safeUrl', 'commonsImageUrl',
   // js/osm_oauth.js, wikidata_auth.js, wikidata_edit.js, live_verify.js
   'OsmAuth', 'ImportAccess', 'WikidataAuth', 'WikidataEdit', 'LiveVerifier',
   // js/batch_manager.js, history_manager.js, map.js

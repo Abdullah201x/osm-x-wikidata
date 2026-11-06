@@ -2554,6 +2554,25 @@ kbd, .kbd-inline {
   color: #fff;
 }
 
+/* Inspector: copy-link button and shared-link notice */
+.status-badge-container { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; flex-shrink: 0; }
+.btn-copy-link {
+  background: var(--color-surface);
+  border: 1px solid var(--panel-border);
+  color: #fff;
+  border-radius: 6px;
+  min-width: 30px;
+  height: 28px;
+  padding: 0 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.btn-copy-link:hover { border-color: var(--color-primary); }
+.btn-copy-link.is-copied { border-color: var(--color-accent); color: var(--color-accent); }
+.empty-state.deep-link-notice { padding: 20px; text-align: center; }
+.deep-link-notice h4 { color: var(--color-candidate); margin-bottom: 6px; }
+.deep-link-notice p { font-size: 0.8rem; color: var(--color-text-muted); line-height: 1.5; }
+
 /* History: daily editing pace */
 .history-pace {
   display: flex;

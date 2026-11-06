@@ -12,6 +12,14 @@ import requests
 from typing import Dict, List, Any, Optional
 from pipeline.config import GCC_COUNTRIES, BASE_DIR, classify_p31
 
+_RE_HTTP_WIKIMEDIA = re.compile(r"^http://(commons|upload)\.wikimedia\.org/", re.IGNORECASE)
+
+
+def https_wikimedia(url: str) -> str:
+    """WDQS returns P18 images as http://commons.wikimedia.org/...; the site's CSP
+    (img-src) only allows https Wikimedia hosts, so store the https form."""
+    return _RE_HTTP_WIKIMEDIA.sub(lambda m: f"https://{m.group(1).lower()}.wikimedia.org/", url or "")
+
 CACHE_DB = os.path.join(BASE_DIR, "pipeline", "wikidata_cache.db")
 WIKIDATA_SPARQL_URL = "https://query.wikidata.org/sparql"
 USER_AGENT = "OSMxWikidataLinker/1.0 (https://github.com/abdullah201x; GCC Mapping Project)"
@@ -153,7 +161,7 @@ def fetch_country_wikidata(country_code: str, force_refresh: bool = False) -> Li
                 "desc_en": row[10] or "",
                 "wikipedia_ar": row[11] or "",
                 "wikipedia_en": row[12] or "",
-                "image": row[13] or "",
+                "image": https_wikimedia(row[13] or ""),
                 "osm_id": row[14] or "",
                 "website": row[15] or "" if len(row) > 15 else "",
                 "dissolved": row[16] or "" if len(row) > 16 else "",
@@ -281,7 +289,7 @@ def fetch_country_wikidata(country_code: str, force_refresh: bool = False) -> Li
         desc_en = b.get("desc_en", {}).get("value", "")
         wiki_ar = b.get("wiki_ar", {}).get("value", "")
         wiki_en = b.get("wiki_en", {}).get("value", "")
-        image_url = b.get("image", {}).get("value", "")
+        image_url = https_wikimedia(b.get("image", {}).get("value", ""))
         osm_id = b.get("osmId", {}).get("value", "")
 
         # NSI Attributes: website, dissolution date, social channels

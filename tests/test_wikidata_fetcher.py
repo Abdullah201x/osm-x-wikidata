@@ -121,3 +121,16 @@ def test_fetch_sparql_retry_on_500():
     assert items is not None
     assert len(items) == 1
     assert items[0]["item"]["value"] == "http://www.wikidata.org/entity/Q100"
+
+
+def test_https_wikimedia_upgrades_p18_image_urls():
+    from pipeline.wikidata_fetcher import https_wikimedia
+
+    assert https_wikimedia("http://commons.wikimedia.org/wiki/Special:FilePath/A.jpg") == (
+        "https://commons.wikimedia.org/wiki/Special:FilePath/A.jpg"
+    )
+    assert https_wikimedia("http://upload.wikimedia.org/x.png") == "https://upload.wikimedia.org/x.png"
+    assert https_wikimedia("https://commons.wikimedia.org/a.jpg") == "https://commons.wikimedia.org/a.jpg"
+    assert https_wikimedia("http://example.org/a.jpg") == "http://example.org/a.jpg"
+    assert https_wikimedia("") == ""
+    assert https_wikimedia(None) == ""

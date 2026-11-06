@@ -9,7 +9,7 @@ import { loadScript } from './load-script.js';
 export function loadApp() {
   loadScript('translations.js', ['TRANSLATIONS']);
   loadScript('arabic_utils.js', ['ArabicUtils']);
-  loadScript('tools.js', ['escapeHtml', 'safeUrl']);
+  loadScript('tools.js', ['escapeHtml', 'safeUrl', 'commonsImageUrl']);
   loadScript('import_access.js', ['ImportAccess']);
 
   globalThis.MapController = {

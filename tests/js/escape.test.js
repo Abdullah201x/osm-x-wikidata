@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { loadScript } from './load-script.js';
 
-let escapeHtml, safeUrl;
+let escapeHtml, safeUrl, commonsImageUrl;
 beforeAll(() => {
-  ({ escapeHtml, safeUrl } = loadScript('tools.js', ['escapeHtml', 'safeUrl', 'MappingTools']));
+  ({ escapeHtml, safeUrl, commonsImageUrl } = loadScript('tools.js', ['escapeHtml', 'safeUrl', 'commonsImageUrl', 'MappingTools']));
 });
 
 describe('escapeHtml', () => {
@@ -67,5 +67,20 @@ describe('safeUrl', () => {
     expect(safeUrl('')).toBe('');
     expect(safeUrl(null)).toBe('');
     expect(safeUrl(undefined)).toBe('');
+  });
+});
+
+describe('commonsImageUrl', () => {
+  it('upgrades http Wikimedia image URLs to https (CSP img-src allows https only)', () => {
+    expect(commonsImageUrl('http://commons.wikimedia.org/wiki/Special:FilePath/A.jpg'))
+      .toBe('https://commons.wikimedia.org/wiki/Special:FilePath/A.jpg');
+    expect(commonsImageUrl('HTTP://Upload.Wikimedia.org/x.png')).toBe('https://upload.wikimedia.org/x.png');
+  });
+
+  it('leaves https and other hosts alone and still rejects non-http schemes', () => {
+    expect(commonsImageUrl('https://commons.wikimedia.org/a.jpg')).toBe('https://commons.wikimedia.org/a.jpg');
+    expect(commonsImageUrl('http://example.org/a.jpg')).toBe('http://example.org/a.jpg');
+    expect(commonsImageUrl('javascript:alert(1)')).toBe('');
+    expect(commonsImageUrl(null)).toBe('');
   });
 });

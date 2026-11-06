@@ -29,6 +29,8 @@ let viewportTimer = null;
 // Reverse QA Mode state: "forward" (Wikidata -> OSM) or "reverse" (OSM -> Wikidata)
 let currentMode = "forward";
 let loadedReverseDataset = null;
+// Item requested by a shared link (#...&qid=Q123[&osm=n456]); applied once after the first data load.
+let pendingDeepLink = null;
 let filteredReverseItems = [];
 let activeReverseKind = "all";
 let activeReverseConfidence = new Set(["high", "medium"]);
@@ -71,6 +73,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Load initial country
     await loadCountry(currentCountry);
   }
+  applyPendingDeepLink();
 
   // Wire UI event listeners & keyboard shortcuts
   setupEventListeners();
@@ -137,6 +140,11 @@ function renderSummaryStats() {
 }
 
 async function loadCountry(code) {
+  if (code.toLowerCase() !== currentCountry) {
+    // The selection belongs to the previous country; keep it out of the URL and shortcuts.
+    selectedItem = null;
+    window.selectedItem = null;
+  }
   currentCountry = code.toLowerCase();
   localStorage.setItem("osm_wd_country", currentCountry);
   updateUrlHash();
@@ -425,6 +433,7 @@ function selectReverseItem(item, marker = null, skipFly = false) {
       </div>
       <div class="status-badge-container">
         <span class="badge ${kindBadgeClass}">${escapeHtml(kindLabel)}</span>
+        ${copyLinkButtonHtml(t)}
       </div>
     </div>
 
@@ -475,6 +484,9 @@ function selectReverseItem(item, marker = null, skipFly = false) {
   `;
 
   // Attach button events in drawer
+  wireCopyLinkButton(t);
+  updateUrlHash();
+
   const copyQsBtn = document.getElementById("btn-copy-qs-line");
   if (copyQsBtn && item.suggested_fix) {
     copyQsBtn.addEventListener("click", () => {
@@ -657,6 +669,9 @@ function refreshReverseViewAfterPush() {
 async function switchMode(mode) {
   if (mode === currentMode) return;
   currentMode = mode;
+  // Forward items are arrays and reverse items objects; a selection never carries across modes.
+  selectedItem = null;
+  window.selectedItem = null;
   updateUrlHash();
   ImportAccess.applyUI();
 
@@ -858,7 +873,7 @@ function selectItem(item, marker = null, skipFly = false) {
   const p31 = item[7] || "";
   const osmRef = item[8] || "";
   const candInfo = item[9] || "";
-  const imageUrl = safeUrl(item[10]);
+  const imageUrl = commonsImageUrl(item[10]);
   const wikiAr = safeUrl(item[11]);
   const website = safeUrl(item[12]);
   const dissolvedYear = item[13] || "";
@@ -992,7 +1007,7 @@ function selectItem(item, marker = null, skipFly = false) {
         <h3>${escapeHtml(nameAr || nameEn || qid)}</h3>
         ${nameEn && nameAr ? `<div class="inspector-subtitle">${escapeHtml(nameEn)}</div>` : ""}
       </div>
-      <div class="status-badge-container">${statusBadgeHtml}</div>
+      <div class="status-badge-container">${statusBadgeHtml}${copyLinkButtonHtml(t)}</div>
     </div>
 
     ${dissolvedHtml}
@@ -1078,6 +1093,8 @@ function selectItem(item, marker = null, skipFly = false) {
   }
 
   // Wire buttons
+  wireCopyLinkButton(t);
+  updateUrlHash();
   document.getElementById("btn-copy-tags").onclick = () => {
     navigator.clipboard.writeText(tagsLines).then(() => {
       const b = document.getElementById("btn-copy-tags");
@@ -2016,6 +2033,11 @@ function parseUrlHash() {
   const hash = window.location.hash.replace(/^#/, "");
   if (!hash) return;
   const params = new URLSearchParams(hash);
+  const qid = (params.get("qid") || "").trim();
+  if (qid && qid.length <= 40) {
+    const osm = (params.get("osm") || "").trim().toLowerCase();
+    pendingDeepLink = { qid, osm: /^[nwr]\d+$/.test(osm) ? osm : "" };
+  }
   const m = params.get("mode");
   if (m === "reverse" || m === "forward") {
     currentMode = m;
@@ -2030,7 +2052,8 @@ function parseUrlHash() {
   }
 }
 
-function updateUrlHash() {
+/** The hash parameters describing the current view, including the selected item. */
+function currentHashParams() {
   const params = new URLSearchParams();
   if (currentMode === "reverse") {
     params.set("mode", "reverse");
@@ -2038,11 +2061,94 @@ function updateUrlHash() {
   params.set("country", currentCountry);
   if (currentMode === "reverse") {
     if (activeReverseKind !== "all") params.set("kind", activeReverseKind);
-    if (selectedItem) params.set("qid", selectedItem.qid || "");
-  } else if (selectedItem) {
+    // Reverse items are objects; a QID can appear on several OSM elements, so add the element.
+    if (selectedItem && !Array.isArray(selectedItem) && selectedItem.qid) {
+      params.set("qid", selectedItem.qid);
+      if (selectedItem.osm_type && selectedItem.osm_id) params.set("osm", `${selectedItem.osm_type}${selectedItem.osm_id}`);
+    }
+  } else if (Array.isArray(selectedItem)) {
     params.set("qid", `Q${selectedItem[0]}`);
   }
-  window.history.replaceState(null, "", `#${params.toString()}`);
+  return params;
+}
+
+function updateUrlHash() {
+  window.history.replaceState(null, "", `#${currentHashParams().toString()}`);
+}
+
+/** Absolute link to the current view and selected item. */
+function itemShareUrl() {
+  return `${window.location.origin}${window.location.pathname}#${currentHashParams().toString()}`;
+}
+
+function copyLinkButtonHtml(t) {
+  const label = escapeHtml(t.btnCopyItemLink || "Copy link");
+  return `<button type="button" id="btn-copy-item-link" class="btn-copy-link" title="${label}" aria-label="${label}">🔗</button>`;
+}
+
+function wireCopyLinkButton(t) {
+  const btn = document.getElementById("btn-copy-item-link");
+  if (!btn) return;
+  btn.onclick = async () => {
+    const url = itemShareUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+      btn.textContent = "✓";
+      btn.classList.add("is-copied");
+      btn.setAttribute("aria-label", t.btnCopied);
+      setTimeout(() => {
+        btn.textContent = "🔗";
+        btn.classList.remove("is-copied");
+        btn.setAttribute("aria-label", t.btnCopyItemLink);
+      }, 2000);
+    } catch {
+      // Clipboard blocked (e.g. insecure context): let the user copy it by hand.
+      window.prompt(t.btnCopyItemLink, url);
+    }
+  };
+}
+
+/** Selects the item named by a shared link, or explains why it is not shown. */
+function applyPendingDeepLink() {
+  const link = pendingDeepLink;
+  pendingDeepLink = null;
+  if (!link) return;
+
+  if (currentMode === "reverse") {
+    const items = (loadedReverseDataset && loadedReverseDataset.items) || [];
+    const sameQid = items.filter((it) => it.qid === link.qid);
+    const match = sameQid.find((it) => link.osm && `${it.osm_type}${it.osm_id}` === link.osm) || sameQid[0];
+    if (match) {
+      selectReverseItem(match);
+      return;
+    }
+  } else if (/^Q\d+$/i.test(link.qid)) {
+    const num = parseInt(link.qid.slice(1), 10);
+    const match = loadedDataset && loadedDataset.items ? loadedDataset.items.find((it) => it[0] === num) : null;
+    if (match) {
+      selectItem(match);
+      return;
+    }
+  }
+
+  // Not in the loaded dataset. In forward mode without import access this is most likely a
+  // "missing" item, which only approved importers can see.
+  const t = TRANSLATIONS[currentLang];
+  const restricted = currentMode !== "reverse" && !ImportAccess.canImport();
+  const panel = document.getElementById("inspector-content");
+  if (!panel) return;
+  const box = document.createElement("div");
+  box.className = "empty-state deep-link-notice";
+  box.setAttribute("role", "status");
+  const title = document.createElement("h4");
+  title.textContent = restricted ? t.deepLinkRestrictedTitle : t.deepLinkNotFoundTitle;
+  const body = document.createElement("p");
+  body.textContent = (restricted ? t.deepLinkRestricted : t.deepLinkNotFound)
+    .replace("{qid}", link.qid)
+    .replace("{country}", currentCountry.toUpperCase());
+  box.append(title, body);
+  panel.textContent = "";
+  panel.appendChild(box);
 }
 
 /**

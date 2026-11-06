@@ -25,8 +25,17 @@ function safeUrl(url) {
   return /^https?:\/\//i.test(s) ? s : "";
 }
 
+/**
+ * safeUrl() for Wikimedia images. Wikidata P18 values arrive as
+ * http://commons.wikimedia.org/...; the CSP img-src only allows https, so upgrade them.
+ */
+function commonsImageUrl(url) {
+  return safeUrl(url).replace(/^http:\/\/(commons|upload)\.wikimedia\.org\//i, (m, host) => `https://${host.toLowerCase()}.wikimedia.org/`);
+}
+
 window.escapeHtml = escapeHtml;
 window.safeUrl = safeUrl;
+window.commonsImageUrl = commonsImageUrl;
 
 const MappingTools = {
   JOSM_BASE: "http://127.0.0.1:8111",
