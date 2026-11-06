@@ -11,12 +11,6 @@ let activeMarker = null;
 let candidatesLayerGroup = null;
 
 const MapController = {
-  STATUS_COLORS: {
-    0: "#ff3366", // Red: Missing in OSM
-    1: "#ffb703", // Amber: Candidate Match
-    2: "#00f2fe"  // Cyan/Green: Already Linked
-  },
-
   init() {
     // Initial map centered on GCC / Riyadh
     map = L.map("map", {
@@ -191,13 +185,13 @@ const MapController = {
       const qid = `Q${item[0]}`;
       const isLocal = LiveVerifier.isLocallyVerified(qid);
       const status = isLocal ? 2 : item[4];
-      const color = this.STATUS_COLORS[status] || "#999999";
       const name = item[5] || item[6] || qid;
 
-      // Lightweight SVG pin icon
+      // Lightweight dot icon. Its colour comes from the status class in
+      // css/style.css (an inline style would need CSP style-src 'unsafe-inline').
       const icon = L.divIcon({
         className: `poi-marker status-${status}`,
-        html: `<div class="marker-dot" style="background-color: ${color}; border-color: rgba(255,255,255,0.85);"></div>`,
+        html: `<div class="marker-dot"></div>`,
         iconSize: [16, 16],
         iconAnchor: [8, 8]
       });
@@ -223,14 +217,6 @@ const MapController = {
     clusterGroup.addLayers(markers);
   },
 
-  REVERSE_COLORS: {
-    missing_backlink_high: "#00ff87",
-    missing_backlink: "#ffb703",
-    broken_osm_tag: "#ff3366",
-    conflict: "#fb8500",
-    review_gap: "#3a86ff"
-  },
-
   renderReverseItems(items, onSelectCallback) {
     clusterGroup.clearLayers();
     this.clearCandidatesFromMap();
@@ -253,12 +239,11 @@ const MapController = {
       if (item.kind === "missing_backlink" && item.subkind === "high_confidence") {
         colorKey = "missing_backlink_high";
       }
-      const color = this.REVERSE_COLORS[colorKey] || "#00f2fe";
       const name = osm.name || osm.name_ar || wd.name_ar || wd.name_en || item.qid;
 
       const icon = L.divIcon({
-        className: `poi-marker reverse-marker kind-${item.kind}`,
-        html: `<div class="marker-dot" style="background-color: ${color}; border-color: rgba(255,255,255,0.85); box-shadow: 0 0 8px ${color};"></div>`,
+        className: `poi-marker reverse-marker kind-${item.kind} color-${colorKey}`,
+        html: `<div class="marker-dot"></div>`,
         iconSize: [16, 16],
         iconAnchor: [8, 8]
       });

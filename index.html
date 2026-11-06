@@ -53,11 +53,11 @@
         <!-- Dual Auth Bar (OSM & Wikidata) -->
         <div class="auth-bar">
           <div class="auth-chip-group">
-            <span id="osm-user-badge" style="display: none;"></span>
+            <span id="osm-user-badge"></span>
             <button id="btn-osm-login" class="osm-btn" data-i18n="loginOsm">تسجيل الدخول بـ OSM</button>
           </div>
           <div class="auth-chip-group">
-            <span id="wd-user-badge" style="display: none;"></span>
+            <span id="wd-user-badge"></span>
             <button id="btn-wd-login" class="wd-btn" data-i18n="loginWd">تسجيل الدخول بـ Wikidata</button>
           </div>
         </div>
@@ -191,7 +191,7 @@
         </div>
 
         <!-- Reverse QA Controls (Visible in Reverse Mode) -->
-        <div id="reverse-controls-panel" style="display: none;">
+        <div id="reverse-controls-panel">
           <!-- Reverse Kind Filter Pills -->
           <div class="control-group">
             <label class="section-label" data-i18n="reverseFilterKind">نوع التدقيق العكسي</label>
@@ -268,7 +268,7 @@
     </nav>
 
     <!-- Floating Batch Dock Trigger (Shown when items are staged) -->
-    <div id="floating-batch-btn" class="floating-batch-dock btn-open-batch-modal" style="display: none;" title="فتح سلة التعديلات المجمعة (B)">
+    <div id="floating-batch-btn" class="floating-batch-dock btn-open-batch-modal" title="فتح سلة التعديلات المجمعة (B)">
       <span class="pulse-indicator"></span>
       <span>📦 <strong data-i18n="batchQueueBtn">سلة التعديلات</strong> (<span class="batch-counter">0</span>)</span>
     </div>
@@ -287,7 +287,7 @@
   </div>
 
   <!-- Keyboard Shortcuts Modal -->
-  <div id="shortcuts-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="shortcuts-modal-title" style="display: none;">
+  <div id="shortcuts-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="shortcuts-modal-title">
     <div class="modal-card shortcuts-modal-card">
       <div class="modal-header-row">
         <h3 id="shortcuts-modal-title" data-i18n="shortcutsTitle">اختصارات لوحة المفاتيح</h3>
@@ -311,7 +311,7 @@
   </div>
 
   <!-- About & Community / DWG Contact Modal -->
-  <div id="about-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="about-modal-title" style="display: none;">
+  <div id="about-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="about-modal-title">
     <div class="modal-card about-modal-card">
       <div class="modal-header-row">
         <h3 id="about-modal-title" data-i18n="aboutModalTitle">حول المشروع، التواصل، وسياسات فريق البيانات (DWG)</h3>
@@ -344,7 +344,7 @@
   </div>
 
   <!-- Image Lightbox Modal -->
-  <div id="image-lightbox-modal" class="modal-overlay lightbox-overlay" role="dialog" aria-modal="true" aria-label="معاينة الصورة / Image preview" style="display: none;">
+  <div id="image-lightbox-modal" class="modal-overlay lightbox-overlay" role="dialog" aria-modal="true" aria-label="معاينة الصورة / Image preview">
     <div class="lightbox-content">
       <button type="button" class="btn-close-modal lightbox-close" id="btn-close-lightbox" aria-label="إغلاق / Close">&times;</button>
       <img id="lightbox-img" src="" alt="Enlarged preview" />
@@ -356,7 +356,7 @@
   </div>
 
   <!-- OSM Note Modal -->
-  <div id="note-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="note-modal-title" style="display: none;">
+  <div id="note-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="note-modal-title">
     <div class="modal-card">
       <h3 id="note-modal-title" data-i18n="noteModalTitle">إرسال ملاحظة إلى OpenStreetMap</h3>
       <div class="note-modal-hint">
@@ -371,7 +371,7 @@
   </div>
 
   <!-- Single OSM Link Confirmation & Comment Review Modal -->
-  <div id="single-link-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="single-link-modal-title" style="display: none;">
+  <div id="single-link-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="single-link-modal-title">
     <div class="modal-card single-link-card">
       <div class="modal-header-row">
         <h3 id="single-link-modal-title" data-i18n="singleLinkTitle">مراجعة وتأكيد الربط الفردي</h3>
@@ -413,7 +413,7 @@
   </div>
 
   <!-- Changeset Batch Staging Queue Modal -->
-  <div id="batch-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="batch-modal-title" style="display: none;">
+  <div id="batch-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="batch-modal-title">
     <div class="modal-card batch-modal-card">
       <div class="modal-header-row">
         <div class="batch-title-wrap">
@@ -423,7 +423,7 @@
         <button type="button" class="btn-close-modal" id="btn-close-batch-modal" aria-label="إغلاق / Close">&times;</button>
       </div>
 
-      <div id="batch-modal-empty" class="batch-empty-view" style="display: none;">
+      <div id="batch-modal-empty" class="batch-empty-view">
         <div class="empty-icon">📦</div>
         <h4 data-i18n="batchEmptyTitle">سلة التعديلات فارغة</h4>
         <p data-i18n="batchEmptyDesc">اختر أي عنصر مرشح واضغط 'إضافة للمجموعة' لتجميع عدة معالم ونشرها في مجموعة تعديل (Changeset) واحدة وفق معايير مجتمع OSM.</p>
@@ -454,12 +454,12 @@
         </div>
       </div>
 
-      <div id="batch-progress-box" class="batch-progress-container" style="display: none;">
+      <div id="batch-progress-box" class="batch-progress-container">
         <div class="batch-progress-header">
           <span id="batch-progress-text">جارٍ التحضير...</span>
         </div>
         <div class="batch-progress-bar-track">
-          <div id="batch-progress-bar-fill" class="batch-progress-bar-fill" style="width: 0%;"></div>
+          <div id="batch-progress-bar-fill" class="batch-progress-bar-fill"></div>
         </div>
       </div>
 
@@ -471,7 +471,7 @@
   </div>
 
   <!-- What Has Been Done: Full Changeset History & Activity Page -->
-  <div id="history-page-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="history-page-modal-title" style="display: none;">
+  <div id="history-page-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="history-page-modal-title">
     <div class="modal-card history-page-card">
       <div class="modal-header-row">
         <div class="history-page-title-group">
@@ -528,7 +528,7 @@
       </div>
 
       <!-- Empty State -->
-      <div id="history-empty-state" class="history-empty-view" style="display: none;">
+      <div id="history-empty-state" class="history-empty-view">
         <div class="empty-icon">🗺️</div>
         <h4 data-i18n="historyEmptyTitle">لم يتم تسجيل أي تعديلات حتى الآن</h4>
         <p data-i18n="historyEmptyDesc">عند قيامك بربط أي معالم (سواء فردياً أو عبر سلة التعديلات)، ستظهر جميع مجموعات التعديل هنا مع تفاصيلها وروابطها الرسمية في OSM.</p>
@@ -542,7 +542,7 @@
   </div>
 
   <!-- Loading Overlay -->
-  <div id="loading-indicator" role="status" aria-live="polite" style="display: none;">
+  <div id="loading-indicator" role="status" aria-live="polite">
     <div class="spinner"></div>
     <div class="loading-indicator-label">جارٍ تحميل البيانات...</div>
   </div>

@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Tests: `tests/test_backend_errors.py` (upstream failures, 429s, input validation, search corpus) and `tests/js/modal_a11y.test.js`, `tests/js/live_verify.test.js`.
 
 ### Changed
+- **Strict style CSP:** `style-src` no longer allows `'unsafe-inline'`. All 47 inline `style="…"` strings in `index.html` and `js/` became CSS classes in `css/style.css`. Initially hidden elements are hidden by ID rules, and map marker colours come from status/kind classes. `tests/test_csp_inline.py` now fails on any `style="` and on `'unsafe-inline'` in `style-src`, and `e2e/csp_styles.e2e.js` renders the reverse inspector cards and map markers under the production CSP. Asset version bumped to `?v=16`.
 - **Basemaps:** CARTO's raster tiles now return an "API key required" placeholder, which broke the "OSM Standard" button. Replaced with keyless Esri layers: Dark, Light, Streets, Topo and Satellite, with place-label overlays on Dark, Light and Satellite (labels sit in their own pane below markers). `[` / `]` cycles all five. CARTO is removed from the CSP and the e2e tile-host allowlist; `tile.openstreetmap.org` is still never contacted.
 - `SECURITY.md` now documents that the OSM token is relayed once to OpenStreetMap by `/api/v1/me`.
 - Asset version bumped to `?v=13`.

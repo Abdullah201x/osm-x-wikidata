@@ -2645,3 +2645,68 @@ kbd, .kbd-inline {
     scroll-behavior: auto !important;
   }
 }
+
+/* ==========================================================================
+   CSP: no inline style attributes (style-src 'self', no 'unsafe-inline').
+   Everything below replaces former style="…" strings in index.html / js/.
+   JS may still set el.style.* (CSSOM), which the CSP allows.
+   ========================================================================== */
+
+/* Initially hidden; JS shows these by setting el.style.display. */
+#osm-user-badge,
+#wd-user-badge,
+#reverse-controls-panel,
+#floating-batch-btn,
+#shortcuts-modal,
+#about-modal,
+#image-lightbox-modal,
+#note-modal,
+#single-link-modal,
+#batch-modal,
+#batch-modal-empty,
+#batch-progress-box,
+#history-page-modal,
+#history-empty-state,
+#loading-indicator,
+#live-verify-result {
+  display: none;
+}
+#batch-progress-bar-fill { width: 0%; }
+
+/* Map marker colours (forward status / reverse kind). */
+.marker-dot { background-color: #999999; border-color: rgba(255, 255, 255, 0.85); }
+.poi-marker.status-0 .marker-dot { background-color: #ff3366; }
+.poi-marker.status-1 .marker-dot { background-color: #ffb703; }
+.poi-marker.status-2 .marker-dot { background-color: #00f2fe; }
+.reverse-marker .marker-dot { --dot: #00f2fe; background-color: var(--dot); box-shadow: 0 0 8px var(--dot); }
+.reverse-marker.color-missing_backlink_high .marker-dot { --dot: #00ff87; }
+.reverse-marker.color-missing_backlink .marker-dot { --dot: #ffb703; }
+.reverse-marker.color-broken_osm_tag .marker-dot { --dot: #ff3366; }
+.reverse-marker.color-conflict .marker-dot { --dot: #fb8500; }
+.reverse-marker.color-review_gap .marker-dot { --dot: #3a86ff; }
+
+/* Reverse inspector action cards and button rows. */
+.rv-desc { font-size: 0.76rem; margin-bottom: 8px; }
+.rv-btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.rv-btn-row--spaced { margin-bottom: 6px; }
+.rv-btn-row--nowrap { flex-wrap: nowrap; }
+.btn.rv-btn { flex: 1; font-size: 0.72rem; }
+.btn.rv-btn-ghost { background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff; }
+.btn.rv-link-btn { text-align: center; text-decoration: none; }
+.reverse-action-card.reverse-action-card--osm { border-color: rgba(255, 51, 102, 0.4); background: rgba(255, 51, 102, 0.08); }
+.reverse-action-card--osm .reverse-action-header { color: #ff3366; }
+.inspector-section.rv-external-links { margin-top: 10px; }
+
+/* "Action completed" state after a reverse push. */
+.empty-state.done-state { padding: 24px; text-align: center; }
+.done-state .empty-icon { font-size: 2.2rem; margin-bottom: 8px; }
+.done-state h4 { color: #00ff87; margin-bottom: 6px; }
+.done-state p { font-size: 0.8rem; color: var(--color-text-muted); }
+
+/* Forward inspector candidate + live-verify result. */
+.candidate-box-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.verify-success-body { display: flex; flex-direction: column; gap: 4px; }
+.verify-success-ref { font-size: 0.72rem; }
+
+.text-missing { color: var(--color-missing); }
+.link-plain { color: inherit; text-decoration: none; }

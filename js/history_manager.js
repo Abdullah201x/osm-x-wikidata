@@ -112,7 +112,7 @@ const HistoryManager = {
                 🏛️ ${escapeHtml(it.qid)} ↗
               </a>
               <span class="history-type-pill batch">
-                <a href="${escapeHtml(egUrl)}" target="_blank" rel="noopener" style="color: inherit; text-decoration: none;">
+                <a href="${escapeHtml(egUrl)}" target="_blank" rel="noopener" class="link-plain">
                   📦 EditGroups: <code>${escapeHtml(it.batchId)}</code> ↗
                 </a>
               </span>
@@ -382,7 +382,7 @@ const HistoryManager = {
     window.addEventListener("osm-history-updated", () => {
       this.updateBadgeCount();
       const modal = document.getElementById("history-page-modal");
-      if (modal && modal.style.display !== "none") {
+      if (modal && getComputedStyle(modal).display !== "none") {
         this.render();
       }
     });

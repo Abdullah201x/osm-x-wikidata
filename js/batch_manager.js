@@ -323,7 +323,7 @@ const BatchManager = {
             </div>
             <div class="batch-success-stats">
               <span>✓ ${res.successCount} ${window.currentLang === "ar" ? "عنصر تم ربطه بنجاح" : "items linked successfully"}</span>
-              ${res.failCount > 0 ? `<span style="color: var(--color-missing);">✕ ${res.failCount} failed</span>` : ""}
+              ${res.failCount > 0 ? `<span class="text-missing">✕ ${res.failCount} failed</span>` : ""}
             </div>
           </div>
         `;
@@ -340,7 +340,7 @@ const BatchManager = {
     } catch (err) {
       console.error("Batch upload failed:", err);
       if (progressText) {
-        progressText.innerHTML = `<span style="color: var(--color-missing);">❌ Error: ${escapeHtml(err.message)}</span>`;
+        progressText.innerHTML = `<span class="text-missing">❌ Error: ${escapeHtml(err.message)}</span>`;
       }
       if (uploadBtn) uploadBtn.disabled = false;
       if (clearBtn) clearBtn.disabled = false;

@@ -363,22 +363,22 @@ function selectReverseItem(item, marker = null, skipFly = false) {
       actionHtml = `
         <div class="reverse-action-card">
           <div class="reverse-action-header">⚡ ${t.labelSuggestedFix} ${t.actionAddClaim}</div>
-          <div style="font-size: 0.76rem; margin-bottom: 8px;">
+          <div class="rv-desc">
             <code>${escapeHtml(qid)} ➔ ${escapeHtml(fix.property)} = "${escapeHtml(fix.value)}"</code>
           </div>
-          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px;">
-            <button id="btn-wd-add-claim" class="btn btn-wd-claim" style="flex: 1; font-size: 0.72rem;">
+          <div class="rv-btn-row rv-btn-row--spaced">
+            <button id="btn-wd-add-claim" class="btn btn-wd-claim rv-btn">
               ${t.btnAddToWikidata || "⚡ إضافة إلى ويكي بيانات مباشرة"}
             </button>
-            <a href="${qsUrl}" target="_blank" rel="noopener" class="btn btn-qs-action" style="flex: 1; font-size: 0.72rem;">
+            <a href="${qsUrl}" target="_blank" rel="noopener" class="btn btn-qs-action rv-btn">
               ${t.btnOpenQsDirect || "↗️ فتح في QuickStatements"}
             </a>
           </div>
-          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-            <button id="btn-copy-qs-line" class="btn" style="flex: 1; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;">
+          <div class="rv-btn-row">
+            <button id="btn-copy-qs-line" class="btn rv-btn rv-btn-ghost">
               📋 ${t.btnQuickStatements}
             </button>
-            <button id="btn-live-verify" class="btn btn-primary" style="flex: 1; font-size: 0.72rem;">
+            <button id="btn-live-verify" class="btn btn-primary rv-btn">
               🔍 ${t.btnLiveVerify} (V)
             </button>
           </div>
@@ -392,19 +392,19 @@ function selectReverseItem(item, marker = null, skipFly = false) {
         desc = `${t.actionRemoveTag}: <code>${escapeHtml(fix.tag)}</code>`;
       }
       actionHtml = `
-        <div class="reverse-action-card" style="border-color: rgba(255, 51, 102, 0.4); background: rgba(255, 51, 102, 0.08);">
-          <div class="reverse-action-header" style="color: #ff3366;">🛠️ ${t.labelSuggestedFix}</div>
-          <div style="font-size: 0.76rem; margin-bottom: 8px;">${desc}</div>
-          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px;">
-            <button id="btn-osm-repair-tag" class="btn btn-osm-repair" style="flex: 1; font-size: 0.72rem;">
+        <div class="reverse-action-card reverse-action-card--osm">
+          <div class="reverse-action-header">🛠️ ${t.labelSuggestedFix}</div>
+          <div class="rv-desc">${desc}</div>
+          <div class="rv-btn-row rv-btn-row--spaced">
+            <button id="btn-osm-repair-tag" class="btn btn-osm-repair rv-btn">
               ${t.btnOsmRepairTag || "🛠️ إصلاح الوسم في OSM مباشرة"}
             </button>
           </div>
-          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-            <button id="btn-reverse-josm" class="btn" style="flex: 1; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;">
+          <div class="rv-btn-row">
+            <button id="btn-reverse-josm" class="btn rv-btn rv-btn-ghost">
               🗺️ فتح في JOSM (J)
             </button>
-            <button id="btn-reverse-id" class="btn" style="flex: 1; font-size: 0.72rem; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;">
+            <button id="btn-reverse-id" class="btn rv-btn rv-btn-ghost">
               ✏️ محرر iD (I)
             </button>
           </div>
@@ -462,12 +462,12 @@ function selectReverseItem(item, marker = null, skipFly = false) {
     ${actionHtml}
 
     <!-- External Navigation Links -->
-    <div class="inspector-section" style="margin-top: 10px;">
-      <div style="display: flex; gap: 6px;">
-        <a href="${osmUrl}" target="_blank" rel="noopener" class="btn" style="flex: 1; font-size: 0.72rem; text-align: center; text-decoration: none; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;">
+    <div class="inspector-section rv-external-links">
+      <div class="rv-btn-row rv-btn-row--nowrap">
+        <a href="${osmUrl}" target="_blank" rel="noopener" class="btn rv-btn rv-btn-ghost rv-link-btn">
           🌐 عرض في OSM
         </a>
-        <a href="${wdUrl}" target="_blank" rel="noopener" class="btn" style="flex: 1; font-size: 0.72rem; text-align: center; text-decoration: none; background: var(--color-surface); border: 1px solid var(--panel-border); color: #fff;">
+        <a href="${wdUrl}" target="_blank" rel="noopener" class="btn rv-btn rv-btn-ghost rv-link-btn">
           🏛️ عرض في Wikidata
         </a>
       </div>
@@ -631,10 +631,10 @@ function refreshReverseViewAfterPush() {
   const panel = document.getElementById("inspector-content");
   if (panel) {
     panel.innerHTML = `
-      <div class="empty-state" style="padding: 24px; text-align: center;">
-        <div class="empty-icon" style="font-size: 2.2rem; margin-bottom: 8px;">✅</div>
-        <h4 style="color: #00ff87; margin-bottom: 6px;">${currentLang === "ar" ? "تم إنجاز التدقيق والربط بنجاح!" : "Action completed successfully!"}</h4>
-        <p style="font-size: 0.8rem; color: var(--color-text-muted);">${currentLang === "ar" ? "تم تسجيل العملية محلياً وتحديث الخريطة والقوائم فوراً." : "Recorded locally; map and lists updated."}</p>
+      <div class="empty-state done-state">
+        <div class="empty-icon">✅</div>
+        <h4>${currentLang === "ar" ? "تم إنجاز التدقيق والربط بنجاح!" : "Action completed successfully!"}</h4>
+        <p>${currentLang === "ar" ? "تم تسجيل العملية محلياً وتحديث الخريطة والقوائم فوراً." : "Recorded locally; map and lists updated."}</p>
       </div>
     `;
   }
@@ -900,7 +900,7 @@ function selectItem(item, marker = null, skipFly = false) {
     }
     candHtml = `
       <div class="candidate-box">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <div class="candidate-box-head">
           <strong>🎯 ${currentLang === 'ar' ? 'عنصر مرشح مقترح بالذكاء الاصطناعي:' : 'AI Suggested OSM Candidate:'}</strong>
           ${confidenceBadge}
         </div>
@@ -1008,7 +1008,7 @@ function selectItem(item, marker = null, skipFly = false) {
         ${wikiHtml}
         <button id="btn-live-verify" class="btn btn-verify">⚡ ${t.btnLiveVerify}</button>
       </div>
-      <div id="live-verify-result" class="verify-feedback" style="display: none;"></div>
+      <div id="live-verify-result" class="verify-feedback"></div>
     </div>
 
     ${researchSuiteHtml}
@@ -1317,9 +1317,9 @@ window.openSingleLinkModal = function(osmRef, qid, featureName, callback) {
         } else {
           feedbackEl.className = "verify-feedback success";
           feedbackEl.innerHTML = `
-            <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="verify-success-body">
               <div><strong>✓ ${t.linkSuccess}</strong> <a href="${res.changesetUrl}" target="_blank" rel="noopener" class="qid-link">#${res.changesetId} ↗</a></div>
-              <div style="font-size: 0.72rem;"><a href="${res.url}" target="_blank" rel="noopener">OSM: <code>${escapeHtml(osmRef)}</code> (v${escapeHtml(res.version)}) ↗</a></div>
+              <div class="verify-success-ref"><a href="${res.url}" target="_blank" rel="noopener">OSM: <code>${escapeHtml(osmRef)}</code> (v${escapeHtml(res.version)}) ↗</a></div>
             </div>
           `;
         }
