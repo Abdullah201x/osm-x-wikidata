@@ -2646,6 +2646,27 @@ kbd, .kbd-inline {
   }
 }
 
+
+/* Tag-repair review dialog (live OSM tags vs. proposed change). */
+.tag-repair-card { width: 560px; max-width: 94vw; }
+.tag-repair-target { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; margin: 6px 0 10px; }
+.tag-repair-target a { color: var(--color-primary); text-decoration: none; }
+.tag-repair-version { color: var(--color-text-muted); font-size: 0.74rem; }
+.tag-repair-alert { font-size: 0.78rem; line-height: 1.45; padding: 8px 10px; margin-bottom: 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--panel-border); color: var(--color-text-muted); }
+.tag-repair-alert--danger { background: rgba(255, 51, 102, 0.12); border-color: rgba(255, 51, 102, 0.5); color: #ff8fab; }
+.tag-repair-alert[hidden] { display: none; }
+.tag-repair-diff-wrap { max-height: 240px; overflow: auto; border: 1px solid var(--panel-border); border-radius: 8px; margin-bottom: 12px; }
+.tag-repair-diff { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+.tag-repair-diff th { position: sticky; top: 0; background: #111827; color: var(--color-text-muted); font-weight: 600; text-align: start; padding: 6px 8px; }
+.tag-repair-diff td { padding: 5px 8px; border-top: 1px solid rgba(255, 255, 255, 0.05); word-break: break-word; vertical-align: top; }
+.tag-repair-diff td code { font-size: 0.74rem; }
+.tag-repair-diff tr.diff-same td { color: var(--color-text-muted); opacity: 0.7; }
+.tag-repair-diff tr.diff-modify td.diff-before,
+.tag-repair-diff tr.diff-delete td.diff-before { background: rgba(255, 51, 102, 0.14); color: #ff8fab; text-decoration: line-through; }
+.tag-repair-diff tr.diff-modify td.diff-after,
+.tag-repair-diff tr.diff-add td.diff-after { background: rgba(0, 255, 135, 0.12); color: #6effb7; font-weight: 600; }
+.tag-repair-diff td.diff-absent { font-style: italic; text-decoration: none; opacity: 0.75; }
+
 /* ==========================================================================
    CSP: no inline style attributes (style-src 'self', no 'unsafe-inline').
    Everything below replaces former style="…" strings in index.html / js/.
@@ -2668,7 +2689,8 @@ kbd, .kbd-inline {
 #history-page-modal,
 #history-empty-state,
 #loading-indicator,
-#live-verify-result {
+#live-verify-result,
+#tag-repair-modal {
   display: none;
 }
 #batch-progress-bar-fill { width: 0%; }

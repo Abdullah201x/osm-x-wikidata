@@ -548,28 +548,54 @@ ${serializer.serializeToString(elemNode)}
     };
   },
 
+  /** Ordered [[k, v], ...] of an OSM element node's tags. */
+  _elementTags(elemNode) {
+    return Array.from(elemNode.querySelectorAll("tag")).map((tag) => [tag.getAttribute("k"), tag.getAttribute("v")]);
+  },
+
   /**
-   * Safely repairs an OSM element's tag (replace, migrate, or remove).
-   * 
+   * Tag-level diff between two [[k, v], ...] lists, in the order keys first appear.
+   * @returns {Array<{key: string, before: string|null, after: string|null, op: "add"|"modify"|"delete"|"same"}>}
+   */
+  diffTags(beforeTags, afterTags) {
+    const before = new Map(beforeTags);
+    const after = new Map(afterTags);
+    const keys = [...new Set([...before.keys(), ...after.keys()])];
+    return keys.map((key) => {
+      const b = before.has(key) ? before.get(key) : null;
+      const a = after.has(key) ? after.get(key) : null;
+      let op = "same";
+      if (b === null) op = "add";
+      else if (a === null) op = "delete";
+      else if (a !== b) op = "modify";
+      return { key, before: b, after: a, op };
+    });
+  },
+
+  /**
+   * Step 1 of a tag repair: reads the element's LIVE version (one single-element
+   * GET) and computes the proposed change without writing anything.
+   *
    * @param {string} osmRef - "node/123", "way/456", or "relation/789"
    * @param {string} repairType - "replace" | "migrate" | "remove"
-   * @param {Object} options - { oldQid, newQid, targetKey, customComment, featureName, countryCode }
-   * @returns {Promise<Object>} Result with changesetId, newVersion, etc.
+   * @param {Object} options - { newQid, fromTag, targetKey, expectedValue, featureName, countryCode, qid }
+   *   expectedValue: the `fromTag` value the dataset scan saw. When given and the
+   *   live value differs, the preview is marked `stale` and must not be applied.
+   * @returns {Promise<Object>} preview: { ref, repairType, fromTag, liveValue, version,
+   *   diff, changed, stale, defaultComment, ... }
    */
-  async repairOsmTag(osmRef, repairType, options = {}) {
-    const token = localStorage.getItem("osm_access_token");
-    if (!token) {
-      throw new Error("NOT_AUTHENTICATED");
-    }
-
+  async previewOsmTagRepair(osmRef, repairType, options = {}) {
     const ref = this.parseOsmRef(osmRef);
     if (!ref) {
       throw new Error(`Invalid OSM Reference: "${osmRef}"`);
     }
+    if (!["replace", "migrate", "remove"].includes(repairType)) {
+      throw new Error(`Unknown repairType: ${repairType}`);
+    }
 
     const urls = this.getUrls();
 
-    // 1. Fetch current element XML
+    // Fetch the current element XML (single element, user-triggered).
     const elemUrl = `${urls.apiBase}/api/0.6/${ref.type}/${ref.id}`;
     const elemRes = await fetch(elemUrl);
     if (!elemRes.ok) {
@@ -587,21 +613,21 @@ ${serializer.serializeToString(elemNode)}
       throw new Error(`Failed to parse XML response for ${ref.type}/${ref.id}`);
     }
 
+    const beforeTags = this._elementTags(elemNode);
     const fromTag = options.fromTag || "wikidata";
     let existingFromTag = null;
-    const allTags = elemNode.querySelectorAll("tag");
-    for (const tag of allTags) {
+    for (const tag of elemNode.querySelectorAll("tag")) {
       if (tag.getAttribute("k") === fromTag) {
         existingFromTag = tag;
         break;
       }
     }
     const oldVal = existingFromTag ? existingFromTag.getAttribute("v") : null;
+    const normQid = (raw) => (raw ? (String(raw).startsWith("Q") ? String(raw) : `Q${raw}`) : "");
 
     let comment = "";
     if (repairType === "replace") {
-      const rawQid = options.newQid || "";
-      const cleanNewQid = rawQid ? (String(rawQid).startsWith("Q") ? String(rawQid) : `Q${rawQid}`) : "";
+      const cleanNewQid = normQid(options.newQid || "");
       if (existingFromTag) {
         existingFromTag.setAttribute("v", cleanNewQid);
       } else {
@@ -610,11 +636,10 @@ ${serializer.serializeToString(elemNode)}
         newTag.setAttribute("v", cleanNewQid);
         elemNode.appendChild(newTag);
       }
-      comment = options.customComment || `Update ${fromTag} tag on ${ref.type}/${ref.id} (${oldVal || ""} -> ${cleanNewQid}) #osm-wikidata-gcc`;
+      comment = `Update ${fromTag} tag on ${ref.type}/${ref.id} (${oldVal || ""} -> ${cleanNewQid}) #osm-wikidata-gcc`;
     } else if (repairType === "migrate") {
       const targetKey = options.targetKey || "brand:wikidata";
-      const rawQid = options.newQid || oldVal || "";
-      const cleanMigrateQid = rawQid ? (String(rawQid).startsWith("Q") ? String(rawQid) : `Q${rawQid}`) : "";
+      const cleanMigrateQid = normQid(options.newQid || oldVal || "");
       if (existingFromTag) {
         elemNode.removeChild(existingFromTag);
       }
@@ -633,23 +658,70 @@ ${serializer.serializeToString(elemNode)}
         newTag.setAttribute("v", cleanMigrateQid);
         elemNode.appendChild(newTag);
       }
-      comment = options.customComment || `Migrate ${fromTag} tag to ${targetKey}=${cleanMigrateQid} on ${ref.type}/${ref.id} #osm-wikidata-gcc`;
-    } else if (repairType === "remove") {
+      comment = `Migrate ${fromTag} tag to ${targetKey}=${cleanMigrateQid} on ${ref.type}/${ref.id} #osm-wikidata-gcc`;
+    } else {
       if (existingFromTag) {
         elemNode.removeChild(existingFromTag);
       }
-      comment = options.customComment || `Remove invalid ${fromTag} tag (${oldVal || ""}) from ${ref.type}/${ref.id} #osm-wikidata-gcc`;
-    } else {
-      throw new Error(`Unknown repairType: ${repairType}`);
+      comment = `Remove invalid ${fromTag} tag (${oldVal || ""}) from ${ref.type}/${ref.id} #osm-wikidata-gcc`;
     }
 
-    // 2. Open Changeset
+    const diff = this.diffTags(beforeTags, this._elementTags(elemNode));
+    const hasExpected = options.expectedValue !== undefined && options.expectedValue !== null;
+    const stale = hasExpected && String(oldVal ?? "").trim() !== String(options.expectedValue).trim();
+
+    return {
+      ref,
+      osmRef: `${ref.type}/${ref.id}`,
+      repairType,
+      fromTag,
+      liveValue: oldVal,
+      expectedValue: hasExpected ? String(options.expectedValue) : null,
+      version: elemNode.getAttribute("version"),
+      diff,
+      changed: diff.some((row) => row.op !== "same"),
+      stale,
+      defaultComment: comment,
+      options,
+      _elemNode: elemNode,
+    };
+  },
+
+  /**
+   * Step 2 of a tag repair: uploads a preview from previewOsmTagRepair() in its
+   * own changeset. Refuses stale or no-op previews.
+   *
+   * @param {Object} preview - from previewOsmTagRepair()
+   * @param {Object} [opts] - { comment } the (possibly user-edited) changeset comment
+   * @returns {Promise<Object>} Result with changesetId, version, url, changesetUrl
+   */
+  async applyOsmTagRepair(preview, opts = {}) {
+    const token = localStorage.getItem("osm_access_token");
+    if (!token) {
+      throw new Error("NOT_AUTHENTICATED");
+    }
+    if (!preview || !preview._elemNode) {
+      throw new Error("No repair preview to apply");
+    }
+    if (preview.stale) {
+      throw new Error("STALE_ELEMENT");
+    }
+    if (!preview.changed) {
+      throw new Error("NO_CHANGES");
+    }
+
+    const { ref, repairType, options } = preview;
+    const elemNode = preview._elemNode;
+    const comment = this._truncateTag(String(opts.comment || "").trim() || preview.defaultComment);
+    const urls = this.getUrls();
+
+    // Open Changeset
     const appOrigin = (typeof window !== "undefined" && window.location.origin) ? window.location.origin : "https://wikidata.saudiosm.org";
     const changesetXml = `<?xml version="1.0" encoding="UTF-8"?>
 <osm version="0.6" generator="OSM x Wikidata GCC Linker">
   <changeset>
     <tag k="created_by" v="OSM x Wikidata GCC Linker (${appOrigin})"/>
-    <tag k="comment" v="${this._escapeXml(this._truncateTag(comment))}"/>
+    <tag k="comment" v="${this._escapeXml(comment)}"/>
     <tag k="source" v="Wikidata; OpenStreetMap Quality Assurance"/>
     <tag k="hashtags" v="#osm-wikidata-gcc"/>
   </changeset>
@@ -674,7 +746,9 @@ ${serializer.serializeToString(elemNode)}
 
     const changesetId = (await csRes.text()).trim();
 
-    // 3. Update the element inside the changeset
+    // Update the element inside the changeset. The element keeps the version we
+    // previewed, so if someone edited it since, OSM answers 409 instead of
+    // silently overwriting their change.
     elemNode.setAttribute("changeset", changesetId);
     const serializer = new XMLSerializer();
     const updatedElemXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -700,7 +774,7 @@ ${serializer.serializeToString(elemNode)}
 
       newVersion = (await updateRes.text()).trim();
     } finally {
-      // 4. Close changeset
+      // Close changeset
       try {
         await fetch(`${urls.apiBase}/api/0.6/changeset/${changesetId}/close`, {
           method: "PUT",
@@ -712,14 +786,17 @@ ${serializer.serializeToString(elemNode)}
     }
 
     const changesetUrl = this.getChangesetUrl(changesetId);
+    const oldVal = preview.liveValue;
 
-    // 5. Save record to persistent history
+    // Save record to persistent history
     this.saveChangesetRecord({
       changesetId: changesetId,
       changesetUrl: changesetUrl,
       timestamp: Date.now(),
       user: this.getUserName() || "OSM User",
       isBatch: false,
+      isRepair: true,
+      repairType: repairType,
       itemCount: 1,
       comment: comment,
       country: options.countryCode || "gcc",
@@ -734,7 +811,7 @@ ${serializer.serializeToString(elemNode)}
       ]
     });
 
-    // 6. Mark resolved optimistically
+    // Mark resolved optimistically
     if (typeof WikidataEdit !== "undefined" && typeof WikidataEdit.markReverseResolved === "function") {
       const itemQid = options.qid || options.newQid || oldVal || "";
       WikidataEdit.markReverseResolved(`${ref.type}${ref.id}:${itemQid}:repair`, {
@@ -762,6 +839,22 @@ ${serializer.serializeToString(elemNode)}
       url: `https://www.openstreetmap.org/${ref.type}/${ref.id}`,
       changesetUrl: changesetUrl
     };
+  },
+
+  /**
+   * Preview + apply in one step (no review dialog). The UI uses the two steps
+   * separately so the mapper sees the live diff first.
+   *
+   * @param {string} osmRef - "node/123", "way/456", or "relation/789"
+   * @param {string} repairType - "replace" | "migrate" | "remove"
+   * @param {Object} options - previewOsmTagRepair() options plus { customComment }
+   */
+  async repairOsmTag(osmRef, repairType, options = {}) {
+    if (!localStorage.getItem("osm_access_token")) {
+      throw new Error("NOT_AUTHENTICATED");
+    }
+    const preview = await this.previewOsmTagRepair(osmRef, repairType, options);
+    return this.applyOsmTagRepair(preview, { comment: options.customComment });
   },
 
   /**

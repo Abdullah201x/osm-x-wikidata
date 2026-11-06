@@ -9,8 +9,8 @@ const crossFile = Object.fromEntries([
   'OsmAuth', 'ImportAccess', 'WikidataAuth', 'WikidataEdit', 'LiveVerifier',
   // js/batch_manager.js, history_manager.js, map.js
   'BatchManager', 'HistoryManager', 'MapController',
-  // js/modal_a11y.js
-  'ModalA11y',
+  // js/modal_a11y.js, tag_repair_dialog.js
+  'ModalA11y', 'TagRepairDialog',
   // js/app.js state and helpers used by the files loaded before it
   'currentLang', 'currentCountry', 'currentMode', 'loadedDataset', 'loadedReverseDataset',
   'selectedItem', 'applyFilters', 'selectItem', 'updateDatasetItemStatus', 'refreshViewAfterPush',

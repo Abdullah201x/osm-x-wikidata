@@ -597,29 +597,43 @@ function selectReverseItem(item, marker = null, skipFly = false) {
         opts.fromTag = fix.tag || "wikidata";
       }
 
-      const confirmed = confirm(currentLang === "ar"
-        ? `هل تريد تأكيد إصلاح الوسم ونشر مجموعة تعديل في OSM للمعلم ${fullOsmType}/${osmId}؟`
-        : `Confirm tag repair and publish changeset to OSM for ${fullOsmType}/${osmId}?`);
+      // The dataset scan saw this value in `fromTag`; if the live element differs,
+      // someone edited it since and the dialog blocks the repair.
+      opts.expectedValue = item.qid;
 
-      if (!confirmed) return;
-
+      const idleLabel = osmRepairBtn.innerText;
       osmRepairBtn.disabled = true;
-      osmRepairBtn.innerText = currentLang === "ar" ? "جارٍ النشر في OSM..." : "Publishing to OSM...";
+      osmRepairBtn.innerText = t.tagRepairLoading;
 
+      let preview;
       try {
-        const res = await OsmAuth.repairOsmTag(`${fullOsmType}/${osmId}`, repairType, opts);
-        window.dispatchEvent(new CustomEvent("osm-history-updated"));
-        alert(currentLang === "ar"
-          ? `✓ تم نشر مجموعة التعديل بنجاح!\nرقم المجموعة: #${res.changesetId}\nرابط المعلم: ${res.url}`
-          : `✓ Changeset published successfully!\nChangeset: #${res.changesetId}\nElement: ${res.url}`);
-        refreshReverseViewAfterPush();
+        preview = await OsmAuth.previewOsmTagRepair(`${fullOsmType}/${osmId}`, repairType, opts);
       } catch (err) {
-        console.error("OSM repair error:", err);
+        console.error("OSM repair preview error:", err);
+        alert(`${t.tagRepairFetchFailed}\n${err.message}`);
+        return;
+      } finally {
         osmRepairBtn.disabled = false;
-        osmRepairBtn.innerText = t.btnOsmRepairTag || "🛠️ إصلاح الوسم في OSM مباشرة";
-        alert(currentLang === "ar"
-          ? `تعذر تحديث عنصر OSM:\n${err.message}`
-          : `Failed to update OSM element:\n${err.message}`);
+        osmRepairBtn.innerText = idleLabel;
+      }
+
+      const res = await TagRepairDialog.open(preview, {
+        t,
+        onConfirm: (comment) => OsmAuth.applyOsmTagRepair(preview, { comment }),
+      });
+      if (!res) return;
+
+      window.dispatchEvent(new CustomEvent("osm-history-updated"));
+      refreshReverseViewAfterPush();
+      const done = document.querySelector("#inspector-content .done-state");
+      if (done) {
+        const link = document.createElement("a");
+        link.href = res.changesetUrl;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.className = "qid-link";
+        link.textContent = `${t.tagRepairSuccess.replace("{id}", res.changesetId)} ↗`;
+        done.appendChild(link);
       }
     });
   }

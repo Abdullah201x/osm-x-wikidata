@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <!-- Old GitHub Pages URL -> wikidata.saudiosm.org -->
-  <script src="js/pages_redirect.js?v=16"></script>
+  <script src="js/pages_redirect.js?v=17"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ربط أوبن ستريت ماب وويكي بيانات لدول الخليج</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗺️</text></svg>" />
   
   <!-- Leaflet & MarkerCluster CSS (Self-Hosted) -->
-  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=16" />
-  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css?v=16" />
-  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.Default.css?v=16" />
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=17" />
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css?v=17" />
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.Default.css?v=17" />
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="css/style.css?v=16" />
+  <link rel="stylesheet" href="css/style.css?v=17" />
 </head>
 <body>
 
@@ -412,6 +412,53 @@
     </div>
   </div>
 
+  <!-- OSM Tag Repair Review Modal (live diff + editable comment) -->
+  <div id="tag-repair-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="tag-repair-modal-title">
+    <div class="modal-card tag-repair-card">
+      <div class="modal-header-row">
+        <h3 id="tag-repair-modal-title" data-i18n="tagRepairTitle">مراجعة إصلاح الوسم</h3>
+        <button type="button" class="btn-close-modal" id="btn-close-tag-repair" aria-label="إغلاق / Close">&times;</button>
+      </div>
+      <p class="modal-sub-desc" data-i18n="tagRepairDesc">هذه وسوم العنصر الحالية على OpenStreetMap الآن. راجع التغيير قبل النشر.</p>
+
+      <div class="tag-repair-target">
+        <a id="tag-repair-element-link" href="https://www.openstreetmap.org/" target="_blank" rel="noopener"><code id="tag-repair-osmref"></code> ↗</a>
+        <span id="tag-repair-version" class="tag-repair-version"></span>
+      </div>
+
+      <div id="tag-repair-stale" class="tag-repair-alert tag-repair-alert--danger" role="alert" hidden></div>
+      <div id="tag-repair-nochange" class="tag-repair-alert" hidden data-i18n="tagRepairNoChanges">العنصر الحالي يحمل الوسوم المقترحة بالفعل؛ لا يوجد ما يُنشر.</div>
+
+      <div class="tag-repair-diff-wrap">
+        <table class="tag-repair-diff">
+          <thead>
+            <tr>
+              <th data-i18n="tagRepairColKey">الوسم</th>
+              <th data-i18n="tagRepairColBefore">الحالي</th>
+              <th data-i18n="tagRepairColAfter">بعد الإصلاح</th>
+            </tr>
+          </thead>
+          <tbody id="tag-repair-diff-body"></tbody>
+        </table>
+      </div>
+
+      <div class="comment-field-group">
+        <div class="comment-field-header">
+          <label class="section-label" for="tag-repair-comment" data-i18n="changesetCommentLabel">تعليق مجموعة التعديل (Changeset Comment):</label>
+          <span class="char-counter"><span id="tag-repair-char-count">0</span> / 255</span>
+        </div>
+        <textarea id="tag-repair-comment" class="comment-textarea" rows="3"></textarea>
+      </div>
+
+      <div id="tag-repair-error" class="tag-repair-alert tag-repair-alert--danger" role="alert" hidden></div>
+
+      <div class="modal-actions-footer">
+        <button id="btn-cancel-tag-repair" class="btn btn-modal-cancel" data-i18n="btnCancel">إلغاء</button>
+        <button id="btn-confirm-tag-repair" class="btn btn-osm-repair" data-i18n="tagRepairPublish">🚀 نشر الإصلاح في OSM</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Changeset Batch Staging Queue Modal -->
   <div id="batch-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="batch-modal-title">
     <div class="modal-card batch-modal-card">
@@ -548,25 +595,26 @@
   </div>
 
   <!-- Leaflet & MarkerCluster JS (Self-Hosted) -->
-  <script src="vendor/leaflet/leaflet.js?v=16"></script>
-  <script src="vendor/markercluster/leaflet.markercluster.js?v=16"></script>
+  <script src="vendor/leaflet/leaflet.js?v=17"></script>
+  <script src="vendor/markercluster/leaflet.markercluster.js?v=17"></script>
 
   <!-- Application Modules -->
-  <script src="js/translations.js?v=16"></script>
-  <script src="js/arabic_utils.js?v=16"></script>
-  <script src="js/tag_generator.js?v=16"></script>
-  <script src="js/wikidata_labels.js?v=16"></script>
-  <script src="js/tools.js?v=16"></script>
-  <script src="js/osm_oauth.js?v=16"></script>
-  <script src="js/import_access.js?v=16"></script>
-  <script src="js/wikidata_auth.js?v=16"></script>
-  <script src="js/wikidata_edit.js?v=16"></script>
-  <script src="js/live_verify.js?v=16"></script>
-  <script src="js/batch_manager.js?v=16"></script>
-  <script src="js/history_manager.js?v=16"></script>
-  <script src="js/map.js?v=16"></script>
-  <script src="js/modal_a11y.js?v=16"></script>
-  <script src="js/app.js?v=16"></script>
+  <script src="js/translations.js?v=17"></script>
+  <script src="js/arabic_utils.js?v=17"></script>
+  <script src="js/tag_generator.js?v=17"></script>
+  <script src="js/wikidata_labels.js?v=17"></script>
+  <script src="js/tools.js?v=17"></script>
+  <script src="js/osm_oauth.js?v=17"></script>
+  <script src="js/import_access.js?v=17"></script>
+  <script src="js/wikidata_auth.js?v=17"></script>
+  <script src="js/wikidata_edit.js?v=17"></script>
+  <script src="js/live_verify.js?v=17"></script>
+  <script src="js/batch_manager.js?v=17"></script>
+  <script src="js/history_manager.js?v=17"></script>
+  <script src="js/map.js?v=17"></script>
+  <script src="js/tag_repair_dialog.js?v=17"></script>
+  <script src="js/modal_a11y.js?v=17"></script>
+  <script src="js/app.js?v=17"></script>
 
 </body>
 </html>
