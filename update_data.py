@@ -30,6 +30,7 @@ from pipeline.wikidata_fetcher import fetch_country_wikidata
 from pipeline.matcher import match_country_items
 from pipeline.reverse_matcher import run_reverse_analysis
 from pipeline.linkable import write_linkable
+from pipeline.progress import append_progress
 
 def main():
     parser = argparse.ArgumentParser(description="Update OSM x Wikidata GCC datasets.")
@@ -191,6 +192,9 @@ def main():
         json.dump(summary, f, ensure_ascii=False, indent=2)
     os.replace(tmp_summary, summary_file)
 
+    # One row per country for the progress-over-time sparklines
+    progress_file = append_progress(DATA_DIR, summary)
+
     elapsed = time.time() - start_time
     print("\n==================================================")
     print(" PIPELINE RUN COMPLETE")
@@ -207,6 +211,7 @@ def main():
         print(f" Broken OSM Tags:  {rt['broken_osm_tag']:,} (🔴 needs OSM tag fix)")
         print(f" Conflicts:        {rt['conflict']:,} (⚠️ multi-tag / ID mismatch)")
     print(f" Summary Saved:    {summary_file}")
+    print(f" Progress Saved:   {progress_file}")
     print("==================================================")
 
 if __name__ == "__main__":

@@ -33,6 +33,20 @@ test.describe('CSP styles (no unsafe-inline)', () => {
     expect(await guard.collectCsp()).toEqual([]);
   });
 
+  test('About shows per-country progress sparklines from data/progress.json', async ({ page, baseURL }) => {
+    const guard = await guardPage(page, baseURL);
+    await openApp(page, { lang: 'en' });
+    await page.locator('#btn-about-modal').click();
+    const rows = page.locator('#about-progress tbody tr');
+    await expect(rows).toHaveCount(6);
+    await expect(page.locator('#about-progress tr[data-cc="sa"] .progress-country')).toHaveText('Saudi Arabia');
+    await expect(page.locator('#about-progress tr[data-cc="sa"] svg.progress-spark polyline')).toHaveCount(2);
+
+    expect(guard.seen.pageErrors).toEqual([]);
+    expect(guard.seen.failedSameOrigin).toEqual([]);
+    expect(await guard.collectCsp()).toEqual([]);
+  });
+
   test('map marker colours come from CSS classes', async ({ page, baseURL }) => {
     const guard = await guardPage(page, baseURL);
     await openApp(page, { lang: 'en', mode: 'forward' });

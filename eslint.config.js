@@ -10,7 +10,7 @@ const crossFile = Object.fromEntries([
   // js/batch_manager.js, history_manager.js, map.js
   'BatchManager', 'HistoryManager', 'MapController',
   // js/modal_a11y.js, tag_repair_dialog.js
-  'ModalA11y', 'TagRepairDialog',
+  'ModalA11y', 'TagRepairDialog', 'ProgressChart',
   // js/app.js state and helpers used by the files loaded before it
   'currentLang', 'currentCountry', 'currentMode', 'loadedDataset', 'loadedReverseDataset',
   'selectedItem', 'applyFilters', 'selectItem', 'updateDatasetItemStatus', 'refreshViewAfterPush',

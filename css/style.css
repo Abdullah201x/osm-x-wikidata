@@ -2573,6 +2573,30 @@ kbd, .kbd-inline {
 .deep-link-notice h4 { color: var(--color-candidate); margin-bottom: 6px; }
 .deep-link-notice p { font-size: 0.8rem; color: var(--color-text-muted); line-height: 1.5; }
 
+/* About: progress over time */
+.about-progress-box { margin-bottom: 16px; }
+.about-progress-desc { font-size: 0.76rem; color: var(--color-text-muted); margin: 4px 0 8px; }
+.progress-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.progress-table th { text-align: start; color: var(--color-text-muted); font-weight: 600; padding: 4px 6px; }
+.progress-table td { padding: 4px 6px; border-top: 1px solid rgba(255, 255, 255, 0.06); vertical-align: middle; }
+.progress-country { white-space: nowrap; }
+.progress-cell { white-space: nowrap; }
+.progress-spark { width: 96px; height: 24px; vertical-align: middle; margin-inline-end: 6px; }
+.progress-spark polyline { stroke: var(--color-text-muted); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.progress-spark circle { fill: var(--color-text-muted); }
+.progress-spark.trend-good polyline { stroke: var(--color-accent); }
+.progress-spark.trend-good circle { fill: var(--color-accent); }
+.progress-spark.trend-bad polyline { stroke: var(--color-missing); }
+.progress-spark.trend-bad circle { fill: var(--color-missing); }
+.progress-val { font-weight: 700; color: #fff; }
+.progress-delta { margin-inline-start: 6px; font-size: 0.72rem; color: var(--color-text-muted); }
+.progress-cell.trend-good .progress-delta { color: var(--color-accent); }
+.progress-cell.trend-bad .progress-delta { color: var(--color-missing); }
+.progress-caption, .progress-empty { font-size: 0.72rem; color: var(--color-text-muted); margin-top: 6px; }
+@media (max-width: 600px) {
+  .progress-spark { width: 64px; }
+}
+
 /* History: daily editing pace */
 .history-pace {
   display: flex;

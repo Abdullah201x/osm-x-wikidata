@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from typing import List, Tuple
 from pipeline.config import BASE_DIR, DATA_DIR, GCC_COUNTRIES
 from pipeline.linkable import derive_linkable
+from pipeline.progress import PROGRESS_FILE, validate_progress
 
 # Minimum fraction of the previously published count a dataset may drop to (20% maximum drop)
 MIN_RATIO = 0.8
@@ -213,6 +214,11 @@ def validate_all_datasets() -> List[str]:
                 errors.append("data/summary.json missing total_items or countries dict")
         except Exception as e:
             errors.append(f"data/summary.json invalid: {e}")
+
+    print("\n[Validator] Checking progress.json...")
+    progress_errors = validate_progress(os.path.join(DATA_DIR, PROGRESS_FILE))
+    errors.extend(progress_errors)
+    print(f"  [{'FAIL' if progress_errors else 'OK'}] data/{PROGRESS_FILE}")
 
     return errors
 

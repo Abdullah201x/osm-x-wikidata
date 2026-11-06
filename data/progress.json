@@ -1,0 +1,8 @@
+{"version": 1, "rows": [
+{"date":"2026-11-01","cc":"ae","linked":1167,"candidates":931,"missing_backlink":946,"broken":42,"conflict":257},
+{"date":"2026-11-01","cc":"bh","linked":181,"candidates":92,"missing_backlink":169,"broken":8,"conflict":15},
+{"date":"2026-11-01","cc":"kw","linked":84,"candidates":107,"missing_backlink":86,"broken":6,"conflict":35},
+{"date":"2026-11-01","cc":"om","linked":742,"candidates":428,"missing_backlink":661,"broken":0,"conflict":36},
+{"date":"2026-11-01","cc":"qa","linked":176,"candidates":212,"missing_backlink":144,"broken":5,"conflict":22},
+{"date":"2026-11-01","cc":"sa","linked":1228,"candidates":5620,"missing_backlink":1146,"broken":59,"conflict":1051}
+]}

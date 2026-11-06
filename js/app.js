@@ -1917,13 +1917,19 @@ function setupEventListeners() {
   const linkDwg = document.getElementById("link-open-dwg-policy");
   const aboutModal = document.getElementById("about-modal");
   const btnCloseAbout = document.getElementById("btn-close-about");
+  const openAbout = () => {
+    aboutModal.style.display = "flex";
+    if (typeof ProgressChart !== "undefined") {
+      ProgressChart.show({ t: TRANSLATIONS[currentLang], lang: currentLang, countries: summaryData ? summaryData.countries : {} });
+    }
+  };
   if (btnAbout && aboutModal) {
-    btnAbout.onclick = () => aboutModal.style.display = "flex";
+    btnAbout.onclick = openAbout;
   }
   if (linkDwg && aboutModal) {
     linkDwg.onclick = (e) => {
       e.preventDefault();
-      aboutModal.style.display = "flex";
+      openAbout();
     };
   }
   if (btnCloseAbout && aboutModal) {
