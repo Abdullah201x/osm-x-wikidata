@@ -96,8 +96,15 @@ const WikidataEdit = {
         continue;
       }
       if (throttled || lagged) {
-        const err = new Error("Wikidata is busy right now. Please try again in a minute.");
+        // Say which signal fired: "busy" alone can't tell lag from a rate limit or an edge 503.
+        const detail = lagged
+          ? `maxlag: ${json.error.info || "replication lag"}`
+          : `HTTP ${res.status}${res.headers?.get?.("Retry-After") ? `, Retry-After ${res.headers.get("Retry-After")}s` : ""}`;
+        const body = lagged ? "" : (await res.text().catch(() => "")).slice(0, 500);
+        console.warn(`Wikidata write throttled (${detail})`, body);
+        const err = new Error(`Wikidata is busy right now. Please try again in a minute. (${detail})`);
         err.busy = true;
+        err.detail = detail;
         throw err;
       }
       if (!res.ok) throw new Error(`Wikidata API request failed: HTTP ${res.status}`);

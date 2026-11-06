@@ -222,8 +222,20 @@ describe('maxlag and rate-limit handling', () => {
     const calls = routeFetch([['/api/v1/edits/preview', okPreview], ['meta=tokens', csrf], ['crossorigin=1', lagged]]);
     const err = await WikidataEdit.addOsmBacklink('Q1', 'node', 1).catch((e) => e);
     expect(err.busy).toBe(true);
+    expect(err.message).toMatch(/maxlag: waiting for a database server/);
     expect(calls.filter((c) => c.url.includes('crossorigin=1') && c.init.method === 'POST')).toHaveLength(4);
     expect(calls.some((c) => c.url.includes('/rest.php/wikibase'))).toBe(false);
+  });
+
+  it('reports the HTTP status and Retry-After when persistently rate-limited', async () => {
+    routeFetch([
+      ['/api/v1/edits/preview', okPreview],
+      ['meta=tokens', csrf],
+      ['crossorigin=1', () => jsonResponse({}, { status: 429, headers: { 'Retry-After': '30' } })],
+    ]);
+    const err = await WikidataEdit.addOsmBacklink('Q1', 'node', 1).catch((e) => e);
+    expect(err.busy).toBe(true);
+    expect(err.detail).toBe('HTTP 429, Retry-After 30s');
   });
 
   it('falls back to the REST API when wbcreateclaim returns an ordinary error', async () => {
