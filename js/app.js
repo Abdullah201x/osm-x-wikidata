@@ -537,7 +537,10 @@ function selectReverseItem(item, marker = null, skipFly = false) {
       wdClaimBtn.innerText = currentLang === "ar" ? "جارٍ الإضافة إلى ويكي بيانات..." : "Adding statement to Wikidata...";
 
       try {
-        const result = await WikidataEdit.addOsmBacklink(qid, fullOsmType, osmId);
+        // One edit the user just clicked: tolerate the WDQS lag that blocks the strict default.
+        const result = await WikidataEdit.addOsmBacklink(qid, fullOsmType, osmId, null, {
+          maxlag: WikidataEdit.MAXLAG_INTERACTIVE_SECONDS
+        });
         window.dispatchEvent(new CustomEvent("osm-history-updated"));
         if (result.skipped) {
           alert(currentLang === "ar"

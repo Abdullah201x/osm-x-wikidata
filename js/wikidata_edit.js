@@ -65,7 +65,12 @@ const WikidataEdit = {
   },
 
   // Wikimedia asks write clients to back off when replication lag is high.
+  // Strict default (also used by the batch queue). Wikidata counts Query Service (WDQS)
+  // lag in maxlag, and that regularly sits above 5 s for hours.
   MAXLAG_SECONDS: 5,
+  // A single edit a person just clicked is not bulk load, so it tolerates more lag
+  // (Wikidata's own web UI sends no maxlag for human edits).
+  MAXLAG_INTERACTIVE_SECONDS: 15,
   MAX_ATTEMPTS: 4,
   MAX_RETRY_WAIT_SECONDS: 60,
 
@@ -162,6 +167,7 @@ const WikidataEdit = {
    * @param {string} [batchId] - Optional 8-char EditGroups batch hex
    * @param {Object} [options]
    * @param {number} [options.baserevid] - Revision the edit was prepared against
+   * @param {number} [options.maxlag] - Max replication/WDQS lag in seconds to accept (default MAXLAG_SECONDS)
    * @returns {Promise<Object>} Result object
    */
   async addOsmBacklink(qid, osmType, osmId, batchId = null, options = {}) {
@@ -222,7 +228,7 @@ const WikidataEdit = {
         snaktype: "value",
         value: JSON.stringify(idStr), // Wikibase requires string value JSON-encoded: "\"12345\""
         summary: summary,
-        maxlag: String(this.MAXLAG_SECONDS),
+        maxlag: String(options.maxlag ?? this.MAXLAG_SECONDS),
         token: csrfToken
       };
       if (baserevid > 0) fields.baserevid = String(baserevid);

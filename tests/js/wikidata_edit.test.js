@@ -227,6 +227,16 @@ describe('maxlag and rate-limit handling', () => {
     expect(calls.some((c) => c.url.includes('/rest.php/wikibase'))).toBe(false);
   });
 
+  it('sends maxlag=5 by default and the caller-supplied value for interactive edits', async () => {
+    const sentMaxlag = async (options) => {
+      const calls = routeFetch([['/api/v1/edits/preview', okPreview], ['meta=tokens', csrf], ['crossorigin=1', created]]);
+      await WikidataEdit.addOsmBacklink('Q1', 'node', 1, null, options);
+      return new URLSearchParams(writeCalls(calls)[0].init.body).get('maxlag');
+    };
+    expect(await sentMaxlag({})).toBe('5');
+    expect(await sentMaxlag({ maxlag: WikidataEdit.MAXLAG_INTERACTIVE_SECONDS })).toBe('15');
+  });
+
   it('reports the HTTP status and Retry-After when persistently rate-limited', async () => {
     routeFetch([
       ['/api/v1/edits/preview', okPreview],
