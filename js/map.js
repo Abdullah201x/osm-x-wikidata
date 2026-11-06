@@ -22,6 +22,7 @@ const MapController = {
     map = L.map("map", {
       center: [24.5, 48.0],
       zoom: 6,
+      maxZoom: 19,
       zoomControl: false,
       preferCanvas: true
     });
@@ -29,21 +30,41 @@ const MapController = {
     // Zoom control in top corner
     L.control.zoom({ position: "topright" }).addTo(map);
 
-    // Basemaps
+    // Basemaps (keyless Esri tiles only; no volunteer-run OSM tile servers, and no
+    // providers that need an API key). Label overlays keep names readable on every style.
+    // Labels sit above the tiles but below markers/vectors.
+    map.createPane("basemapLabels").style.zIndex = 250;
+    map.getPane("basemapLabels").style.pointerEvents = "none";
+
+    const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services";
+    const esri = (path, opts) =>
+      L.tileLayer(`${ESRI}/${path}/MapServer/tile/{z}/{y}/{x}`, {
+        maxNativeZoom: 19,
+        maxZoom: 19,
+        ...opts
+      });
+    const esriAttr = '&copy; <a href="https://www.esri.com/">Esri</a>';
+    const labels = (path) => esri(path, { pane: "basemapLabels", opacity: 0.9, attribution: "" });
+
     basemapLayers = {
-      dark: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
-        attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, HERE, Garmin',
-        maxZoom: 16
+      dark: L.layerGroup([
+        esri("Canvas/World_Dark_Gray_Base", { maxNativeZoom: 16, attribution: `${esriAttr}, HERE, Garmin` }),
+        labels("Canvas/World_Dark_Gray_Reference")
+      ]),
+      light: L.layerGroup([
+        esri("Canvas/World_Light_Gray_Base", { maxNativeZoom: 16, attribution: `${esriAttr}, HERE, Garmin` }),
+        labels("Canvas/World_Light_Gray_Reference")
+      ]),
+      streets: esri("World_Street_Map", {
+        attribution: `${esriAttr}, HERE, Garmin, USGS, NGA, FAO, OpenStreetMap contributors`
       }),
-      satellite: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-        attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, Earthstar Geographics',
-        maxZoom: 19
+      topo: esri("World_Topo_Map", {
+        attribution: `${esriAttr}, HERE, Garmin, USGS, NGA, FAO, OpenStreetMap contributors`
       }),
-      streets: L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: "abcd",
-        maxZoom: 20
-      })
+      satellite: L.layerGroup([
+        esri("World_Imagery", { attribution: `${esriAttr}, Maxar, Earthstar Geographics` }),
+        labels("Reference/World_Boundaries_and_Places")
+      ])
     };
 
     // Default to dark
@@ -78,6 +99,8 @@ const MapController = {
       }
     });
   },
+
+  BASEMAP_ORDER: ["dark", "light", "streets", "topo", "satellite"],
 
   switchBasemap(type) {
     if (basemapLayers[type] && currentBasemap !== basemapLayers[type]) {

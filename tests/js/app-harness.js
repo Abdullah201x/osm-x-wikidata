@@ -17,6 +17,7 @@ export function loadApp() {
     flyTo: vi.fn(),
     clearCandidatesFromMap: vi.fn(),
     switchBasemap: vi.fn(),
+    BASEMAP_ORDER: ['dark', 'light', 'streets', 'topo', 'satellite'],
   };
   globalThis.LiveVerifier = { getVerifiedCache: vi.fn(() => ({})) };
   globalThis.MappingTools = {

@@ -18,8 +18,10 @@ beforeEach(() => {
     <div id="shortcuts-modal" class="modal-overlay" style="display:none"></div>
     <div id="other-modal" class="modal-overlay" style="display:flex"></div>
     <button class="basemap-btn active" data-bm="dark"></button>
-    <button class="basemap-btn" data-bm="satellite"></button>
+    <button class="basemap-btn" data-bm="light"></button>
     <button class="basemap-btn" data-bm="streets"></button>
+    <button class="basemap-btn" data-bm="topo"></button>
+    <button class="basemap-btn" data-bm="satellite"></button>
     <input id="q" />`;
   vi.clearAllMocks();
   app.__app.set({ currentMode: 'forward', selectedItem: null, selectedItemIndex: -1, filteredItems: [], filteredReverseItems: [] });
@@ -47,12 +49,12 @@ describe('global shortcuts', () => {
 
   it('] and [ cycle the basemap forwards and backwards', () => {
     press(']');
-    expect(globalThis.MapController.switchBasemap).toHaveBeenLastCalledWith('satellite');
-    expect(document.querySelector('.basemap-btn.active').dataset.bm).toBe('satellite');
+    expect(globalThis.MapController.switchBasemap).toHaveBeenLastCalledWith('light');
+    expect(document.querySelector('.basemap-btn.active').dataset.bm).toBe('light');
     press('[');
     expect(globalThis.MapController.switchBasemap).toHaveBeenLastCalledWith('dark');
     press('[');
-    expect(globalThis.MapController.switchBasemap).toHaveBeenLastCalledWith('streets');
+    expect(globalThis.MapController.switchBasemap).toHaveBeenLastCalledWith('satellite');
   });
 
   it('ignores shortcuts while typing in an input', () => {
@@ -202,7 +204,7 @@ describe('Arabic layout shortcuts (physical key code fallback)', () => {
 
   it('Arabic layout physical brackets (BracketRight / BracketLeft) cycle basemap', () => {
     press('د', window, { code: 'BracketRight' });
-    expect(globalThis.MapController.switchBasemap).toHaveBeenLastCalledWith('satellite');
+    expect(globalThis.MapController.switchBasemap).toHaveBeenLastCalledWith('light');
     press('ج', window, { code: 'BracketLeft' });
     expect(globalThis.MapController.switchBasemap).toHaveBeenLastCalledWith('dark');
   });

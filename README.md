@@ -238,7 +238,7 @@ docker compose -f deploy/docker-compose.coolify.yml up -d --build
 * **No Blind Automated Edits**: Edits are staged for explicit human review. No automated bots.
 * **OSM Import Guidelines**: Adding missing features from Wikidata is governed by the [OSMF Import Guidelines](https://wiki.openstreetmap.org/wiki/Import/Guidelines). Read **[`OSM_IMPORT_GUIDELINES.md`](OSM_IMPORT_GUIDELINES.md)** before performing batch edits.
 * **Wikimedia Edit Policy**: All Wikidata edits use authenticated OAuth 2.0 PKCE with `maxlag=5` and `baserevid` collision guards.
-* **Tile Usage**: Map tiles are sourced from CARTO Voyager and Esri World Imagery. **Zero traffic is routed to `tile.openstreetmap.org`**.
+* **Tile Usage**: Map tiles come from Esri only (Dark/Light Gray, Streets, Topo, World Imagery, plus label overlays); no API key is needed. **Zero traffic is routed to `tile.openstreetmap.org`**.
 
 ---
 

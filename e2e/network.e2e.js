@@ -11,14 +11,14 @@ const OVERPASS = /overpass/;
 
 for (const mode of ['forward', 'reverse']) {
   test.describe(`${mode} mode`, () => {
-    test('page load contacts only the approved tile CDNs', async ({ page, baseURL }) => {
+    test('page load contacts only the approved tile CDN', async ({ page, baseURL }) => {
       const guard = await guardPage(page, baseURL);
       await openApp(page, { lang: 'en', mode });
       await page.waitForLoadState('networkidle');
 
       const hosts = [...new Set(guard.seen.external.map((r) => r.host))];
       for (const host of hosts) {
-        expect(host, `unexpected third-party host ${host}`).toMatch(/(^|\.)(arcgisonline\.com|basemaps\.cartocdn\.com)$/);
+        expect(host, `unexpected third-party host ${host}`).toMatch(/(^|\.)(arcgisonline\.com)$/);
       }
     });
 

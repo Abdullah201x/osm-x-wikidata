@@ -640,6 +640,10 @@ h1 {
   font-family: inherit;
   transition: all 0.2s;
 }
+@media (max-width: 600px) {
+  .floating-basemap-bar { max-width: calc(100vw - 16px); overflow-x: auto; scrollbar-width: none; }
+  .basemap-btn { padding: 6px 10px; font-size: 0.72rem; white-space: nowrap; }
+}
 .basemap-btn:hover {
   color: #fff;
 }

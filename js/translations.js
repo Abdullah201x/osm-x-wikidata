@@ -37,8 +37,10 @@ const TRANSLATIONS = {
 
     // Basemaps
     bmDark: "داكن (افتراضي)",
-    bmSatellite: "قمر صناعي (Esri)",
-    bmStreets: "شوارع OSM",
+    bmLight: "فاتح",
+    bmStreets: "شوارع",
+    bmTopo: "تضاريس",
+    bmSatellite: "قمر صناعي",
     
     // Inspector & Actions
     inspectorTitle: "لوحة الفحص والمعاينة المتقدمة",
@@ -275,8 +277,10 @@ const TRANSLATIONS = {
 
     // Basemaps
     bmDark: "Dark Mode (Default)",
-    bmSatellite: "Satellite (Esri Imagery)",
-    bmStreets: "OSM Standard",
+    bmLight: "Light",
+    bmStreets: "Streets",
+    bmTopo: "Topo",
+    bmSatellite: "Satellite",
     
     // Inspector & Actions
     inspectorTitle: "Advanced Inspection Workbench",

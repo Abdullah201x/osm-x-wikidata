@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Tests: `tests/test_backend_errors.py` (upstream failures, 429s, input validation, search corpus) and `tests/js/modal_a11y.test.js`, `tests/js/live_verify.test.js`.
 
 ### Changed
+- **Basemaps:** CARTO's raster tiles now return an "API key required" placeholder, which broke the "OSM Standard" button. Replaced with keyless Esri layers: Dark, Light, Streets, Topo and Satellite, with place-label overlays on Dark, Light and Satellite (labels sit in their own pane below markers). `[` / `]` cycles all five. CARTO is removed from the CSP and the e2e tile-host allowlist; `tile.openstreetmap.org` is still never contacted.
 - `SECURITY.md` now documents that the OSM token is relayed once to OpenStreetMap by `/api/v1/me`.
 - Asset version bumped to `?v=13`.
 - **Backend hardening:** `/api/v1/edits/preview` and `/api/v1/verify` no longer return upstream exception text (it is logged instead), `preview` now maps upstream 429s to 503 + `Retry-After` and rejects non-200/non-JSON Wikidata responses with 502, and both routers share `app/routers/_common.py` and the app's single HTTP client (the unclosed fallback client is gone; a missing client is a 503).

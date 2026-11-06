@@ -3,7 +3,7 @@ import { expect } from '@playwright/test';
 // 1x1 transparent PNG, served for every map tile request.
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
 
-const TILE_HOSTS = /(^|\.)(arcgisonline\.com|basemaps\.cartocdn\.com)$/;
+const TILE_HOSTS = /(^|\.)(arcgisonline\.com)$/;
 
 /**
  * Wires a page for a compliance-grade smoke run:

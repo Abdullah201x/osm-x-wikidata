@@ -1635,10 +1635,10 @@ function setupKeyboardShortcuts() {
     // '[' or ']' -> Cycle Basemap
     if (key === "[" || key === "]") {
       e.preventDefault();
-      const bms = ["dark", "satellite", "streets"];
+      const bms = MapController.BASEMAP_ORDER;
       const activeBtn = document.querySelector(".basemap-btn.active");
       const current = activeBtn ? activeBtn.getAttribute("data-bm") : "dark";
-      const nextIdx = (bms.indexOf(current) + (key === "]" ? 1 : 2)) % bms.length;
+      const nextIdx = (bms.indexOf(current) + (key === "]" ? 1 : bms.length - 1)) % bms.length;
       const targetBm = bms[nextIdx];
       document.querySelectorAll(".basemap-btn").forEach(b => {
         b.classList.toggle("active", b.getAttribute("data-bm") === targetBm);
