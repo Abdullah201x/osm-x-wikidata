@@ -1,7 +1,11 @@
 """
 Machine Learning Candidate Matcher for OSM x Wikidata Conflation.
-Uses HistGradientBoostingClassifier trained on strictly local OSM-Wikidata pairs (10m–400m)
+Uses HistGradientBoostingClassifier trained on local OSM-Wikidata pairs (0-400 m)
 to predict pairwise match probability based on spatial, semantic, and ontological features.
+
+Training data: build_training_pairs(). Held-out evaluation: pipeline/evaluate_matcher.py.
+
+    python -m pipeline.ml_matcher --retrain    # retrain from the local caches and save the model
 """
 
 import os
@@ -18,6 +22,13 @@ from pipeline.pbf_extractor import OSM_CACHE_DB
 from pipeline.wikidata_fetcher import CACHE_DB as WIKIDATA_CACHE_DB
 
 MODEL_FILE = os.path.join(PIPELINE_DIR, "ml_matcher_model.joblib")
+
+MAX_DIST_M = 400.0      # candidate search radius (find_ml_candidate)
+MIN_SIM = 0.20          # find_ml_candidate() skips pairs below this name similarity
+PROD_THRESHOLD = 0.60   # probability needed to suggest a candidate (matcher.py)
+NEG_PER_POS = 3         # negatives sampled per positive
+HARD_NEG_SIM = 0.60     # "same name, different QID" hard negatives
+GRID_SIZE = 0.05        # spatial index cell (~5 km)
 
 # Reference latitude constants for fast planar distance approximation (centered at 24 deg N)
 REF_LAT_RAD = math.radians(24.0)
@@ -144,116 +155,232 @@ def extract_pair_features(wd_item: Dict[str, Any], osm_cand: Tuple, dist_m: floa
     ]
     return feats, sim_max
 
-def train_matcher_model() -> Any:
+def load_training_data() -> Tuple[Dict[str, Dict[str, Any]], List[Tuple], List[Tuple]]:
     """
-    Trains the HistGradientBoostingClassifier using strictly local OSM-Wikidata ground truth.
-    Saves the serialized model to MODEL_FILE.
+    Reads the ground truth from the local caches.
+
+    Returns (wd_map, linked_rows, candidates):
+      wd_map:      qid -> {qid, lat, lon, cat, p31, name_ar, name_en}
+      linked_rows: (qid, osm_type, osm_id, lat, lon, name, name_ar, name_en, main_key, main_val)
+                   OSM elements that carry a wikidata=* tag
+      candidates:  (osm_type, osm_id, lat, lon, name, name_ar, name_en, main_key, main_val)
+                   untagged OSM POIs, the pool find_ml_candidate() searches in production
     """
-    from sklearn.ensemble import HistGradientBoostingClassifier
-    from sklearn.metrics import roc_auc_score
-
-    print("  [ML Matcher] Training ML candidate classifier from strictly local ground truth...")
-
     conn_osm = sqlite3.connect(OSM_CACHE_DB)
     conn_wd = sqlite3.connect(WIKIDATA_CACHE_DB)
+    try:
+        wd_map = {}
+        for r in conn_wd.execute("SELECT qid, lat, lon, cat_id, p31_qid, name_ar, name_en FROM wikidata_cache"):
+            wd_map[r[0]] = {
+                'qid': r[0], 'lat': r[1], 'lon': r[2], 'cat': r[3],
+                'p31': r[4], 'name_ar': r[5], 'name_en': r[6]
+            }
+        linked_rows = conn_osm.execute("""
+            SELECT qid, osm_type, osm_id, lat, lon, name, name_ar, name_en, main_key, main_val
+            FROM osm_linked
+        """).fetchall()
+        candidates = conn_osm.execute("""
+            SELECT osm_type, osm_id, lat, lon, name, name_ar, name_en, main_key, main_val
+            FROM osm_candidates
+        """).fetchall()
+    finally:
+        conn_osm.close()
+        conn_wd.close()
+    return wd_map, linked_rows, candidates
 
-    # Load Wikidata cache
-    c_wd = conn_wd.cursor()
-    c_wd.execute("""
-    SELECT qid, lat, lon, cat_id, p31_qid, name_ar, name_en
-    FROM wikidata_cache
-    """)
-    wd_map = {}
-    for r in c_wd.fetchall():
-        wd_map[r[0]] = {
-            'qid': r[0], 'lat': r[1], 'lon': r[2], 'cat': r[3],
-            'p31': r[4], 'name_ar': r[5], 'name_en': r[6]
-        }
 
-    # Load linked OSM items (positive pairs)
-    c_osm = conn_osm.cursor()
-    c_osm.execute("""
-    SELECT qid, osm_type, osm_id, lat, lon, name, name_ar, name_en, main_key, main_val
-    FROM osm_linked
-    """)
-    linked_rows = c_osm.fetchall()
+def _grid_index(rows: List[Tuple], lat_i: int, lon_i: int) -> Dict[Tuple[int, int], List[Tuple]]:
+    grid: Dict[Tuple[int, int], List[Tuple]] = {}
+    for r in rows:
+        grid.setdefault((int(r[lat_i] / GRID_SIZE), int(r[lon_i] / GRID_SIZE)), []).append(r)
+    return grid
 
-    positive_pairs = []
+
+def _nearby(grid: Dict[Tuple[int, int], List[Tuple]], lat: float, lon: float) -> List[Tuple]:
+    cell = (int(lat / GRID_SIZE), int(lon / GRID_SIZE))
+    out: List[Tuple] = []
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            out.extend(grid.get((cell[0] + dx, cell[1] + dy), ()))
+    return out
+
+
+def build_training_pairs(
+    wd_map: Dict[str, Dict[str, Any]],
+    linked_rows: List[Tuple],
+    candidates: List[Tuple],
+    neg_per_pos: int = NEG_PER_POS,
+    seed: int = 42,
+    min_sim: float = MIN_SIM,
+) -> Dict[str, Any]:
+    """
+    Builds labelled (Wikidata item, OSM element) pairs from the tagged ground truth.
+
+    Positives: each wikidata-tagged OSM element within MAX_DIST_M of its item.
+    Negatives, per positive (at most `neg_per_pos`, so every positive gets its
+    share instead of a global cap filling up on the first ones):
+      - first, up to one HARD negative: an OSM element tagged with a DIFFERENT
+        QID whose name is similar (sim >= HARD_NEG_SIM), e.g. another branch;
+      - then random elements from the same 0-400 m pool (no 10 m floor, so
+        distance is not a free label: positives and negatives share the range).
+    Pairs below `min_sim` are dropped on both sides: find_ml_candidate() never
+    scores them, so the model should not spend capacity on them either.
+
+    For the candidate-picker evaluation every positive also gets its full
+    production pool: the true element plus every untagged candidate within
+    MAX_DIST_M and >= min_sim, as find_ml_candidate() would see it.
+
+    Returns {X, y, groups, pools, n_positive_raw, n_unreachable}
+      X: feature rows, y: labels, groups: QID per row (for GroupKFold)
+      pools: list of (qid, X_pool, true_index)
+    """
+    rng = random.Random(seed)
+    cand_grid = _grid_index(candidates, 2, 3)
+    linked_grid = _grid_index(linked_rows, 3, 4)
+
+    X: List[List[float]] = []
+    y: List[int] = []
+    groups: List[str] = []
+    pools: List[Tuple[str, np.ndarray, int]] = []
+    n_positive_raw = 0
+    n_unreachable = 0
+
     for r in linked_rows:
         qid = r[0]
-        if qid in wd_map:
-            wd_item = wd_map[qid]
-            osm_cand = (r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9])
-            dist = lat_lon_distance_m(wd_item['lat'], wd_item['lon'], r[3], r[4])
-            if dist <= 400.0:
-                positive_pairs.append((wd_item, osm_cand, dist))
+        wd_item = wd_map.get(qid)
+        if not wd_item:
+            continue
+        true_cand = (r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9])
+        dist = lat_lon_distance_m(wd_item['lat'], wd_item['lon'], r[3], r[4])
+        if dist > MAX_DIST_M:
+            continue
+        n_positive_raw += 1
+        pos_feats, pos_sim = extract_pair_features(wd_item, true_cand, dist)
+        if pos_sim < min_sim:
+            n_unreachable += 1  # production would never score this pair
+            continue
 
-    # Load candidate POIs for strictly local hard negative sampling
-    c_osm.execute("""
-    SELECT osm_type, osm_id, lat, lon, name, name_ar, name_en, main_key, main_val
-    FROM osm_candidates
-    """)
-    candidates = c_osm.fetchall()
+        # Untagged candidates: the production pool and the random-negative pool.
+        cand_scored = []
+        for c in _nearby(cand_grid, wd_item['lat'], wd_item['lon']):
+            d = lat_lon_distance_m(wd_item['lat'], wd_item['lon'], c[2], c[3])
+            if d > MAX_DIST_M:
+                continue
+            feats, sim = extract_pair_features(wd_item, c, d)
+            if sim >= min_sim:
+                cand_scored.append((feats, sim))
 
-    GRID_SIZE = 0.05
-    grid: Dict[Tuple[int, int], List[Tuple]] = {}
-    for c in candidates:
-        cell = (int(c[2] / GRID_SIZE), int(c[3] / GRID_SIZE))
-        grid.setdefault(cell, []).append(c)
+        # Elements tagged with a different QID: certain negatives.
+        other_linked = []
+        for o in _nearby(linked_grid, wd_item['lat'], wd_item['lon']):
+            if o[0] == qid or (o[1] == true_cand[0] and o[2] == true_cand[1]):
+                continue
+            d = lat_lon_distance_m(wd_item['lat'], wd_item['lon'], o[3], o[4])
+            if d > MAX_DIST_M:
+                continue
+            o_cand = (o[1], o[2], o[3], o[4], o[5], o[6], o[7], o[8], o[9])
+            feats, sim = extract_pair_features(wd_item, o_cand, d)
+            if sim >= min_sim:
+                other_linked.append((feats, sim))
 
-    negative_pairs = []
-    random.seed(42)
+        negatives: List[List[float]] = []
+        hard = [f for f, s in other_linked if s >= HARD_NEG_SIM]
+        if hard and neg_per_pos > 0:
+            negatives.append(rng.choice(hard))
+        rest = [f for f, _ in cand_scored] + [f for f, s in other_linked if s < HARD_NEG_SIM]
+        need = neg_per_pos - len(negatives)
+        if need > 0 and rest:
+            negatives.extend(rng.sample(rest, min(need, len(rest))))
 
-    # Sample up to 3 hard negatives per positive entity located in the same spatial cell (10m to 400m)
-    for wd_item, true_cand, _ in positive_pairs:
-        cell = (int(wd_item['lat'] / GRID_SIZE), int(wd_item['lon'] / GRID_SIZE))
-        for dx in (-1, 0, 1):
-            for dy in (-1, 0, 1):
-                for c in grid.get((cell[0] + dx, cell[1] + dy), []):
-                    if c[0] == true_cand[0] and c[1] == true_cand[1]:
-                        continue
-                    d = lat_lon_distance_m(wd_item['lat'], wd_item['lon'], c[2], c[3])
-                    if 10.0 <= d <= 400.0:
-                        negative_pairs.append((wd_item, c, d))
-                        if len(negative_pairs) >= len(positive_pairs) * 3:
-                            break
-                if len(negative_pairs) >= len(positive_pairs) * 3:
-                    break
-            if len(negative_pairs) >= len(positive_pairs) * 3:
-                break
-
-    conn_osm.close()
-    conn_wd.close()
-
-    # Extract feature matrices
-    X = []
-    y = []
-
-    for w, c, d in positive_pairs:
-        feats, _ = extract_pair_features(w, c, d)
-        X.append(feats)
+        X.append(pos_feats)
         y.append(1)
+        groups.append(qid)
+        for f in negatives:
+            X.append(f)
+            y.append(0)
+            groups.append(qid)
 
-    for w, c, d in negative_pairs:
-        feats, _ = extract_pair_features(w, c, d)
-        X.append(feats)
-        y.append(0)
+        pool = [pos_feats] + [f for f, _ in cand_scored]
+        pools.append((qid, np.array(pool, dtype=float), 0))
 
-    X_arr = np.array(X)
-    y_arr = np.array(y)
+    return {
+        "X": np.array(X, dtype=float),
+        "y": np.array(y, dtype=int),
+        "groups": np.array(groups),
+        "pools": pools,
+        "n_positive_raw": n_positive_raw,
+        "n_unreachable": n_unreachable,
+    }
+
+
+def build_legacy_pairs(wd_map: Dict[str, Dict[str, Any]], linked_rows: List[Tuple], candidates: List[Tuple]) -> Dict[str, Any]:
+    """
+    The sampler used before 2026-11 (kept only so evaluate_matcher.py can compare
+    on the same folds): one GLOBAL negative cap of 3x positives that the first
+    positives used up, a 10 m floor for negatives only, and no similarity filter.
+    """
+    cand_grid = _grid_index(candidates, 2, 3)
+    positives = []
+    for r in linked_rows:
+        wd_item = wd_map.get(r[0])
+        if not wd_item:
+            continue
+        cand = (r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9])
+        d = lat_lon_distance_m(wd_item['lat'], wd_item['lon'], r[3], r[4])
+        if d <= MAX_DIST_M:
+            positives.append((wd_item, cand, d))
+
+    cap = len(positives) * 3
+    negatives = []
+    for wd_item, true_cand, _ in positives:
+        if len(negatives) >= cap:
+            break
+        for c in _nearby(cand_grid, wd_item['lat'], wd_item['lon']):
+            if c[0] == true_cand[0] and c[1] == true_cand[1]:
+                continue
+            d = lat_lon_distance_m(wd_item['lat'], wd_item['lon'], c[2], c[3])
+            if 10.0 <= d <= MAX_DIST_M:
+                negatives.append((wd_item, c, d))
+                if len(negatives) >= cap:
+                    break
+
+    X, y, groups = [], [], []
+    for label, rows in ((1, positives), (0, negatives)):
+        for w, c, d in rows:
+            X.append(extract_pair_features(w, c, d)[0])
+            y.append(label)
+            groups.append(w['qid'])
+    return {"X": np.array(X, dtype=float), "y": np.array(y, dtype=int), "groups": np.array(groups)}
+
+
+def fit_matcher(X: np.ndarray, y: np.ndarray) -> Any:
+    from sklearn.ensemble import HistGradientBoostingClassifier
 
     clf = HistGradientBoostingClassifier(max_iter=150, min_samples_leaf=15, random_state=42)
-    clf.fit(X_arr, y_arr)
+    clf.fit(X, y)
+    return clf
 
-    # Evaluate internal ROC-AUC
-    probs = clf.predict_proba(X_arr)[:, 1]
-    auc = roc_auc_score(y_arr, probs)
-    print(f"  [ML Matcher] Model trained successfully ({len(X_arr):,} local samples, ROC-AUC: {auc:.4f}).")
 
-    os.makedirs(os.path.dirname(MODEL_FILE), exist_ok=True)
-    joblib.dump(clf, MODEL_FILE)
-    print(f"  [ML Matcher] Saved model to {MODEL_FILE}")
-
+def train_matcher_model(save: bool = True) -> Any:
+    """
+    Trains the classifier on all tagged ground truth and saves it to MODEL_FILE.
+    Held-out quality is measured separately by pipeline/evaluate_matcher.py.
+    """
+    print("  [ML Matcher] Training ML candidate classifier from local ground truth...")
+    data = build_training_pairs(*load_training_data())
+    X, y = data["X"], data["y"]
+    if len(set(y.tolist())) < 2:
+        raise RuntimeError("Not enough ground truth to train the matcher (need positives and negatives).")
+    clf = fit_matcher(X, y)
+    print(
+        f"  [ML Matcher] Trained on {len(X):,} pairs ({int(y.sum()):,} positive, {int((y == 0).sum()):,} negative; "
+        f"{data['n_unreachable']:,} positives below the similarity pre-filter skipped). "
+        "Run `python pipeline/evaluate_matcher.py` for held-out metrics."
+    )
+    if save:
+        os.makedirs(os.path.dirname(MODEL_FILE), exist_ok=True)
+        joblib.dump(clf, MODEL_FILE)
+        print(f"  [ML Matcher] Saved model to {MODEL_FILE}")
     return clf
 
 def load_or_train_matcher(force_retrain: bool = False) -> Any:
@@ -270,7 +397,7 @@ def find_ml_candidate(
     clf: Any,
     wd_item: Dict[str, Any],
     nearby_cands: List[Tuple],
-    threshold: float = 0.60
+    threshold: float = PROD_THRESHOLD
 ) -> Optional[Tuple[Tuple, float, int]]:
     """
     Evaluates candidate OSM POIs for a given Wikidata item using the ML classifier.
@@ -291,10 +418,10 @@ def find_ml_candidate(
 
     for c in nearby_cands:
         dist = lat_lon_distance_m(wd_lat, wd_lon, c[2], c[3])
-        if dist <= 400.0:
+        if dist <= MAX_DIST_M:
             feats, sim_max = extract_pair_features(wd_item, c, dist)
-            # High-efficiency pre-filter: candidates with zero similarity (< 0.20) are skipped
-            if sim_max < 0.20:
+            # High-efficiency pre-filter: candidates with (near) zero name similarity are skipped
+            if sim_max < MIN_SIM:
                 continue
             valid_cands.append(c)
             features_batch.append(feats)
@@ -314,3 +441,14 @@ def find_ml_candidate(
         return valid_cands[best_idx], best_prob, distances[best_idx]
 
     return None
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Train the OSM x Wikidata candidate matcher.")
+    parser.add_argument("--retrain", action="store_true", help="Retrain from the local caches and overwrite the model file.")
+    if parser.parse_args().retrain:
+        train_matcher_model()
+    else:
+        parser.print_help()

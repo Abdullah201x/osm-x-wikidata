@@ -13,6 +13,8 @@ import json
 import os
 from typing import Any, Dict, Optional
 
+from pipeline.jsonio import write_dataset
+
 STATUS_SLOT = 4
 LINKABLE_STATUSES = (1, 2)
 
@@ -40,9 +42,4 @@ def write_linkable(data_dir: str, cc: str, data: Optional[Dict[str, Any]] = None
     if data is None:
         with open(os.path.join(data_dir, f"{cc.lower()}.json"), "r", encoding="utf-8") as f:
             data = json.load(f)
-    out_file = linkable_path(data_dir, cc)
-    tmp_file = out_file + ".tmp"
-    with open(tmp_file, "w", encoding="utf-8") as f:
-        json.dump(derive_linkable(data), f, ensure_ascii=False, separators=(",", ":"))
-    os.replace(tmp_file, out_file)
-    return out_file
+    return write_dataset(linkable_path(data_dir, cc), derive_linkable(data))

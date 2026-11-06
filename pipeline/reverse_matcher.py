@@ -20,6 +20,7 @@ from pipeline.config import PIPELINE_DIR, DATA_DIR, GCC_COUNTRIES, P31_ONTOLOGY
 from pipeline.arabic_normalizer import match_names_composite, normalize_arabic
 from pipeline.physicality_filter import NON_MAPPABLE_P31
 from pipeline.country_boundaries import get_country_matcher
+from pipeline.jsonio import write_dataset
 
 WIKIDATA_CACHE_DB = os.path.join(PIPELINE_DIR, "wikidata_cache.db")
 OSM_CACHE_DB = os.path.join(PIPELINE_DIR, "osm_cache.db")
@@ -1032,10 +1033,7 @@ def run_reverse_analysis(
 
     # Write out data/reverse_<cc>.json atomically
     out_file = os.path.join(DATA_DIR, f"reverse_{country_code}.json")
-    tmp_file = out_file + ".tmp"
-    with open(tmp_file, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False, separators=(',', ':'))
-    os.replace(tmp_file, out_file)
+    write_dataset(out_file, result)
 
     file_size_kb = os.path.getsize(out_file) / 1024
     print(f"  [Reverse QA] Wrote {out_file} ({file_size_kb:.1f} KB | {counts['missing_backlink_high']:,} high back-links, {counts['broken_osm_tag']:,} broken tags, {counts['conflict']:,} conflicts).")

@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "generated_at": "2026-11-06T18:57:53Z",
+  "method": "GroupKFold(n_splits=5) by QID; threshold 0.6; 3 negatives per positive from 0-400 m, similarity pre-filter 0.2",
+  "threshold": 0.6,
+  "data": {
+    "ground_truth_items": 2395,
+    "unreachable_items": 210,
+    "pairs": 4615,
+    "positives": 2185,
+    "negatives": 2430
+  },
+  "model": {
+    "roc_auc": 0.9586,
+    "precision": 0.9026,
+    "recall": 0.8947,
+    "f1": 0.8986,
+    "tp": 1955,
+    "fp": 211,
+    "fn": 230,
+    "precision_at_top1": 0.9621,
+    "recall_at_top1": 0.7954,
+    "picker_suggestions": 1980,
+    "picker_correct": 1905
+  },
+  "legacy_sampler": {
+    "roc_auc": 0.9483,
+    "precision": 0.8178,
+    "recall": 0.9616,
+    "f1": 0.8839,
+    "tp": 2101,
+    "fp": 468,
+    "fn": 84,
+    "precision_at_top1": 0.9499,
+    "recall_at_top1": 0.8392,
+    "picker_suggestions": 2116,
+    "picker_correct": 2010
+  }
+}

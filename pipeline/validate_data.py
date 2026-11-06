@@ -19,6 +19,7 @@ from typing import List, Tuple
 from pipeline.config import BASE_DIR, DATA_DIR, GCC_COUNTRIES
 from pipeline.linkable import derive_linkable
 from pipeline.progress import PROGRESS_FILE, validate_progress
+from pipeline.evaluate_matcher import check_metrics
 
 # Minimum fraction of the previously published count a dataset may drop to (20% maximum drop)
 MIN_RATIO = 0.8
@@ -220,7 +221,27 @@ def validate_all_datasets() -> List[str]:
     errors.extend(progress_errors)
     print(f"  [{'FAIL' if progress_errors else 'OK'}] data/{PROGRESS_FILE}")
 
+    print("\n[Validator] Checking matcher_metrics.json (held-out ML matcher quality)...")
+    errors.extend(validate_matcher_metrics())
+
     return errors
+
+
+def validate_matcher_metrics(rel_path: str = "data/matcher_metrics.json") -> List[str]:
+    """Blocks a publish when the matcher's held-out precision is too low or regressed."""
+    path = os.path.join(BASE_DIR, rel_path)
+    if not os.path.exists(path):
+        return [f"{rel_path} is missing (run python pipeline/evaluate_matcher.py)"]
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            current = json.load(f)
+    except (OSError, ValueError) as e:
+        return [f"{rel_path} is not valid JSON: {e}"]
+    errs = check_metrics(current, get_git_file_json(rel_path))
+    m = current.get("model") or {}
+    print(f"  [{'FAIL' if errs else 'OK'}] precision@{current.get('threshold')}: {m.get('precision')}, "
+          f"picker precision@top1: {m.get('precision_at_top1')}")
+    return [f"{rel_path}: {e}" for e in errs]
 
 
 def main():

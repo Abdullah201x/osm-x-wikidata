@@ -31,6 +31,7 @@ from pipeline.matcher import match_country_items
 from pipeline.reverse_matcher import run_reverse_analysis
 from pipeline.linkable import write_linkable
 from pipeline.progress import append_progress
+from pipeline.jsonio import write_dataset
 
 def main():
     parser = argparse.ArgumentParser(description="Update OSM x Wikidata GCC datasets.")
@@ -135,10 +136,7 @@ def main():
 
         # Save country JSON file atomically
         out_file = os.path.join(DATA_DIR, f"{c_code.lower()}.json")
-        tmp_file = out_file + ".tmp"
-        with open(tmp_file, "w", encoding="utf-8") as f:
-            json.dump(matched_result, f, ensure_ascii=False, separators=(',', ':'))
-        os.replace(tmp_file, out_file)
+        write_dataset(out_file, matched_result)
 
         file_size_kb = os.path.getsize(out_file) / 1024
         print(f"  [Export] Wrote {out_file} ({file_size_kb:.1f} KB, {matched_result['counts']['total']:,} items)")

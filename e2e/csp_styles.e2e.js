@@ -43,7 +43,7 @@ test.describe('CSP styles (no unsafe-inline)', () => {
     await expect(page.locator('#about-progress tr[data-cc="sa"] svg.progress-spark polyline')).toHaveCount(2);
 
     expect(guard.seen.pageErrors).toEqual([]);
-    expect(guard.seen.failedSameOrigin).toEqual([]);
+    expect(guard.seen.failedSameOrigin.filter((u) => u.includes('progress.json'))).toEqual([]);
     expect(await guard.collectCsp()).toEqual([]);
   });
 

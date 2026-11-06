@@ -2,9 +2,14 @@ name: Update OSM x Wikidata Datasets
 
 on:
   schedule:
-    # Run every Monday at 04:00 UTC
-    - cron: '0 4 * * 1'
+    # Daily at 04:00 UTC (Geofabrik's GCC extract is rebuilt daily; WDQS gets the same 6 queries per day)
+    - cron: '0 4 * * *'
   workflow_dispatch:
+    inputs:
+      retrain:
+        description: 'Retrain the ML matcher on the fresh ground truth (held-out metrics must pass the publish gate)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -42,18 +47,36 @@ jobs:
         env:
           PYTHONUNBUFFERED: "1"
 
-      - name: Validate dataset schema and shrink guard
+      - name: Retrain and evaluate the ML matcher
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.retrain }}
+        run: |
+          python -m pipeline.ml_matcher --retrain
+          python pipeline/evaluate_matcher.py
+          # Re-match with the new model; PBF and Wikidata come from the caches the first pass filled.
+          python update_data.py --pbf "$RUNNER_TEMP/osm/gcc-states-latest.osm.pbf"
+        env:
+          PYTHONUNBUFFERED: "1"
+
+      - name: Validate dataset schema, shrink guard and matcher metrics
         run: |
           python pipeline/validate_data.py
+
+      - name: Drop timestamp-only dataset rewrites
+        run: |
+          python pipeline/publish_filter.py
 
       - name: Commit and push updated datasets
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add data/*.json
+          if [ "${{ github.event_name == 'workflow_dispatch' && inputs.retrain }}" = "true" ]; then
+            git add pipeline/ml_matcher_model.joblib
+          fi
           if git diff --staged --quiet; then
             echo "No data changes to commit."
           else
+            # summary.json always changes (updated_at), which keeps /api/healthz/freshness green.
             git commit -m "Auto-update GCC OSM x Wikidata datasets"
             git push
           fi
