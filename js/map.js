@@ -67,8 +67,8 @@ const MapController = {
       ])
     };
 
-    // Default to dark
-    currentBasemap = basemapLayers.dark;
+    // Default to streets
+    currentBasemap = basemapLayers.streets;
     currentBasemap.addTo(map);
 
     // Marker cluster group

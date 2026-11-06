@@ -1640,7 +1640,7 @@ function setupKeyboardShortcuts() {
       e.preventDefault();
       const bms = MapController.BASEMAP_ORDER;
       const activeBtn = document.querySelector(".basemap-btn.active");
-      const current = activeBtn ? activeBtn.getAttribute("data-bm") : "dark";
+      const current = activeBtn ? activeBtn.getAttribute("data-bm") : "streets";
       const nextIdx = (bms.indexOf(current) + (key === "]" ? 1 : bms.length - 1)) % bms.length;
       const targetBm = bms[nextIdx];
       document.querySelectorAll(".basemap-btn").forEach(b => {
