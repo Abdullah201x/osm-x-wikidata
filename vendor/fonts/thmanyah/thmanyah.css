@@ -1,0 +1,55 @@
+/* Thmanyah Font Family (خط ثمانية) */
+
+/* Thmanyah Sans - Regular (400) */
+@font-face {
+  font-family: 'Thmanyah Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('thmanyah-sans-Regular.woff2') format('woff2');
+}
+
+/* Thmanyah Sans - Medium (500) */
+@font-face {
+  font-family: 'Thmanyah Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('thmanyah-sans-Medium.woff2') format('woff2');
+}
+
+/* Thmanyah Sans - Bold (700) */
+@font-face {
+  font-family: 'Thmanyah Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('thmanyah-sans-Bold.woff2') format('woff2');
+}
+
+/* Thmanyah Serif Display - Medium (500) */
+@font-face {
+  font-family: 'Thmanyah Serif Display';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('thmanyah-serif-display-Medium.woff2') format('woff2');
+}
+
+/* Thmanyah Serif Display - Bold (700) */
+@font-face {
+  font-family: 'Thmanyah Serif Display';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('thmanyah-serif-display-Bold.woff2') format('woff2');
+}
+
+/* Thmanyah Serif Text - Regular (400) */
+@font-face {
+  font-family: 'Thmanyah Serif Text';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('thmanyah-serif-text-Regular.woff2') format('woff2');
+}

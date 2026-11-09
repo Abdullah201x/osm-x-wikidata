@@ -25,6 +25,11 @@ sa_boundary.geojson
 node_modules/
 test-results/
 playwright-report/
+# Coverage & Reports
 .coverage
 coverage.*
 htmlcov/
+
+# Impeccable engine binaries (fetched per platform locally)
+**/skills/impeccable/scripts/bin/
+
