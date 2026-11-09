@@ -34,7 +34,6 @@
             <button id="btn-toggle-lang" class="lang-btn" title="تبديل اللغة / Toggle Language">English</button>
           </div>
         </div>
-        <p class="subtitle" data-i18n="subtitle">أداة متقدمة لربط بيانات OpenStreetMap بـ Wikidata، وكشف العناصر المفقودة في OSM لدول الخليج العربي.</p>
         
         <!-- Quick Nav Actions: Batch Staging & History Page -->
         <div class="quick-nav-bar">
@@ -51,12 +50,12 @@
         </div>
 
         <!-- Dual Auth Bar (OSM & Wikidata) -->
-        <div class="auth-bar">
-          <div class="auth-chip-group">
+        <div class="auth-bar" role="region" aria-label="حسابات الربط والتحرير">
+          <div class="auth-chip-group" id="osm-auth-card">
             <span id="osm-user-badge"></span>
             <button id="btn-osm-login" class="osm-btn" data-i18n="loginOsm">تسجيل الدخول بـ OSM</button>
           </div>
-          <div class="auth-chip-group">
+          <div class="auth-chip-group" id="wd-auth-card">
             <span id="wd-user-badge"></span>
             <button id="btn-wd-login" class="wd-btn" data-i18n="loginWd">تسجيل الدخول بـ Wikidata</button>
           </div>
@@ -77,79 +76,68 @@
 
       <div class="sidebar-body">
         
-        <!-- Country Selector -->
-        <div class="control-group">
-          <label class="section-label" data-i18n="filterCountry">الدولة</label>
-          <select id="country-select" class="select-custom">
-            <option value="sa" selected>🇸🇦 المملكة العربية السعودية (Saudi Arabia)</option>
-            <option value="ae">🇦🇪 الإمارات (UAE)</option>
-            <option value="kw">🇰🇼 الكويت (Kuwait)</option>
-            <option value="qa">🇶🇦 قطر (Qatar)</option>
-            <option value="om">🇴🇲 سلطنة عمان (Oman)</option>
-            <option value="bh">🇧🇭 البحرين (Bahrain)</option>
-          </select>
+        <!-- Scope Bar: Country & Search -->
+        <div class="control-group scope-group">
+          <div class="scope-row">
+            <div class="scope-country-col">
+              <select id="country-select" class="select-custom scope-select" aria-label="اختر الدولة / Select Country">
+                <option value="sa" selected>🇸🇦 السعودية (SA)</option>
+                <option value="ae">🇦🇪 الإمارات (AE)</option>
+                <option value="kw">🇰🇼 الكويت (KW)</option>
+                <option value="qa">🇶🇦 قطر (QA)</option>
+                <option value="om">🇴🇲 عمان (OM)</option>
+                <option value="bh">🇧🇭 البحرين (BH)</option>
+              </select>
+            </div>
+            <div class="scope-search-col">
+              <span class="search-icon" aria-hidden="true">🔍</span>
+              <input type="text" id="search-input" class="search-box scope-search-input" placeholder="بحث بالاسم أو QID... (/)" aria-label="بحث بالاسم أو QID / Search by name or QID" />
+            </div>
+          </div>
         </div>
 
-        <!-- Search Box -->
-        <div class="control-group">
-          <input type="text" id="search-input" class="search-box" placeholder="بحث بالاسم العربي أو الإنجليزي أو رمز QID..." />
-        </div>
-
-        <!-- Stats Section with Viewport Toggle -->
-        <div class="control-group">
+        <!-- Unified Interactive Metric-Filter Grid -->
+        <div class="control-group stats-control-group">
           <div class="stats-header-row">
-            <label class="section-label" data-i18n="statTotal">الإحصائيات</label>
+            <label class="section-label" data-i18n="filterStatus">حالة الربط والإحصائيات</label>
             <button id="btn-toggle-viewport-stats" class="viewport-toggle-btn" title="حساب الإحصائيات لمجال الرؤية الحالي فقط">
               <span class="vp-dot"></span>
               <span data-i18n="toggleViewportStats">نطاق الرؤية</span>
             </button>
           </div>
-          <div class="stats-grid">
-            <div class="stat-card">
+          <div class="stats-grid status-metric-grid" role="group" aria-label="حالة الربط والإحصائيات">
+            <button type="button" class="stat-card status-filter-btn active" data-status="all" id="stat-total-card">
               <span class="stat-val" id="stat-total-val">0</span>
               <span class="stat-sub-inview" id="stat-total-inview"></span>
               <span class="stat-lbl" id="stat-total-lbl" data-i18n="statTotal">إجمالي العناصر</span>
-            </div>
-            <div class="stat-card" id="stat-missing-card">
+            </button>
+            <button type="button" class="stat-card status-filter-btn" data-status="0" id="stat-missing-card" data-import-only hidden>
               <span class="stat-val missing" id="stat-missing-val">0</span>
               <span class="stat-sub-inview" id="stat-missing-inview"></span>
               <span class="stat-lbl" id="stat-missing-lbl" data-i18n="statMissing">مفقود في OSM</span>
-            </div>
-            <div class="stat-card">
+            </button>
+            <button type="button" class="stat-card status-filter-btn" data-status="1" id="stat-candidates-card">
               <span class="stat-val candidates" id="stat-candidates-val">0</span>
               <span class="stat-sub-inview" id="stat-candidates-inview"></span>
               <span class="stat-lbl" id="stat-candidates-lbl" data-i18n="statCandidates">مرشح للربط</span>
-            </div>
-            <div class="stat-card">
+            </button>
+            <button type="button" class="stat-card status-filter-btn" data-status="2" id="stat-linked-card">
               <span class="stat-val linked" id="stat-linked-val">0</span>
               <span class="stat-sub-inview" id="stat-linked-inview"></span>
               <span class="stat-lbl" id="stat-linked-lbl" data-i18n="statLinked">مرتبط مسبقاً</span>
-            </div>
+            </button>
           </div>
+          <p id="import-restricted-note" class="import-note" data-i18n="importRestrictedNote" hidden>مواقع ويكي بيانات غير الموجودة في OSM متاحة فقط للمستوردين المعتمدين.</p>
         </div>
 
         <!-- Forward Linker Controls (Visible in Forward Mode) -->
         <div id="forward-controls-panel">
-          <!-- Status Filter Buttons -->
-          <div class="control-group">
-            <label class="section-label" data-i18n="filterStatus">حالة الربط</label>
-            <div class="status-pill-group">
-              <button class="status-filter-btn active" data-status="all" data-i18n="statusAll">الكل</button>
-              <button class="status-filter-btn" data-status="0" data-import-only hidden>🔴 مفقود</button>
-              <button class="status-filter-btn" data-status="1">🟡 مرشح</button>
-              <button class="status-filter-btn" data-status="2">🟢 مرتبط</button>
-            </div>
-            <p id="import-restricted-note" class="import-note" data-i18n="importRestrictedNote" hidden>مواقع ويكي بيانات غير الموجودة في OSM متاحة فقط للمستوردين المعتمدين.</p>
-          </div>
-
           <!-- Quick Quality Filter Chips -->
           <div class="control-group">
             <div class="filter-chips-container">
               <button id="chip-wiki" class="filter-chip" data-filter="wiki" data-i18n="chipHasWiki">📖 مقال ويكيبيديا</button>
               <button id="chip-photo" class="filter-chip" data-filter="photo" data-i18n="chipHasPhoto">📷 صورة كومنز</button>
               <button id="chip-demolished" class="filter-chip active" data-filter="demolished" data-i18n="chipHideDemolished">🚫 إخفاء المهدم</button>
-              <button id="chip-mosques" class="filter-chip" data-filter="mosques" data-i18n="chipHideMosques">🕌 إخفاء المساجد</button>
-              <button id="chip-hide-linked" class="filter-chip" data-filter="linked" data-i18n="chipHideLinked">🟢 إخفاء المرتبط</button>
             </div>
           </div>
 
@@ -238,6 +226,8 @@
               ⚡ QS v2
             </button>
           </div>
+        </div>
+
         <!-- Maintainer & Community Contact Footer -->
         <footer class="sidebar-footer">
           <div class="footer-maintainer">
@@ -318,6 +308,9 @@
         <button type="button" class="btn-close-modal" id="btn-close-about" aria-label="إغلاق / Close">&times;</button>
       </div>
       <div class="about-content">
+        <p class="about-lead-desc subtitle" data-i18n="subtitle">
+          أداة متقدمة لربط بيانات OpenStreetMap بـ Wikidata، وكشف العناصر المفقودة في OSM لدول الخليج العربي.
+        </p>
         <p class="about-lead-text" data-i18n="aboutLead">
           أداة مساعدة لمجتمع OpenStreetMap لدول الخليج لربط المعالم القائمة بمعرفات Wikidata المقابلة لها (Assisted Conflation).
         </p>

@@ -236,7 +236,7 @@ const TRANSLATIONS = {
 
     // Phase 5 Bilingual Keys
     loginWd: "تسجيل الدخول بـ Wikidata",
-    logoutWd: "تسجيل الخروج من Wikidata",
+    logoutWd: "تسجيل خروج",
     btnAddToWikidata: "⚡ إضافة إلى ويكي بيانات مباشرة",
     btnOpenQsDirect: "↗️ فتح في QuickStatements (1-Click)",
     btnOsmRepairTag: "🛠️ إصلاح الوسم في OSM مباشرة",
@@ -514,7 +514,7 @@ const TRANSLATIONS = {
 
     // Phase 5 Bilingual Keys
     loginWd: "Log in with Wikidata",
-    logoutWd: "Log out of Wikidata",
+    logoutWd: "Logout",
     btnAddToWikidata: "⚡ Add to Wikidata Directly",
     btnOpenQsDirect: "↗️ Open in QuickStatements (1-Click)",
     btnOsmRepairTag: "🛠️ Repair Tag in OSM Directly",
