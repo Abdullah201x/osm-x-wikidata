@@ -10,7 +10,7 @@ import time
 import sqlite3
 import requests
 from typing import Dict, List, Any, Optional
-from pipeline.config import GCC_COUNTRIES, BASE_DIR, classify_p31
+from pipeline.config import GCC_COUNTRIES, BASE_DIR, classify_p31, P31_ONTOLOGY
 
 _RE_HTTP_WIKIMEDIA = re.compile(r"^http://(commons|upload)\.wikimedia\.org/", re.IGNORECASE)
 
@@ -85,7 +85,7 @@ def classify_item(name_ar: str, name_en: str, p31_qid: str, p31_label: str) -> t
     if RE_MOSQUE_NAME.search(name_ar or "") or RE_MOSQUE_NAME.search(name_en or "") or RE_MOSQUE_NAME_EN.search(name_en or ""):
         return 6, "Q32815", "مسجد / جامع"
     if not p31_label and p31_qid in P31_ONTOLOGY:
-        p31_label = P31_ONTOLOGY[p31_qid].get("label_ar") or P31_ONTOLOGY[p31_qid].get("label_en") or p31_qid
+        p31_label = P31_ONTOLOGY[p31_qid].get("name_ar") or P31_ONTOLOGY[p31_qid].get("name_en") or p31_qid
     return classify_p31(p31_qid), p31_qid, p31_label
 
 def fetch_sparql(query: str, max_retries: int = 4, timeout: int = 90) -> Optional[List[Dict[str, Any]]]:
