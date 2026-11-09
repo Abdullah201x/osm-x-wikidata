@@ -84,9 +84,11 @@ def classify_item(name_ar: str, name_en: str, p31_qid: str, p31_label: str) -> t
     """Returns (cat_id, p31_qid, p31_label), promoting items named like mosques to the worship category."""
     if RE_MOSQUE_NAME.search(name_ar or "") or RE_MOSQUE_NAME.search(name_en or "") or RE_MOSQUE_NAME_EN.search(name_en or ""):
         return 6, "Q32815", "مسجد / جامع"
+    if not p31_label and p31_qid in P31_ONTOLOGY:
+        p31_label = P31_ONTOLOGY[p31_qid].get("label_ar") or P31_ONTOLOGY[p31_qid].get("label_en") or p31_qid
     return classify_p31(p31_qid), p31_qid, p31_label
 
-def fetch_sparql(query: str, max_retries: int = 3, timeout: int = 45) -> Optional[List[Dict[str, Any]]]:
+def fetch_sparql(query: str, max_retries: int = 4, timeout: int = 90) -> Optional[List[Dict[str, Any]]]:
     """Executes a SPARQL query with retries and exponential backoff. Returns None if every attempt failed."""
     headers = {
         "User-Agent": USER_AGENT,
@@ -104,15 +106,22 @@ def fetch_sparql(query: str, max_retries: int = 3, timeout: int = 45) -> Optiona
                 data = r.json()
                 return data.get("results", {}).get("bindings", [])
             elif r.status_code in (429, 503, 504):
-                wait = (attempt + 1) * 5
-                print(f"  [Wikidata] Rate limited / Busy (HTTP {r.status_code}). Retrying in {wait}s...")
+                # When WDQS rate-limiting is active (e.g. 1 req/min during platform outages),
+                # backoff must wait >= 65s per attempt to clear the throttle window.
+                retry_header = r.headers.get("Retry-After")
+                if retry_header and retry_header.isdigit():
+                    wait = max(int(retry_header), 65)
+                else:
+                    wait = 65 + (attempt * 20)
+                print(f"  [Wikidata] Rate limited / Busy (HTTP {r.status_code}). Waiting {wait}s for rate-limit window...")
                 time.sleep(wait)
             else:
                 print(f"  [Wikidata Error] HTTP {r.status_code}: {r.text[:200]}")
-                time.sleep(3)
+                time.sleep(5)
         except requests.exceptions.RequestException as e:
-            print(f"  [Wikidata Request Exception] {e}. Retrying...")
-            time.sleep((attempt + 1) * 3)
+            wait = 15 * (attempt + 1)
+            print(f"  [Wikidata Request Exception] {e}. Retrying in {wait}s...")
+            time.sleep(wait)
     return None
 
 def fetch_country_wikidata(country_code: str, force_refresh: bool = False) -> List[Dict[str, Any]]:
@@ -180,13 +189,14 @@ def fetch_country_wikidata(country_code: str, force_refresh: bool = False) -> Li
     if country_code == "SA":
         # Query 1: All non-mosque POIs in SA (~16,000 items - archaeology, places, hospitals, peaks, etc.)
         queries.append(f"""
-        SELECT ?item ?itemLabel ?itemLabel_ar ?itemLabel_en ?coords ?p31 ?p31Label ?desc_ar ?desc_en ?wiki_ar ?wiki_en ?image ?osmId ?website ?dissolved ?twitter ?instagram ?facebook WHERE {{
+        SELECT ?item ?itemLabel ?itemLabel_ar ?itemLabel_en ?coords ?p31 ?desc_ar ?desc_en ?wiki_ar ?wiki_en ?image ?osmId ?website ?dissolved ?twitter ?instagram ?facebook WHERE {{
           ?item wdt:P17 wd:{c_qid} ;
                 wdt:P625 ?coords .
           MINUS {{ ?item wdt:P31 wd:Q32815 . }}
           OPTIONAL {{ ?item wdt:P31 ?p31 . }}
           OPTIONAL {{ ?item rdfs:label ?itemLabel_ar . FILTER(LANG(?itemLabel_ar) = "ar") }}
           OPTIONAL {{ ?item rdfs:label ?itemLabel_en . FILTER(LANG(?itemLabel_en) = "en") }}
+          OPTIONAL {{ ?item rdfs:label ?itemLabel . FILTER(LANG(?itemLabel) IN ("ar", "en")) }}
           OPTIONAL {{ ?item schema:description ?desc_ar . FILTER(LANG(?desc_ar) = "ar") }}
           OPTIONAL {{ ?item schema:description ?desc_en . FILTER(LANG(?desc_en) = "en") }}
           OPTIONAL {{ ?wiki_ar schema:about ?item ; schema:isPartOf <https://ar.wikipedia.org/> . }}
@@ -198,7 +208,6 @@ def fetch_country_wikidata(country_code: str, force_refresh: bool = False) -> Li
           OPTIONAL {{ ?item wdt:P2002 ?twitter . }}
           OPTIONAL {{ ?item wdt:P2003 ?instagram . }}
           OPTIONAL {{ ?item wdt:P2013 ?facebook . }}
-          SERVICE wikibase:label {{ bd:serviceParam wikibase:language "ar,en". }}
         }}
         """)
         # Query 2: Mosques in SA in fast 25,000 batches
@@ -216,12 +225,13 @@ def fetch_country_wikidata(country_code: str, force_refresh: bool = False) -> Li
     else:
         # Standard single query for other GCC countries (< 5,000 items each)
         queries.append(f"""
-        SELECT ?item ?itemLabel ?itemLabel_ar ?itemLabel_en ?coords ?p31 ?p31Label ?desc_ar ?desc_en ?wiki_ar ?wiki_en ?image ?osmId ?website ?dissolved ?twitter ?instagram ?facebook WHERE {{
+        SELECT ?item ?itemLabel ?itemLabel_ar ?itemLabel_en ?coords ?p31 ?desc_ar ?desc_en ?wiki_ar ?wiki_en ?image ?osmId ?website ?dissolved ?twitter ?instagram ?facebook WHERE {{
           ?item wdt:P17 wd:{c_qid} ;
                 wdt:P625 ?coords .
           OPTIONAL {{ ?item wdt:P31 ?p31 . }}
           OPTIONAL {{ ?item rdfs:label ?itemLabel_ar . FILTER(LANG(?itemLabel_ar) = "ar") }}
           OPTIONAL {{ ?item rdfs:label ?itemLabel_en . FILTER(LANG(?itemLabel_en) = "en") }}
+          OPTIONAL {{ ?item rdfs:label ?itemLabel . FILTER(LANG(?itemLabel) IN ("ar", "en")) }}
           OPTIONAL {{ ?item schema:description ?desc_ar . FILTER(LANG(?desc_ar) = "ar") }}
           OPTIONAL {{ ?item schema:description ?desc_en . FILTER(LANG(?desc_en) = "en") }}
           OPTIONAL {{ ?wiki_ar schema:about ?item ; schema:isPartOf <https://ar.wikipedia.org/> . }}
@@ -233,7 +243,6 @@ def fetch_country_wikidata(country_code: str, force_refresh: bool = False) -> Li
           OPTIONAL {{ ?item wdt:P2002 ?twitter . }}
           OPTIONAL {{ ?item wdt:P2003 ?instagram . }}
           OPTIONAL {{ ?item wdt:P2013 ?facebook . }}
-          SERVICE wikibase:label {{ bd:serviceParam wikibase:language "ar,en". }}
         }}
         """)
 

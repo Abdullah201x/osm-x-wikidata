@@ -35,6 +35,16 @@ jobs:
         run: |
           pip install -r requirements.txt
 
+      - name: Cache pipeline databases
+        uses: actions/cache@v4
+        with:
+          path: |
+            pipeline/wikidata_cache.db
+            pipeline/osm_cache.db
+          key: pipeline-cache-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            pipeline-cache-${{ runner.os }}-
+
       - name: Download GCC OSM extract
         run: |
           mkdir -p "$RUNNER_TEMP/osm"
