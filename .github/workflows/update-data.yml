@@ -23,10 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -36,7 +36,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Restore pipeline databases
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             pipeline/wikidata_cache.db
@@ -59,7 +59,7 @@ jobs:
 
       - name: Save pipeline databases
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             pipeline/wikidata_cache.db
