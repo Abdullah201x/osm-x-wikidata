@@ -98,6 +98,48 @@ header {
   margin-bottom: 4px;
 }
 
+.freshness-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.freshness-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.freshness-dot {
+  font-size: 0.55rem;
+  line-height: 1;
+  color: #00f2fe;
+}
+
+.freshness-tag.warn .freshness-dot {
+  color: #ffb03a;
+}
+
+.freshness-tag.stale .freshness-dot {
+  color: #ff453a;
+}
+
+.freshness-lbl {
+  color: var(--color-text-muted);
+}
+
+.freshness-time {
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
 .brand-title {
   display: flex;
   align-items: center;

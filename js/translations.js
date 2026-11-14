@@ -7,6 +7,7 @@ const TRANSLATIONS = {
     langLabel: "English",
     docTitle: "ربط أوبن ستريت ماب وويكي بيانات لدول الخليج",
     mainTitle: "ربط OSM × ويكي بيانات",
+    dataFreshnessLabel: "بيانات:",
     subtitle: "أداة متقدمة لربط بيانات OpenStreetMap بـ Wikidata، وكشف العناصر المفقودة في OSM لدول الخليج العربي.",
     
     // Stats & Filters
@@ -285,6 +286,7 @@ const TRANSLATIONS = {
     langLabel: "العربية",
     docTitle: "OSM x Wikidata Linker for GCC Countries",
     mainTitle: "OSM × Wikidata GCC Linker",
+    dataFreshnessLabel: "Data:",
     subtitle: "Power-user tool to link OpenStreetMap with Wikidata and find missing geographic entities across the GCC.",
     
     // Stats & Filters

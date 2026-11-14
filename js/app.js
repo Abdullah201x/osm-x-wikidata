@@ -83,7 +83,54 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Initialize Batch Manager and History Manager
   if (typeof BatchManager !== "undefined") BatchManager.init();
   if (typeof HistoryManager !== "undefined") HistoryManager.init();
+
+  setInterval(() => {
+    if (!document.hidden) renderDataFreshness();
+  }, 60000);
 });
+
+function formatDataRelativeAge(isoString, lang) {
+  const ts = Date.parse(isoString);
+  if (Number.isNaN(ts)) return { text: "–", status: "" };
+  const diffSec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  const mins = Math.floor(diffSec / 60);
+  const hours = Math.floor(diffSec / 3600);
+  const days = Math.floor(diffSec / 86400);
+
+  let text;
+  if (mins < 1) {
+    text = lang === "ar" ? "الآن" : "just now";
+  } else if (hours < 1) {
+    text = lang === "ar" ? `منذ ${mins} د` : `${mins}m ago`;
+  } else if (days < 1) {
+    text = lang === "ar" ? `منذ ${hours} س` : `${hours}h ago`;
+  } else {
+    text = lang === "ar" ? `منذ ${days} ي` : `${days}d ago`;
+  }
+
+  let status = "fresh";
+  if (hours >= 216) {
+    status = "stale";
+  } else if (hours >= 48) {
+    status = "warn";
+  }
+  return { text, status };
+}
+
+function renderDataFreshness() {
+  const tagEl = document.getElementById("data-freshness-tag");
+  const timeEl = document.getElementById("freshness-data-time");
+  if (!tagEl || !timeEl || !summaryData || !summaryData.updated_at) return;
+
+  const { text, status } = formatDataRelativeAge(summaryData.updated_at, currentLang);
+  timeEl.dateTime = summaryData.updated_at;
+  timeEl.textContent = text;
+  tagEl.className = status ? `freshness-tag ${status}` : "freshness-tag";
+  const pbf = summaryData.pbf_file ? ` (${summaryData.pbf_file})` : "";
+  tagEl.title = currentLang === "ar"
+    ? `آخر تحديث للبيانات: ${summaryData.updated_at}${pbf}`
+    : `Dataset updated: ${summaryData.updated_at}${pbf}`;
+}
 
 async function loadSummary() {
   try {
@@ -94,6 +141,7 @@ async function loadSummary() {
         WikidataEdit.pruneOldResolved(summaryData.updated_at);
       }
       renderSummaryStats();
+      renderDataFreshness();
     }
   } catch (e) {
     console.warn("Could not load summary.json:", e);
@@ -1576,6 +1624,7 @@ function setLanguage(lang) {
 
   // The data-i18n pass above resets the auth button to "login"; restore the real login/logout state
   updateAuthUI();
+  renderDataFreshness();
 
   if (selectedItem) {
     selectItem(selectedItem);
