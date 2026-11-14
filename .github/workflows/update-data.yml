@@ -35,8 +35,8 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Cache pipeline databases
-        uses: actions/cache@v4
+      - name: Restore pipeline databases
+        uses: actions/cache/restore@v4
         with:
           path: |
             pipeline/wikidata_cache.db
@@ -56,6 +56,15 @@ jobs:
           python update_data.py --refresh-wikidata --pbf "$RUNNER_TEMP/osm/gcc-states-latest.osm.pbf"
         env:
           PYTHONUNBUFFERED: "1"
+
+      - name: Save pipeline databases
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            pipeline/wikidata_cache.db
+            pipeline/osm_cache.db
+          key: pipeline-cache-${{ runner.os }}-${{ github.run_id }}
 
       - name: Retrain and evaluate the ML matcher
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.retrain }}

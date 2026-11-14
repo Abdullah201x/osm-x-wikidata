@@ -88,7 +88,7 @@ def classify_item(name_ar: str, name_en: str, p31_qid: str, p31_label: str) -> t
         p31_label = P31_ONTOLOGY[p31_qid].get("name_ar") or P31_ONTOLOGY[p31_qid].get("name_en") or p31_qid
     return classify_p31(p31_qid), p31_qid, p31_label
 
-def fetch_sparql(query: str, max_retries: int = 4, timeout: int = 90) -> Optional[List[Dict[str, Any]]]:
+def fetch_sparql(query: str, max_retries: int = 5, timeout: int = 90) -> Optional[List[Dict[str, Any]]]:
     """Executes a SPARQL query with retries and exponential backoff. Returns None if every attempt failed."""
     headers = {
         "User-Agent": USER_AGENT,
@@ -258,7 +258,10 @@ def fetch_country_wikidata(country_code: str, force_refresh: bool = False) -> Li
                 return fetch_country_wikidata(country_code, force_refresh=False)
             raise RuntimeError(f"Wikidata SPARQL query {idx+1} failed for {country_code} and no cache is available.")
         all_bindings.extend(bindings)
-        time.sleep(1)
+        # Polite pause between WDQS queries to avoid triggering per-client 429 rate limits
+        time.sleep(5)
+        if "LIMIT 25000 OFFSET" in q and len(bindings) < 25000:
+            break
 
     print(f"  [Wikidata] Received {len(all_bindings)} records for {country_code}.")
 
