@@ -2,7 +2,7 @@
 Unit Tests for GCC Country Boundary Matcher and Spatial Waterfall.
 """
 
-from pipeline.country_boundaries import get_country_matcher
+from pipeline.country_boundaries import extract_and_cache_gcc_boundaries, get_country_matcher
 
 def test_gcc_country_point_containment():
     m = get_country_matcher()
@@ -36,4 +36,22 @@ def test_waterfall_country_resolution():
     # Tier 3: (0, 0) coords, no tags, but Wikidata P17
     assert m.resolve_country(0.0, 0.0, wd_item={"p17": ["Q851"]}) == "SA"
     assert m.resolve_country(0.0, 0.0, wd_item={"lat": 26.05, "lon": 50.55}) == "BH"
+
+
+def test_boundaries_uses_osm_pbf_env_cache_hit(tmp_path, monkeypatch):
+    import os
+    import pipeline.country_boundaries as cb
+
+    pbf = tmp_path / "gcc.osm.pbf"
+    pbf.write_bytes(b"stub")
+    geojson = tmp_path / "gcc_boundaries.geojson"
+    geojson.write_text('{"type":"FeatureCollection","features":[]}', encoding="utf-8")
+
+    # Make geojson mtime >= pbf mtime so extraction returns the cached geojson path
+    os.utime(pbf, (1000, 1000))
+    os.utime(geojson, (2000, 2000))
+    monkeypatch.setenv("OSM_PBF", str(pbf))
+    monkeypatch.setattr(cb, "BOUNDARIES_GEOJSON", str(geojson))
+
+    assert extract_and_cache_gcc_boundaries() == str(geojson)
 

@@ -63,7 +63,7 @@ def extract_and_cache_gcc_boundaries(pbf_path: Optional[str] = None, force: bool
     Skips extraction if the GeoJSON cache is newer than the PBF mtime.
     """
     if not pbf_path:
-        pbf_path = find_pbf(BASE_DIR)
+        pbf_path = os.environ.get("OSM_PBF") or find_pbf(BASE_DIR)
     if not pbf_path or not os.path.exists(pbf_path):
         raise FileNotFoundError("Could not find valid PBF file to extract boundaries.")
 
@@ -128,11 +128,11 @@ class CountryMatcher:
     In-memory spatial country resolver using prepared shapely polygons.
     Implements a 3-tier country assignment waterfall.
     """
-    def __init__(self, geojson_path: Optional[str] = None):
+    def __init__(self, geojson_path: Optional[str] = None, pbf_path: Optional[str] = None):
         if not geojson_path or not os.path.exists(geojson_path):
             geojson_path = BOUNDARIES_GEOJSON
         if not os.path.exists(geojson_path):
-            geojson_path = extract_and_cache_gcc_boundaries()
+            geojson_path = extract_and_cache_gcc_boundaries(pbf_path=pbf_path)
 
         self.geoms: Dict[str, Any] = {}
         self.prepared: Dict[str, PreparedGeometry] = {}
@@ -217,9 +217,9 @@ class CountryMatcher:
 
 _MATCHER_INSTANCE: Optional[CountryMatcher] = None
 
-def get_country_matcher() -> CountryMatcher:
+def get_country_matcher(pbf_path: Optional[str] = None) -> CountryMatcher:
     global _MATCHER_INSTANCE
     if _MATCHER_INSTANCE is None:
-        _MATCHER_INSTANCE = CountryMatcher()
+        _MATCHER_INSTANCE = CountryMatcher(pbf_path=pbf_path)
     return _MATCHER_INSTANCE
 

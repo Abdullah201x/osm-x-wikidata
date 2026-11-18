@@ -25,6 +25,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
 
 from pipeline.config import GCC_COUNTRIES, DATA_DIR, find_pbf
+from pipeline.country_boundaries import extract_and_cache_gcc_boundaries
 from pipeline.pbf_extractor import extract_pbf_to_cache
 from pipeline.wikidata_fetcher import fetch_country_wikidata
 from pipeline.matcher import match_country_items
@@ -88,6 +89,9 @@ def main():
         print(f"[ERROR] No .osm.pbf file found. Looked in 'update osm' and '{BASE_DIR}'.")
         sys.exit(1)
 
+    # Propagate explicit --pbf path to downstream helpers (e.g. ReverseAnalyzer -> CountryMatcher)
+    os.environ["OSM_PBF"] = pbf_file
+
     print(f" PBF File:       {os.path.basename(pbf_file)}")
     print(f" PBF Path:       {pbf_file}")
     print(f" Target Country: {args.country.upper()}")
@@ -96,6 +100,8 @@ def main():
     # Step 1: Scan / Update local PBF cache
     print("\n[Step 1/3] Checking & scanning local PBF file...")
     linked_cnt, cand_cnt = extract_pbf_to_cache(pbf_file, force_reparse=args.reparse_pbf)
+    if not args.skip_reverse:
+        extract_and_cache_gcc_boundaries(pbf_file)
 
     # Determine countries to process
     if args.country.lower() == "all":
