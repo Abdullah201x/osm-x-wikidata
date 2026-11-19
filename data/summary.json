@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-11-18T18:54:39Z",
+  "updated_at": "2026-11-19T12:34:54Z",
   "pbf_file": "gcc-states-latest.osm.pbf",
-  "total_items": 92654,
-  "total_missing": 82928,
-  "total_candidates": 5963,
-  "total_linked": 3763,
+  "total_items": 92752,
+  "total_missing": 83015,
+  "total_candidates": 5968,
+  "total_linked": 3769,
   "countries": {
     "KW": {
       "name_en": "Kuwait",
@@ -34,17 +34,17 @@
       "file": "qa.json",
       "counts": {
         "total": 2113,
-        "missing": 1699,
+        "missing": 1698,
         "candidates": 233,
-        "linked": 181,
+        "linked": 182,
         "filtered_non_physical": 952
       },
       "reverse_counts": {
-        "total_tagged": 246,
-        "missing_backlink": 151,
+        "total_tagged": 247,
+        "missing_backlink": 152,
         "missing_backlink_high": 42,
         "missing_backlink_medium": 84,
-        "missing_backlink_low": 25,
+        "missing_backlink_low": 26,
         "broken_osm_tag": 5,
         "conflict": 38,
         "review_gap": 60
@@ -55,11 +55,11 @@
       "name_ar": "الإمارات العربية المتحدة",
       "file": "ae.json",
       "counts": {
-        "total": 4485,
-        "missing": 2501,
+        "total": 4483,
+        "missing": 2499,
         "candidates": 765,
         "linked": 1219,
-        "filtered_non_physical": 195
+        "filtered_non_physical": 197
       },
       "reverse_counts": {
         "total_tagged": 1523,
@@ -99,17 +99,17 @@
       "name_ar": "المملكة العربية السعودية",
       "file": "sa.json",
       "counts": {
-        "total": 82307,
-        "missing": 76556,
-        "candidates": 4407,
-        "linked": 1344,
+        "total": 82407,
+        "missing": 76646,
+        "candidates": 4412,
+        "linked": 1349,
         "filtered_non_physical": 4275
       },
       "reverse_counts": {
-        "total_tagged": 3337,
-        "missing_backlink": 1228,
-        "missing_backlink_high": 209,
-        "missing_backlink_medium": 628,
+        "total_tagged": 3341,
+        "missing_backlink": 1232,
+        "missing_backlink_high": 211,
+        "missing_backlink_medium": 630,
         "missing_backlink_low": 391,
         "broken_osm_tag": 58,
         "conflict": 912,
@@ -128,24 +128,24 @@
         "filtered_non_physical": 69
       },
       "reverse_counts": {
-        "total_tagged": 219,
-        "missing_backlink": 167,
+        "total_tagged": 220,
+        "missing_backlink": 168,
         "missing_backlink_high": 79,
         "missing_backlink_medium": 67,
-        "missing_backlink_low": 21,
+        "missing_backlink_low": 22,
         "broken_osm_tag": 8,
         "conflict": 14,
         "review_gap": 53
       }
     }
   },
-  "total_filtered_non_physical": 6325,
+  "total_filtered_non_physical": 6327,
   "reverse_totals": {
-    "total_tagged": 6370,
-    "missing_backlink": 3294,
-    "missing_backlink_high": 989,
-    "missing_backlink_medium": 1540,
-    "missing_backlink_low": 765,
+    "total_tagged": 6376,
+    "missing_backlink": 3300,
+    "missing_backlink_high": 991,
+    "missing_backlink_medium": 1542,
+    "missing_backlink_low": 767,
     "broken_osm_tag": 121,
     "conflict": 1235,
     "review_gap": 1768
