@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-11-19T12:34:54Z",
+  "updated_at": "2026-11-21T12:10:14Z",
   "pbf_file": "gcc-states-latest.osm.pbf",
-  "total_items": 92752,
-  "total_missing": 83015,
+  "total_items": 92652,
+  "total_missing": 82916,
   "total_candidates": 5968,
-  "total_linked": 3769,
+  "total_linked": 3768,
   "countries": {
     "KW": {
       "name_en": "Kuwait",
@@ -34,15 +34,15 @@
       "file": "qa.json",
       "counts": {
         "total": 2113,
-        "missing": 1698,
+        "missing": 1697,
         "candidates": 233,
-        "linked": 182,
+        "linked": 183,
         "filtered_non_physical": 952
       },
       "reverse_counts": {
-        "total_tagged": 247,
-        "missing_backlink": 152,
-        "missing_backlink_high": 42,
+        "total_tagged": 248,
+        "missing_backlink": 153,
+        "missing_backlink_high": 43,
         "missing_backlink_medium": 84,
         "missing_backlink_low": 26,
         "broken_osm_tag": 5,
@@ -86,8 +86,8 @@
       "reverse_counts": {
         "total_tagged": 878,
         "missing_backlink": 688,
-        "missing_backlink_high": 126,
-        "missing_backlink_medium": 390,
+        "missing_backlink_high": 125,
+        "missing_backlink_medium": 391,
         "missing_backlink_low": 172,
         "broken_osm_tag": 0,
         "conflict": 45,
@@ -99,21 +99,21 @@
       "name_ar": "المملكة العربية السعودية",
       "file": "sa.json",
       "counts": {
-        "total": 82407,
-        "missing": 76646,
+        "total": 82306,
+        "missing": 76547,
         "candidates": 4412,
-        "linked": 1349,
+        "linked": 1347,
         "filtered_non_physical": 4275
       },
       "reverse_counts": {
         "total_tagged": 3341,
-        "missing_backlink": 1232,
+        "missing_backlink": 1233,
         "missing_backlink_high": 211,
-        "missing_backlink_medium": 630,
+        "missing_backlink_medium": 631,
         "missing_backlink_low": 391,
         "broken_osm_tag": 58,
         "conflict": 912,
-        "review_gap": 601
+        "review_gap": 600
       }
     },
     "BH": {
@@ -121,11 +121,11 @@
       "name_ar": "البحرين",
       "file": "bh.json",
       "counts": {
-        "total": 545,
-        "missing": 282,
+        "total": 546,
+        "missing": 283,
         "candidates": 76,
         "linked": 187,
-        "filtered_non_physical": 69
+        "filtered_non_physical": 68
       },
       "reverse_counts": {
         "total_tagged": 220,
@@ -139,15 +139,15 @@
       }
     }
   },
-  "total_filtered_non_physical": 6327,
+  "total_filtered_non_physical": 6326,
   "reverse_totals": {
-    "total_tagged": 6376,
-    "missing_backlink": 3300,
+    "total_tagged": 6377,
+    "missing_backlink": 3302,
     "missing_backlink_high": 991,
-    "missing_backlink_medium": 1542,
+    "missing_backlink_medium": 1544,
     "missing_backlink_low": 767,
     "broken_osm_tag": 121,
     "conflict": 1235,
-    "review_gap": 1768
+    "review_gap": 1767
   }
 }
