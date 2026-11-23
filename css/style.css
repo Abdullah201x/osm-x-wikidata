@@ -3178,3 +3178,108 @@ kbd, .kbd-inline {
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: none; }
 }
+
+/* ---- Workspace layout (Phase 3) ---- */
+
+/* Stats: one column per visible card (the import-gated card may be hidden), labels wrap
+   instead of truncating Arabic. Overrides the two earlier .stats-grid blocks. */
+.stats-grid.status-metric-grid {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+}
+.status-metric-grid .stat-lbl {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  font-size: 0.75rem;
+}
+.status-metric-grid .stat-sub-inview { font-size: 0.6875rem; }
+
+/* The one primary action in the sidebar: the only solid primary fill (Von Restorff). */
+.review-next-group { display: flex; flex-direction: column; gap: var(--space-xs); }
+.btn.btn-review-next {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 100%;
+  min-height: 40px;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  border: none;
+  border-radius: var(--rounded-md);
+  font-weight: 700;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.btn.btn-review-next:hover:not(:disabled) { filter: brightness(1.1); }
+.btn.btn-review-next:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-review-next .kbd-inline {
+  background: rgba(15, 23, 42, 0.15);
+  border-color: rgba(15, 23, 42, 0.3);
+  color: var(--color-text-inverse);
+}
+[dir="rtl"] .btn-review-next .icon { transform: scaleX(-1); }
+.review-remaining {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* Secondary controls live behind quiet disclosures. */
+.refine-panel {
+  border: 1px solid var(--panel-border);
+  border-radius: var(--rounded-md);
+  background: var(--color-surface);
+  margin-bottom: var(--space-md);
+}
+.refine-panel > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 36px;
+  padding: 0 var(--space-md);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text);
+  list-style: none;
+  user-select: none;
+}
+.refine-panel > summary::-webkit-details-marker { display: none; }
+.refine-panel > summary::after {
+  content: "";
+  margin-inline-start: auto;
+  width: 7px;
+  height: 7px;
+  /* Physical borders on purpose: a down/up chevron must not mirror in RTL. */
+  border-right: 2px solid var(--color-text-muted);
+  border-bottom: 2px solid var(--color-text-muted);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.15s ease;
+}
+.refine-panel[open] > summary::after { transform: translateY(2px) rotate(-135deg); }
+.refine-panel > summary:hover { background: var(--color-surface-hover); border-radius: var(--rounded-md); }
+.refine-panel > summary .icon { color: var(--color-text-muted); }
+.refine-panel > :not(summary) { padding: 0 var(--space-md) var(--space-sm); }
+.refine-panel > .control-group:last-child, .refine-panel > .export-btn-grid { padding-bottom: var(--space-md); }
+.refine-count {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--rounded-full);
+  background: rgba(var(--rgb-primary), 0.15);
+  color: var(--color-linked-text);
+}
+.export-center-group .refine-panel { margin-bottom: 0; }
+
+/* Login hint: which account this workspace needs. */
+.auth-hint {
+  margin: 6px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}

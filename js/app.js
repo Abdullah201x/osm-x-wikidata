@@ -109,6 +109,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Wire UI event listeners & keyboard shortcuts
   setupEventListeners();
   setupKeyboardShortcuts();
+  setupRefinePanels();
   setupViewportStatsListener();
 
   // Initialize Batch Manager and History Manager
@@ -398,6 +399,7 @@ function applyReverseFilters() {
   if (visibleBadge) {
     visibleBadge.innerText = filteredReverseItems.length.toLocaleString();
   }
+  updateWorkspaceChrome();
 
   // Render on map
   MapController.renderReverseItems(filteredReverseItems, (item, marker) => {
@@ -752,6 +754,111 @@ function refreshReverseViewAfterPush() {
   }
 }
 
+// ---- Workspace chrome: primary "next" action, refine counts, login hint ----
+
+/** Forward items still need a human (not linked); every reverse item is an open issue. */
+function makeActionableTest() {
+  if (currentMode === "reverse") return () => true;
+  const verified = LiveVerifier.getVerifiedCache();
+  return (item) => (verified[`Q${item[0]}`] ? 2 : item[4]) !== 2;
+}
+
+/**
+ * Selects the next (dir=1) or previous (dir=-1) item, wrapping around. Prefers items that
+ * still need work, so "next" never lands on something already linked; if the current
+ * filter holds nothing actionable it walks every item instead.
+ */
+function stepItem(dir) {
+  const list = currentMode === "reverse" ? filteredReverseItems : filteredItems;
+  const n = list.length;
+  if (!n) return;
+  const isActionable = makeActionableTest();
+  const pool = list.some(isActionable) ? isActionable : () => true;
+  const start = selectedItemIndex >= 0 && selectedItemIndex < n ? selectedItemIndex : (dir > 0 ? -1 : 0);
+  for (let k = 1; k <= n; k++) {
+    const item = list[(((start + dir * k) % n) + n) % n];
+    if (pool(item)) {
+      if (currentMode === "reverse") selectReverseItem(item);
+      else selectItem(item);
+      return;
+    }
+  }
+}
+
+/** Number of filters that differ from the workspace defaults. */
+function activeRefineCount() {
+  if (currentMode === "reverse") {
+    const defaults = ["high", "medium"];
+    const extra = [...activeReverseConfidence].filter((c) => !defaults.includes(c)).length;
+    const missing = defaults.filter((c) => !activeReverseConfidence.has(c)).length;
+    return extra + missing;
+  }
+  return (filterHasWiki ? 1 : 0) + (filterHasPhoto ? 1 : 0) + (filterHideDemolished ? 0 : 1)
+    + (6 - activeCategoryFilters.size);
+}
+
+function updateWorkspaceChrome() {
+  const reverse = currentMode === "reverse";
+  const list = reverse ? filteredReverseItems : filteredItems;
+  const remaining = list.filter(makeActionableTest()).length;
+
+  const label = document.getElementById("review-next-label");
+  if (label) {
+    const key = reverse ? "reviewNextReverse" : "reviewNextForward";
+    label.setAttribute("data-i18n", key);
+    label.textContent = i18n(key);
+  }
+  const nextBtn = document.getElementById("btn-review-next");
+  if (nextBtn) nextBtn.disabled = list.length === 0;
+  const remainingEl = document.getElementById("review-remaining");
+  if (remainingEl) {
+    remainingEl.textContent = i18n("reviewRemaining", {
+      n: remaining.toLocaleString(),
+      shown: list.length.toLocaleString(),
+    });
+  }
+
+  const count = activeRefineCount();
+  const countEl = document.getElementById(reverse ? "refine-count-reverse" : "refine-count-forward");
+  if (countEl) {
+    countEl.textContent = count ? i18n("refineActive", { n: count }) : "";
+    countEl.hidden = !count;
+  }
+  updateAuthHint();
+}
+
+/** Says which account the current workspace needs, only while that account is missing. */
+function updateAuthHint() {
+  const reverse = currentMode === "reverse";
+  const osmIn = typeof OsmAuth !== "undefined" && !!OsmAuth.getUserName();
+  const wdIn = typeof WikidataAuth !== "undefined" && WikidataAuth.isAuthenticated();
+  // Wikidata login only matters for Reverse QA (adding back-links); keep it out of the
+  // forward workspace unless the editor is already signed in.
+  const wdCard = document.getElementById("wd-auth-card");
+  if (wdCard) wdCard.hidden = !reverse && !wdIn;
+
+  const hint = document.getElementById("auth-hint");
+  if (!hint) return;
+  let key = null;
+  if (reverse && (!osmIn || !wdIn)) key = "authHintReverse";
+  else if (!reverse && !osmIn) key = "authHintForward";
+  hint.hidden = !key;
+  hint.textContent = key ? i18n(key) : "";
+}
+
+/** <details data-refine> panels remember whether the editor left them open. */
+function setupRefinePanels() {
+  document.querySelectorAll("details[data-refine]").forEach((el) => {
+    const storageKey = `osm_wd_refine_${el.dataset.refine}`;
+    if (localStorage.getItem(storageKey) === "open") el.open = true;
+    el.addEventListener("toggle", () => {
+      localStorage.setItem(storageKey, el.open ? "open" : "closed");
+    });
+  });
+  const nextBtn = document.getElementById("btn-review-next");
+  if (nextBtn) nextBtn.addEventListener("click", () => stepItem(1));
+}
+
 async function switchMode(mode) {
   if (mode === currentMode) return;
   currentMode = mode;
@@ -767,8 +874,8 @@ async function switchMode(mode) {
   const panelRev = document.getElementById("reverse-controls-panel");
 
   if (currentMode === "forward") {
-    if (btnFwd) btnFwd.classList.add("active");
-    if (btnRev) btnRev.classList.remove("active");
+    if (btnFwd) { btnFwd.classList.add("active"); btnFwd.setAttribute("aria-pressed", "true"); }
+    if (btnRev) { btnRev.classList.remove("active"); btnRev.setAttribute("aria-pressed", "false"); }
     if (panelFwd) panelFwd.style.display = "block";
     if (panelRev) panelRev.style.display = "none";
 
@@ -785,8 +892,8 @@ async function switchMode(mode) {
     renderSummaryStats();
     applyFilters();
   } else {
-    if (btnFwd) btnFwd.classList.remove("active");
-    if (btnRev) btnRev.classList.add("active");
+    if (btnFwd) { btnFwd.classList.remove("active"); btnFwd.setAttribute("aria-pressed", "false"); }
+    if (btnRev) { btnRev.classList.add("active"); btnRev.setAttribute("aria-pressed", "true"); }
     if (panelFwd) panelFwd.style.display = "none";
     if (panelRev) panelRev.style.display = "block";
 
@@ -882,6 +989,7 @@ function applyFilters() {
   if (visibleBadge) {
     visibleBadge.innerText = filteredItems.length.toLocaleString();
   }
+  updateWorkspaceChrome();
 
   // Render on map
   MapController.renderItems(filteredItems, (item, marker) => {
@@ -1625,6 +1733,7 @@ function updateAuthUI() {
     }
     if (wdUserLabel) wdUserLabel.style.display = "none";
   }
+  updateAuthHint();
 }
 
 function setLanguage(lang) {
@@ -1640,6 +1749,10 @@ function setLanguage(lang) {
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.getAttribute("data-i18n");
     if (t[key]) el.innerText = t[key];
+  });
+  document.querySelectorAll("[data-i18n-aria]").forEach(el => {
+    const key = el.getAttribute("data-i18n-aria");
+    if (t[key]) el.setAttribute("aria-label", t[key]);
   });
 
   // Placeholder translations
@@ -1758,6 +1871,13 @@ function setupKeyboardShortcuts() {
       return;
     }
 
+    // 'n' / 'p' -> next / previous item needing review; works before anything is selected
+    if (key === "n" || key === "N" || key === "p" || key === "P") {
+      e.preventDefault();
+      stepItem(key === "n" || key === "N" ? 1 : -1);
+      return;
+    }
+
     // Feature-specific shortcuts
     if (currentMode === "reverse") {
       // selectReverseItem() stores the reverse item in selectedItem / selectedItemIndex
@@ -1777,18 +1897,6 @@ function setupKeyboardShortcuts() {
         e.preventDefault();
         if (osmRef && qid) {
           MappingTools.josmAddTags(osmRef, qid);
-        }
-      } else if (key === "n" || key === "N") {
-        e.preventDefault();
-        if (filteredReverseItems.length > 0) {
-          const nextIdx = (selectedItemIndex + 1) % filteredReverseItems.length;
-          selectReverseItem(filteredReverseItems[nextIdx]);
-        }
-      } else if (key === "p" || key === "P") {
-        e.preventDefault();
-        if (filteredReverseItems.length > 0) {
-          const prevIdx = (selectedItemIndex - 1 + filteredReverseItems.length) % filteredReverseItems.length;
-          selectReverseItem(filteredReverseItems[prevIdx]);
         }
       }
       return;
@@ -1830,20 +1938,6 @@ function setupKeyboardShortcuts() {
       e.preventDefault();
       const btnVerify = document.getElementById("btn-live-verify");
       if (btnVerify) btnVerify.click();
-    } else if (key === "n" || key === "N") {
-      // Next POI
-      e.preventDefault();
-      if (filteredItems.length > 0) {
-        const nextIdx = (selectedItemIndex + 1) % filteredItems.length;
-        selectItem(filteredItems[nextIdx]);
-      }
-    } else if (key === "p" || key === "P") {
-      // Previous POI
-      e.preventDefault();
-      if (filteredItems.length > 0) {
-        const prevIdx = (selectedItemIndex - 1 + filteredItems.length) % filteredItems.length;
-        selectItem(filteredItems[prevIdx]);
-      }
     }
   });
 }

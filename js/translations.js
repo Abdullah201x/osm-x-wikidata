@@ -312,6 +312,16 @@ const TRANSLATIONS = {
     noHistoryToExport: "لا توجد مجموعات تعديل في السجل لتصديرها.",
     wdAuthStateError: "فشل تسجيل الدخول إلى ويكي بيانات: رمز الحالة غير صالح. أعد المحاولة.",
     wdAuthFailed: "تعذر تسجيل الدخول إلى ويكي بيانات. يمكنك استخدام QuickStatements بديلاً.",
+    workspaceLabel: "مساحة العمل",
+    reviewNextForward: "مراجعة المرشح التالي",
+    reviewNextReverse: "مراجعة المشكلة التالية",
+    reviewRemaining: "{n} بحاجة لمراجعة · {shown} معروض",
+    refineLabel: "تصفية",
+    refineActive: "{n} مفعّل",
+    exportLabel: "تصدير",
+    authHintForward: "سجّل الدخول بحساب OSM لنشر الروابط باسمك.",
+    authHintReverse: "حساب OSM لإصلاح الوسوم، وحساب ويكي بيانات لإضافة الروابط الخلفية.",
+    shownSuffix: "معروض",
     footerText: 'بيانات <a href="https://www.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> و <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> · مجتمع OSM السعودي: <a href="https://t.me/OSMSaudi" target="_blank" rel="noopener">تيليجرام</a>'
   },
   en: {
@@ -623,6 +633,16 @@ const TRANSLATIONS = {
     noHistoryToExport: "No changesets in history to export.",
     wdAuthStateError: "Wikidata login failed: invalid OAuth state. Please try again.",
     wdAuthFailed: "Couldn't log in to Wikidata. You can use QuickStatements instead.",
+    workspaceLabel: "Workspace",
+    reviewNextForward: "Review next candidate",
+    reviewNextReverse: "Review next issue",
+    reviewRemaining: "{n} to review · {shown} shown",
+    refineLabel: "Refine",
+    refineActive: "{n} active",
+    exportLabel: "Export",
+    authHintForward: "Log in to OSM to publish links under your name.",
+    authHintReverse: "OSM login repairs tags; Wikidata login adds back-links.",
+    shownSuffix: "shown",
     footerText: 'Data from <a href="https://www.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> & <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> · Saudi OSM Community: <a href="https://t.me/OSMSaudi" target="_blank" rel="noopener">Telegram</a>'
   }
 };

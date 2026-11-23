@@ -164,6 +164,12 @@ describe('reverse mode item shortcuts', () => {
     press('p');
     expect(app.__app.get().selectedItem).toBe(items[2]);
   });
+
+  it('n with nothing selected starts at the first item', () => {
+    app.__app.set({ selectedItem: null, selectedItemIndex: -1 });
+    press('n');
+    expect(app.__app.get().selectedItem).toBe(items[0]);
+  });
 });
 
 describe('URL hash in reverse mode', () => {
@@ -206,5 +212,34 @@ describe('Arabic layout shortcuts (physical key code fallback)', () => {
     expect(globalThis.MapController.switchBasemap).toHaveBeenLastCalledWith('light');
     press('ج', window, { code: 'BracketLeft' });
     expect(globalThis.MapController.switchBasemap).toHaveBeenLastCalledWith('dark');
+  });
+});
+
+describe('forward "next" skips items that are already linked', () => {
+  // [qid, lat, lon, cat, status, ...]: status 2 = linked (nothing to do), 1 = candidate
+  const fwd = [
+    [1, 24, 46, 1, 1, 'a', 'A', '', 'n1'],
+    [2, 24, 46, 1, 2, 'b', 'B', '', 'n2'],
+    [3, 24, 46, 1, 2, 'c', 'C', '', 'n3'],
+    [4, 24, 46, 1, 1, 'd', 'D', '', 'n4'],
+  ];
+
+  it('n jumps over linked items and wraps; p walks back the same way', () => {
+    app.__app.set({ currentMode: 'forward', filteredItems: fwd, selectedItem: fwd[0], selectedItemIndex: 0 });
+    press('n');
+    expect(app.__app.get().selectedItem).toBe(fwd[3]);
+    press('n');
+    expect(app.__app.get().selectedItem).toBe(fwd[0]);
+    press('p');
+    expect(app.__app.get().selectedItem).toBe(fwd[3]);
+  });
+
+  it('falls back to every item when the filter shows only linked ones', () => {
+    const linked = [fwd[1], fwd[2]];
+    app.__app.set({ currentMode: 'forward', filteredItems: linked, selectedItem: null, selectedItemIndex: -1 });
+    press('n');
+    expect(app.__app.get().selectedItem).toBe(linked[0]);
+    press('n');
+    expect(app.__app.get().selectedItem).toBe(linked[1]);
   });
 });

@@ -98,6 +98,8 @@ test.describe('logged-in OSM user', () => {
     expect(meCalls).toEqual(['Bearer TEST-TOKEN']);
     expect(dataRequests).toContain('/data/sa.json');
     expect(dataRequests).not.toContain('/data/sa_linkable.json');
+    // Exports are secondary and live behind the collapsed "Export" disclosure.
+    await page.locator('details[data-refine="export"] > summary').click();
     for (const sel of IMPORT_ONLY) await expect(page.locator(sel)).toBeVisible();
     await expect(page.locator('#stat-missing-card')).toBeVisible();
     await expect(page.locator('#import-restricted-note')).toBeHidden();

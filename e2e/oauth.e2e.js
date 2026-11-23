@@ -30,7 +30,8 @@ test.describe('login buttons', () => {
 
   test('Wikidata: S256 PKCE, wd_ state, exact index.html redirect, editpage scope', async ({ page, baseURL }) => {
     await guardPage(page, baseURL);
-    await openApp(page, { lang: 'en' });
+    // The Wikidata login lives in the Reverse QA workspace (the only place it is needed).
+    await openApp(page, { lang: 'en', mode: 'reverse' });
 
     const url = await clickLogin(page, '#btn-wd-login', /meta\.wikimedia\.org\/w\/rest\.php\/oauth2\/authorize/);
     expect(url.origin + url.pathname).toBe('https://meta.wikimedia.org/w/rest.php/oauth2/authorize');
@@ -39,6 +40,17 @@ test.describe('login buttons', () => {
     expect(url.searchParams.get('state')).toMatch(/^wd_/);
     expect(url.searchParams.get('redirect_uri')).toBe(`${baseURL}/index.html`);
     expect(url.searchParams.get('scope')).toBe('basic editpage');
+  });
+
+  test('Forward workspace hides the Wikidata login and says which account it needs', async ({ page, baseURL }) => {
+    await guardPage(page, baseURL);
+    await openApp(page, { lang: 'en' });
+    await expect(page.locator('#wd-auth-card')).toBeHidden();
+    await expect(page.locator('#auth-hint')).toHaveText(/Log in to OSM/);
+    await page.locator('#btn-mode-reverse').click();
+    await expect(page.locator('#btn-mode-reverse')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#wd-auth-card')).toBeVisible();
+    await expect(page.locator('#auth-hint')).toHaveText(/Wikidata login adds back-links/);
   });
 
   test('two logins never reuse the PKCE challenge or state', async ({ page, baseURL }) => {

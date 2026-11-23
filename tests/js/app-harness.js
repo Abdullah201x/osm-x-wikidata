@@ -12,6 +12,7 @@ export function loadApp() {
   loadScript('tools.js', ['escapeHtml', 'icon', 'safeUrl', 'commonsImageUrl']);
   loadScript('notify.js', ['Notify']);
   loadScript('import_access.js', ['ImportAccess']);
+  loadScript('tag_generator.js', ['TagGenerator']);
 
   globalThis.MapController = {
     renderItems: vi.fn(),
@@ -20,7 +21,7 @@ export function loadApp() {
     switchBasemap: vi.fn(),
     BASEMAP_ORDER: ['dark', 'light', 'streets', 'topo', 'satellite'],
   };
-  globalThis.LiveVerifier = { getVerifiedCache: vi.fn(() => ({})) };
+  globalThis.LiveVerifier = { getVerifiedCache: vi.fn(() => ({})), isLocallyVerified: vi.fn(() => false) };
   globalThis.MappingTools = {
     josmLoadAndZoom: vi.fn(),
     josmAddTags: vi.fn(),

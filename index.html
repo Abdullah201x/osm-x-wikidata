@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <!-- Old GitHub Pages URL -> wikidata.saudiosm.org -->
-  <script src="js/pages_redirect.js?v=23"></script>
+  <script src="js/pages_redirect.js?v=24"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ربط أوبن ستريت ماب وويكي بيانات لدول الخليج</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2242%22 r=%2230%22 fill=%22none%22 stroke=%22%2300f2fe%22 stroke-width=%2212%22/><path d=%22M50 96 28 64h44z%22 fill=%22%2300f2fe%22/></svg>" />
   
   <!-- Leaflet & MarkerCluster CSS (Self-Hosted) -->
-  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=23" />
-  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css?v=23" />
-  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.Default.css?v=23" />
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=24" />
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css?v=24" />
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.Default.css?v=24" />
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="css/style.css?v=23" />
+  <link rel="stylesheet" href="css/style.css?v=24" />
 </head>
 <body>
   <!-- Icon sprite: one stroke family (24px grid, 2px stroke, currentColor). Use via <svg class="icon"><use href="#i-NAME"/></svg>. -->
@@ -90,6 +90,18 @@
           </button>
         </div>
 
+        <!-- Workspace switch: Forward linking | Reverse QA (one task per workspace) -->
+        <div class="mode-switcher-wrap" role="group" data-i18n-aria="workspaceLabel" aria-label="مساحة العمل">
+          <button id="btn-mode-forward" class="mode-btn active" aria-pressed="true" data-mode="forward" title="ويكي بيانات ← OSM (الوضع الافتراضي)">
+            <span class="mode-icon"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+            <span data-i18n="modeForward">Wikidata → OSM</span>
+          </button>
+          <button id="btn-mode-reverse" class="mode-btn" aria-pressed="false" data-mode="reverse" title="تدقيق معالم OSM الموسومة بـ wikidata=* وربطها بويكي بيانات">
+            <span class="mode-icon"><svg class="icon" aria-hidden="true"><use href="#i-swap"/></svg></span>
+            <span data-i18n="modeReverse">OSM → Wikidata (Reverse QA)</span>
+          </button>
+        </div>
+
         <!-- Dual Auth Bar (OSM & Wikidata) -->
         <div class="auth-bar" role="region" aria-label="حسابات الربط والتحرير">
           <div class="auth-chip-group" id="osm-auth-card">
@@ -101,18 +113,8 @@
             <button id="btn-wd-login" class="wd-btn" data-i18n="loginWd">تسجيل الدخول بـ Wikidata</button>
           </div>
         </div>
+        <p id="auth-hint" class="auth-hint" aria-live="polite" hidden></p>
 
-        <!-- Direction Mode Switcher -->
-        <div class="mode-switcher-wrap">
-          <button id="btn-mode-forward" class="mode-btn active" data-mode="forward" title="ويكي بيانات ← OSM (الوضع الافتراضي)">
-            <span class="mode-icon"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></span>
-            <span data-i18n="modeForward">Wikidata → OSM</span>
-          </button>
-          <button id="btn-mode-reverse" class="mode-btn" data-mode="reverse" title="تدقيق معالم OSM الموسومة بـ wikidata=* وربطها بويكي بيانات">
-            <span class="mode-icon"><svg class="icon" aria-hidden="true"><use href="#i-swap"/></svg></span>
-            <span data-i18n="modeReverse">OSM → Wikidata (Reverse QA)</span>
-          </button>
-        </div>
       </header>
 
       <div class="sidebar-body">
@@ -171,52 +173,63 @@
           <p id="import-restricted-note" class="import-note" data-i18n="importRestrictedNote" hidden>مواقع ويكي بيانات غير الموجودة في OSM متاحة فقط للمستوردين المعتمدين.</p>
         </div>
 
+        <!-- Primary action: one obvious next step per workspace (Hick's Law) -->
+        <div class="control-group review-next-group">
+          <button type="button" id="btn-review-next" class="btn btn-review-next">
+            <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg><span id="review-next-label" data-i18n="reviewNextForward">مراجعة المرشح التالي</span>
+            <kbd class="kbd-inline">N</kbd>
+          </button>
+          <p id="review-remaining" class="review-remaining" aria-live="polite"></p>
+        </div>
+
         <!-- Forward Linker Controls (Visible in Forward Mode) -->
         <div id="forward-controls-panel">
-          <!-- Quick Quality Filter Chips -->
-          <div class="control-group">
-            <div class="filter-chips-container">
-              <button id="chip-wiki" class="filter-chip" data-filter="wiki"><span data-i18n="chipHasWiki">مقال ويكيبيديا</span></button>
-              <button id="chip-photo" class="filter-chip" data-filter="photo"><span data-i18n="chipHasPhoto">صورة كومنز</span></button>
-              <button id="chip-demolished" class="filter-chip active" data-filter="demolished"><span data-i18n="chipHideDemolished">إخفاء المهدم</span></button>
+          <details class="refine-panel" data-refine="forward">
+            <summary><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><span data-i18n="refineLabel">تصفية</span> <span class="refine-count" id="refine-count-forward"></span></summary>
+            <div class="control-group">
+              <div class="filter-chips-container">
+                <button id="chip-wiki" class="filter-chip" data-filter="wiki"><span data-i18n="chipHasWiki">مقال ويكيبيديا</span></button>
+                <button id="chip-photo" class="filter-chip" data-filter="photo"><span data-i18n="chipHasPhoto">صورة كومنز</span></button>
+                <button id="chip-demolished" class="filter-chip active" data-filter="demolished"><span data-i18n="chipHideDemolished">إخفاء المهدم</span></button>
+              </div>
             </div>
-          </div>
 
-          <!-- Category Filter Checkboxes -->
-          <div class="control-group">
-            <div class="section-title-row">
-              <label class="section-label" data-i18n="filterCategory">التصنيفات</label>
-              <span class="text-caption-muted" aria-live="polite">
-                (<span id="visible-count">0</span> معروض)
-              </span>
+            <!-- Category Filter Checkboxes -->
+            <div class="control-group">
+              <div class="section-title-row">
+                <label class="section-label" data-i18n="filterCategory">التصنيفات</label>
+                <span class="text-caption-muted" aria-live="polite">
+                  (<span id="visible-count">0</span> <span data-i18n="shownSuffix">معروض</span>)
+                </span>
+              </div>
+              <div class="category-grid">
+                <label class="cat-item">
+                  <input type="checkbox" class="cat-checkbox" data-cat="1" checked />
+                  <span>المدن والتجمعات</span>
+                </label>
+                <label class="cat-item">
+                  <input type="checkbox" class="cat-checkbox" data-cat="2" checked />
+                  <span>التراث والتاريخ</span>
+                </label>
+                <label class="cat-item">
+                  <input type="checkbox" class="cat-checkbox" data-cat="3" checked />
+                  <span>المعالم الطبيعية</span>
+                </label>
+                <label class="cat-item">
+                  <input type="checkbox" class="cat-checkbox" data-cat="4" checked />
+                  <span>التعليم والصحة</span>
+                </label>
+                <label class="cat-item">
+                  <input type="checkbox" class="cat-checkbox" data-cat="5" checked />
+                  <span>السياحة والتجارة</span>
+                </label>
+                <label class="cat-item">
+                  <input type="checkbox" class="cat-checkbox" data-cat="6" checked />
+                  <span>المساجد والعبادة</span>
+                </label>
+              </div>
             </div>
-            <div class="category-grid">
-              <label class="cat-item">
-                <input type="checkbox" class="cat-checkbox" data-cat="1" checked />
-                <span>المدن والتجمعات</span>
-              </label>
-              <label class="cat-item">
-                <input type="checkbox" class="cat-checkbox" data-cat="2" checked />
-                <span>التراث والتاريخ</span>
-              </label>
-              <label class="cat-item">
-                <input type="checkbox" class="cat-checkbox" data-cat="3" checked />
-                <span>المعالم الطبيعية</span>
-              </label>
-              <label class="cat-item">
-                <input type="checkbox" class="cat-checkbox" data-cat="4" checked />
-                <span>التعليم والصحة</span>
-              </label>
-              <label class="cat-item">
-                <input type="checkbox" class="cat-checkbox" data-cat="5" checked />
-                <span>السياحة والتجارة</span>
-              </label>
-              <label class="cat-item">
-                <input type="checkbox" class="cat-checkbox" data-cat="6" checked />
-                <span>المساجد والعبادة</span>
-              </label>
-            </div>
-          </div>
+          </details>
         </div>
 
         <!-- Reverse QA Controls (Visible in Reverse Mode) -->
@@ -233,15 +246,17 @@
             </div>
           </div>
 
-          <!-- Reverse Confidence Chips -->
-          <div class="control-group">
-            <label class="section-label" data-i18n="reverseConfidence">مستوى الدقة والثقة</label>
-            <div class="filter-chips-container">
-              <button id="chip-rev-high" class="filter-chip active" data-conf="high" data-i18n="confHigh">دقة عالية (≥ 85%)</button>
-              <button id="chip-rev-med" class="filter-chip active" data-conf="medium" data-i18n="confMedium">دقة متوسطة</button>
-              <button id="chip-rev-low" class="filter-chip" data-conf="low" data-i18n="confLow">دقة منخفضة</button>
+          <details class="refine-panel" data-refine="reverse">
+            <summary><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><span data-i18n="refineLabel">تصفية</span> <span class="refine-count" id="refine-count-reverse"></span></summary>
+            <div class="control-group">
+              <label class="section-label" data-i18n="reverseConfidence">مستوى الدقة والثقة</label>
+              <div class="filter-chips-container">
+                <button id="chip-rev-high" class="filter-chip active" data-conf="high" data-i18n="confHigh">دقة عالية (≥ 85%)</button>
+                <button id="chip-rev-med" class="filter-chip active" data-conf="medium" data-i18n="confMedium">دقة متوسطة</button>
+                <button id="chip-rev-low" class="filter-chip" data-conf="low" data-i18n="confLow">دقة منخفضة</button>
+              </div>
             </div>
-          </div>
+          </details>
 
           <!-- Quick Action: Export Filtered Backlinks to QuickStatements -->
           <div class="control-group">
@@ -251,8 +266,10 @@
           </div>
         </div>
 
-        <!-- Export Center -->
+        <!-- Export Center (secondary; collapsed by default) -->
         <div class="control-group export-center-group">
+          <details class="refine-panel" data-refine="export">
+            <summary><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span data-i18n="exportLabel">تصدير</span></summary>
           <div class="export-btn-grid">
             <button id="btn-export-mr" class="btn btn-export-mini" data-import-only hidden title="MapRoulette GeoJSON">
               <svg class="icon" aria-hidden="true"><use href="#i-target"/></svg> MapRoulette
@@ -267,6 +284,7 @@
               <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> QS v2
             </button>
           </div>
+          </details>
         </div>
 
         <!-- Maintainer & Community Contact Footer -->
@@ -655,28 +673,28 @@
   </div>
 
   <!-- Leaflet & MarkerCluster JS (Self-Hosted) -->
-  <script src="vendor/leaflet/leaflet.js?v=23"></script>
-  <script src="vendor/markercluster/leaflet.markercluster.js?v=23"></script>
+  <script src="vendor/leaflet/leaflet.js?v=24"></script>
+  <script src="vendor/markercluster/leaflet.markercluster.js?v=24"></script>
 
   <!-- Application Modules -->
-  <script src="js/translations.js?v=23"></script>
-  <script src="js/arabic_utils.js?v=23"></script>
-  <script src="js/tag_generator.js?v=23"></script>
-  <script src="js/wikidata_labels.js?v=23"></script>
-  <script src="js/tools.js?v=23"></script>
-  <script src="js/notify.js?v=23"></script>
-  <script src="js/osm_oauth.js?v=23"></script>
-  <script src="js/import_access.js?v=23"></script>
-  <script src="js/wikidata_auth.js?v=23"></script>
-  <script src="js/wikidata_edit.js?v=23"></script>
-  <script src="js/live_verify.js?v=23"></script>
-  <script src="js/batch_manager.js?v=23"></script>
-  <script src="js/history_manager.js?v=23"></script>
-  <script src="js/map.js?v=23"></script>
-  <script src="js/tag_repair_dialog.js?v=23"></script>
-  <script src="js/progress_chart.js?v=23"></script>
-  <script src="js/modal_a11y.js?v=23"></script>
-  <script src="js/app.js?v=23"></script>
+  <script src="js/translations.js?v=24"></script>
+  <script src="js/arabic_utils.js?v=24"></script>
+  <script src="js/tag_generator.js?v=24"></script>
+  <script src="js/wikidata_labels.js?v=24"></script>
+  <script src="js/tools.js?v=24"></script>
+  <script src="js/notify.js?v=24"></script>
+  <script src="js/osm_oauth.js?v=24"></script>
+  <script src="js/import_access.js?v=24"></script>
+  <script src="js/wikidata_auth.js?v=24"></script>
+  <script src="js/wikidata_edit.js?v=24"></script>
+  <script src="js/live_verify.js?v=24"></script>
+  <script src="js/batch_manager.js?v=24"></script>
+  <script src="js/history_manager.js?v=24"></script>
+  <script src="js/map.js?v=24"></script>
+  <script src="js/tag_repair_dialog.js?v=24"></script>
+  <script src="js/progress_chart.js?v=24"></script>
+  <script src="js/modal_a11y.js?v=24"></script>
+  <script src="js/app.js?v=24"></script>
 
 </body>
 </html>
