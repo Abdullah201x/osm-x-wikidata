@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-11-22T12:20:16Z",
+  "updated_at": "2026-11-23T14:10:46Z",
   "pbf_file": "gcc-states-latest.osm.pbf",
-  "total_items": 93151,
-  "total_missing": 83409,
-  "total_candidates": 5971,
-  "total_linked": 3771,
+  "total_items": 93750,
+  "total_missing": 83965,
+  "total_candidates": 6015,
+  "total_linked": 3770,
   "countries": {
     "KW": {
       "name_en": "Kuwait",
@@ -55,11 +55,11 @@
       "name_ar": "الإمارات العربية المتحدة",
       "file": "ae.json",
       "counts": {
-        "total": 4484,
-        "missing": 2500,
+        "total": 4483,
+        "missing": 2499,
         "candidates": 765,
         "linked": 1219,
-        "filtered_non_physical": 196
+        "filtered_non_physical": 197
       },
       "reverse_counts": {
         "total_tagged": 1523,
@@ -77,9 +77,9 @@
       "name_ar": "سلطنة عمان",
       "file": "om.json",
       "counts": {
-        "total": 2800,
+        "total": 2801,
         "missing": 1667,
-        "candidates": 389,
+        "candidates": 390,
         "linked": 744,
         "filtered_non_physical": 628
       },
@@ -99,20 +99,20 @@
       "name_ar": "المملكة العربية السعودية",
       "file": "sa.json",
       "counts": {
-        "total": 82805,
-        "missing": 77041,
-        "candidates": 4414,
-        "linked": 1350,
+        "total": 83404,
+        "missing": 77600,
+        "candidates": 4455,
+        "linked": 1349,
         "filtered_non_physical": 4274
       },
       "reverse_counts": {
         "total_tagged": 3342,
-        "missing_backlink": 1234,
-        "missing_backlink_high": 212,
+        "missing_backlink": 1235,
+        "missing_backlink_high": 213,
         "missing_backlink_medium": 631,
         "missing_backlink_low": 391,
         "broken_osm_tag": 58,
-        "conflict": 912,
+        "conflict": 909,
         "review_gap": 601
       }
     },
@@ -122,8 +122,8 @@
       "file": "bh.json",
       "counts": {
         "total": 544,
-        "missing": 281,
-        "candidates": 76,
+        "missing": 279,
+        "candidates": 78,
         "linked": 187,
         "filtered_non_physical": 69
       },
@@ -139,15 +139,15 @@
       }
     }
   },
-  "total_filtered_non_physical": 6325,
+  "total_filtered_non_physical": 6326,
   "reverse_totals": {
     "total_tagged": 6378,
-    "missing_backlink": 3303,
-    "missing_backlink_high": 992,
+    "missing_backlink": 3304,
+    "missing_backlink_high": 993,
     "missing_backlink_medium": 1544,
     "missing_backlink_low": 767,
     "broken_osm_tag": 121,
-    "conflict": 1235,
+    "conflict": 1232,
     "review_gap": 1768
   }
 }
