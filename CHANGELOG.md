@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Changed: UX audit against the cognitive UX playbook (2026-11-24)
+- **Point of view:** `PRODUCT.md` ties each principle to a UX law. `DESIGN.md` is now the source of truth for tokens and icons, and `css/style.css` mirrors it.
+- **Palette and icons:** status colours follow DESIGN.md as RGB-channel tokens. Neon tints and idle pulse animations are gone, and claim/repair buttons pass AA. About 250 emoji are replaced by one SVG stroke-icon sprite. This also fixed doubled glyphs such as "⚡ ⚡ Link Now". Reverse-QA kind pills use dots that match the map markers.
+- **Honest feedback:** `js/notify.js` replaces all `alert()` calls. Errors persist and offer Retry. A failed Reverse QA load used to show an empty map, which read as "nothing to fix", and now says the load failed. A batch with failures is no longer headlined as a success.
+- **Two workspaces:** Forward and Reverse QA each have one primary "Review next" action (`N`). It works before anything is selected and skips items that are already linked. Filters and exports sit behind remembered "Refine"/"Export" disclosures. The Wikidata login appears only in Reverse QA, with a hint about which account the workspace needs.
+- **Language:** every UI string, attribute and confirm now goes through `translations.js` / `i18n()`, one language at a time. Country names and relative times use `Intl`.
+- **Craft:** links are readable, targets are ≥ 32px (44px on touch), and the text floor is 11px. Low match confidence is now neutral rather than error-red. Phones are read-only (browse and inspect).
+- **Known gaps (next pass):**
+  - The forward inspector still shows about eight equally weighted action buttons, which should become one primary action plus a tools menu.
+  - The History and About modals were not audited.
+  - Login and destructive prompts still use the native `confirm()`.
+
 ### Added
 - **CI-gated production deploys:** `.github/workflows/deploy.yml` redeploys the Coolify Service through the Coolify API after a green CI or data-refresh run on `main`. A `verify-live` job then confirms the site serves the new commit, data is fresh and the reverse API is populated.
 - **`docker-build` CI job:** builds both images, runs `caddy validate`, and asserts the API image actually loads its datasets.
