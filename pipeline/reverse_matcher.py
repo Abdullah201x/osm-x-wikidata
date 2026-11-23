@@ -23,7 +23,7 @@ from pipeline.country_boundaries import get_country_matcher
 from pipeline.jsonio import write_dataset
 
 WIKIDATA_CACHE_DB = os.path.join(PIPELINE_DIR, "wikidata_cache.db")
-OSM_CACHE_DB = os.path.join(PIPELINE_DIR, "osm_cache.db")
+OSM_CACHE_DB = os.environ.get("OSM_CACHE_DB") or os.path.join(PIPELINE_DIR, "osm_cache.db")
 
 USER_AGENT = "OSMxWikidataLinker/2.0 (+https://wikidata.saudiosm.org/)"
 

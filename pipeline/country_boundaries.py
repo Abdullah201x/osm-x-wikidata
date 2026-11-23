@@ -79,7 +79,12 @@ def extract_and_cache_gcc_boundaries(pbf_path: Optional[str] = None, force: bool
     rel_collector.apply_file(pbf_path)
 
     coord_collector = GCCWayCoordinateCollector(rel_collector.all_way_ids)
-    coord_collector.apply_file(pbf_path, locations=True)
+    # Only the few boundary ways reach Python; enable_for(WAY) keeps nodes/relations untouched.
+    coord_collector.apply_file(
+        pbf_path,
+        locations=True,
+        filters=[osmium.filter.IdFilter(rel_collector.all_way_ids).enable_for(osmium.osm.WAY)],
+    )
 
     features = []
     for cc, c_info in GCC_COUNTRIES.items():

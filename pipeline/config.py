@@ -27,12 +27,11 @@ def find_pbf(base_dir=None):
     ]
     for d in search_dirs:
         if os.path.exists(d):
-            matches = glob.glob(os.path.join(d, "*.osm.pbf")) + glob.glob(os.path.join(d, "*.pbf"))
-            seen = set()
-            unique = [m for m in matches if not (m in seen or seen.add(m))]
-            if unique:
-                unique.sort(key=os.path.getmtime, reverse=True)
-                return unique[0]
+            # Only *.osm.pbf: a bare *.pbf glob also matches full-history *.osh.pbf files.
+            matches = glob.glob(os.path.join(d, "*.osm.pbf"))
+            if matches:
+                matches.sort(key=os.path.getmtime, reverse=True)
+                return matches[0]
     return None
 
 # GCC Country Definitions

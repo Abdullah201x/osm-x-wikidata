@@ -16,7 +16,8 @@ import osmium
 
 from pipeline.config import find_pbf, BASE_DIR
 
-OSM_CACHE_DB = os.path.join(BASE_DIR, "pipeline", "osm_cache.db")
+# OSM_CACHE_DB env var lets benchmarks/experiments use a scratch DB instead of the real cache.
+OSM_CACHE_DB = os.environ.get("OSM_CACHE_DB") or os.path.join(BASE_DIR, "pipeline", "osm_cache.db")
 
 TARGET_TAG_KEYS = (
     "amenity", "historic", "tourism", "place", "building",
@@ -25,6 +26,20 @@ TARGET_TAG_KEYS = (
     "highway", "railway", "landuse", "route", "public_transport",
     "power", "water", "bridge", "military", "barrier"
 )
+
+# Every kept object has `wikidata` or a TARGET_TAG_KEYS key; derived, never hand-maintained.
+FILTER_KEYS = ("wikidata",) + TARGET_TAG_KEYS
+
+
+def assert_not_history_file(pbf_path: str) -> None:
+    """Raise if the PBF is a full-history (.osh) file: duplicate IDs, deleted objects, 2x slower."""
+    reader = osmium.io.Reader(pbf_path, osmium.osm.osm_entity_bits.NOTHING)
+    try:
+        if reader.header().has_multiple_object_versions:
+            raise ValueError(f"{pbf_path} is a history file; use an .osm.pbf")
+    finally:
+        reader.close()
+
 
 def init_osm_db():
     conn = sqlite3.connect(OSM_CACHE_DB)
@@ -292,6 +307,8 @@ def extract_pbf_to_cache(pbf_path: Optional[str] = None, force_reparse: bool = F
     if not pbf_path or not os.path.exists(pbf_path):
         raise FileNotFoundError("Could not find a valid .osm.pbf file in project or 'update osm' directory.")
 
+    assert_not_history_file(pbf_path)
+    print(f"  [OSM Parser] Using PBF: {pbf_path}")
     pbf_mtime = str(os.path.getmtime(pbf_path))
 
     conn = sqlite3.connect(OSM_CACHE_DB)
@@ -322,8 +339,14 @@ def extract_pbf_to_cache(pbf_path: Optional[str] = None, force_reparse: bool = F
     conn.commit()
     conn.close()
 
+    # KeyFilter runs in C++ before the Python callbacks. The node-location handler runs
+    # before filters, so untagged nodes are skipped yet way centroids still resolve.
     handler = GCCPbfHandler()
-    handler.apply_file(pbf_path, locations=True)
+    handler.apply_file(
+        pbf_path,
+        locations=True,
+        filters=[osmium.filter.KeyFilter(*FILTER_KEYS)],
+    )
     handler.close()
 
     # Step 2: Compute approximate centroids for relations from linked/candidate members
