@@ -308,7 +308,7 @@ const BatchManager = {
       if (progressBox) {
         progressBox.innerHTML = `
           <div class="batch-success-box">
-            <div class="batch-success-icon">${res.failCount > 0 ? "⚠️" : "🎉"}</div>
+            <div class="batch-success-icon">${res.failCount > 0 ? icon("alert") : icon("check")}</div>
             <h4>${t.batchSuccessTitle || "Changeset Uploaded Successfully!"}</h4>
             ${res.failCount > 0
               ? `<p>${window.currentLang === "ar" ? "العناصر التي فشل رفعها بقيت في السلة لإعادة المحاولة." : "Items that failed to upload were kept in the batch queue for retry."}</p>`
@@ -318,7 +318,7 @@ const BatchManager = {
                 OSM Changeset #${res.changesetId} ↗
               </a>
               <button class="btn btn-secondary-batch" id="batch-view-history-btn">
-                📜 ${t.viewChangesetInHistory || "View in History"}
+                ${icon("history")} ${t.viewChangesetInHistory || "View in History"}
               </button>
             </div>
             <div class="batch-success-stats">
@@ -340,7 +340,7 @@ const BatchManager = {
     } catch (err) {
       console.error("Batch upload failed:", err);
       if (progressText) {
-        progressText.innerHTML = `<span class="text-missing">❌ Error: ${escapeHtml(err.message)}</span>`;
+        progressText.innerHTML = `<span class="text-missing">${icon("alert")} Error: ${escapeHtml(err.message)}</span>`;
       }
       if (uploadBtn) uploadBtn.disabled = false;
       if (clearBtn) clearBtn.disabled = false;

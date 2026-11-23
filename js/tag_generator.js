@@ -55,6 +55,22 @@ const TagGenerator = {
   },
 
   /**
+   * Turns an Arabic Wikipedia article URL into an OSM `wikipedia=ar:<Title>` value.
+   * wikipedia=* is optional enrichment, so a malformed URL is skipped (and logged)
+   * rather than blocking the edit; returns null in that case.
+   */
+  wikipediaTag(wikiUrl) {
+    if (!wikiUrl) return null;
+    try {
+      const article = decodeURIComponent(new URL(wikiUrl).pathname.replace(/^\/wiki\//, ""));
+      return article ? `ar:${article}` : null;
+    } catch (err) {
+      console.warn("Skipping wikipedia tag; unparseable article URL:", wikiUrl, err);
+      return null;
+    }
+  },
+
+  /**
    * Generates a dictionary of OSM tags for a given Wikidata item tuple.
    * item tuple: [0:qid_num, 1:lat, 2:lon, 3:cat, 4:status, 5:name_ar, 6:name_en, 7:p31, 8:osm_ref, 9:cand_info, 10:image, 11:wiki_ar, 12:website, 13:dissolved, 14:social]
    */
@@ -84,16 +100,8 @@ const TagGenerator = {
 
     tags["wikidata"] = qid;
 
-    // Wikipedia tag (ar:Title)
-    if (wikiAr) {
-      try {
-        const url = new URL(wikiAr);
-        const article = decodeURIComponent(url.pathname.replace(/^\/wiki\//, ""));
-        if (article) {
-          tags["wikipedia"] = `ar:${article}`;
-        }
-      } catch (e) {}
-    }
+    const wikipedia = this.wikipediaTag(wikiAr);
+    if (wikipedia) tags["wikipedia"] = wikipedia;
 
     // NSI Attribute: Official website
     if (website) {

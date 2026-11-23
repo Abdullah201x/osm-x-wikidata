@@ -3,20 +3,53 @@
 <head>
   <meta charset="UTF-8" />
   <!-- Old GitHub Pages URL -> wikidata.saudiosm.org -->
-  <script src="js/pages_redirect.js?v=21"></script>
+  <script src="js/pages_redirect.js?v=22"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ربط أوبن ستريت ماب وويكي بيانات لدول الخليج</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗺️</text></svg>" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2242%22 r=%2230%22 fill=%22none%22 stroke=%22%2300f2fe%22 stroke-width=%2212%22/><path d=%22M50 96 28 64h44z%22 fill=%22%2300f2fe%22/></svg>" />
   
   <!-- Leaflet & MarkerCluster CSS (Self-Hosted) -->
-  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=21" />
-  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css?v=21" />
-  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.Default.css?v=21" />
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=22" />
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css?v=22" />
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.Default.css?v=22" />
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="css/style.css?v=21" />
+  <link rel="stylesheet" href="css/style.css?v=22" />
 </head>
 <body>
+  <!-- Icon sprite: one stroke family (24px grid, 2px stroke, currentColor). Use via <svg class="icon"><use href="#i-NAME"/></svg>. -->
+  <svg class="icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+    <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16M14 6l6 6-6 6"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h15l-4-4M20 16H5l4 4"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5 21.5 20h-19z"/><path d="M12 10v4M12 17h.01"/></symbol>
+    <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0 5 5l-8.9 8.9a2.1 2.1 0 0 1-3-3z"/><path d="M14.7 6.3 17 4l3 3-2.3 2.3"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 20h18M6 20v-6M11 20V8M16 20v-9M21 20V4"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 7z"/><circle cx="7.5" cy="8.5" r="1.2"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13 7 4 4"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5h6a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h6z"/></symbol>
+    <symbol id="i-satellite" viewBox="0 0 24 24"><path d="m8 8 8 8M5 11l6-6 3 3-6 6zM13 19l6-6"/><path d="M17 21a4 4 0 0 0 4-4"/></symbol>
+  </svg>
 
   <div id="app-container">
     
@@ -29,8 +62,8 @@
             <h1 data-i18n="mainTitle">ربط OSM × ويكي بيانات</h1>
           </div>
           <div class="header-right-actions">
-            <button id="btn-about-modal" class="shortcuts-btn" title="حول الأداة والتواصل / About & Contact">ℹ️</button>
-            <button id="btn-shortcuts-modal" class="shortcuts-btn" title="اختصارات لوحة المفاتيح / Keyboard Shortcuts">⌨️</button>
+            <button id="btn-about-modal" class="shortcuts-btn" title="حول الأداة والتواصل / About & Contact" aria-label="حول الأداة / About"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg></button>
+            <button id="btn-shortcuts-modal" class="shortcuts-btn" title="اختصارات لوحة المفاتيح / Keyboard Shortcuts" aria-label="اختصارات لوحة المفاتيح / Keyboard shortcuts"><svg class="icon" aria-hidden="true"><use href="#i-keyboard"/></svg></button>
             <button id="btn-toggle-lang" class="lang-btn" title="تبديل اللغة / Toggle Language">English</button>
           </div>
         </div>
@@ -46,12 +79,12 @@
         <!-- Quick Nav Actions: Batch Staging & History Page -->
         <div class="quick-nav-bar">
           <button id="btn-header-batch" class="nav-pill-btn batch-pill-btn btn-open-batch-modal" title="سلة التعديلات المجمعة (B)">
-            <span class="pill-icon">📦</span>
+            <span class="pill-icon"><svg class="icon" aria-hidden="true"><use href="#i-box"/></svg></span>
             <span data-i18n="batchQueueBtn">سلة التعديلات</span>
             <span class="batch-counter">0</span>
           </button>
           <button id="btn-header-history" class="nav-pill-btn history-pill-btn btn-open-history-modal" title="سجل العمليات ومجموعات التعديل (H)">
-            <span class="pill-icon">📜</span>
+            <span class="pill-icon"><svg class="icon" aria-hidden="true"><use href="#i-history"/></svg></span>
             <span data-i18n="historyPageTitle">سجل الإنجازات</span>
             <span class="history-counter">0</span>
           </button>
@@ -72,11 +105,11 @@
         <!-- Direction Mode Switcher -->
         <div class="mode-switcher-wrap">
           <button id="btn-mode-forward" class="mode-btn active" data-mode="forward" title="ويكي بيانات ← OSM (الوضع الافتراضي)">
-            <span class="mode-icon">➡️</span>
+            <span class="mode-icon"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></span>
             <span data-i18n="modeForward">Wikidata → OSM</span>
           </button>
           <button id="btn-mode-reverse" class="mode-btn" data-mode="reverse" title="تدقيق معالم OSM الموسومة بـ wikidata=* وربطها بويكي بيانات">
-            <span class="mode-icon">🔄</span>
+            <span class="mode-icon"><svg class="icon" aria-hidden="true"><use href="#i-swap"/></svg></span>
             <span data-i18n="modeReverse">OSM → Wikidata (Reverse QA)</span>
           </button>
         </div>
@@ -98,7 +131,7 @@
               </select>
             </div>
             <div class="scope-search-col">
-              <span class="search-icon" aria-hidden="true">🔍</span>
+              <span class="search-icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg></span>
               <input type="text" id="search-input" class="search-box scope-search-input" placeholder="بحث بالاسم أو QID... (/)" aria-label="بحث بالاسم أو QID / Search by name or QID" />
             </div>
           </div>
@@ -143,9 +176,9 @@
           <!-- Quick Quality Filter Chips -->
           <div class="control-group">
             <div class="filter-chips-container">
-              <button id="chip-wiki" class="filter-chip" data-filter="wiki" data-i18n="chipHasWiki">📖 مقال ويكيبيديا</button>
-              <button id="chip-photo" class="filter-chip" data-filter="photo" data-i18n="chipHasPhoto">📷 صورة كومنز</button>
-              <button id="chip-demolished" class="filter-chip active" data-filter="demolished" data-i18n="chipHideDemolished">🚫 إخفاء المهدم</button>
+              <button id="chip-wiki" class="filter-chip" data-filter="wiki"><span data-i18n="chipHasWiki">مقال ويكيبيديا</span></button>
+              <button id="chip-photo" class="filter-chip" data-filter="photo"><span data-i18n="chipHasPhoto">صورة كومنز</span></button>
+              <button id="chip-demolished" class="filter-chip active" data-filter="demolished"><span data-i18n="chipHideDemolished">إخفاء المهدم</span></button>
             </div>
           </div>
 
@@ -160,27 +193,27 @@
             <div class="category-grid">
               <label class="cat-item">
                 <input type="checkbox" class="cat-checkbox" data-cat="1" checked />
-                <span>🏙️ المدن والتجمعات</span>
+                <span>المدن والتجمعات</span>
               </label>
               <label class="cat-item">
                 <input type="checkbox" class="cat-checkbox" data-cat="2" checked />
-                <span>🏛️ التراث والتاريخ</span>
+                <span>التراث والتاريخ</span>
               </label>
               <label class="cat-item">
                 <input type="checkbox" class="cat-checkbox" data-cat="3" checked />
-                <span>⛰️ المعالم الطبيعية</span>
+                <span>المعالم الطبيعية</span>
               </label>
               <label class="cat-item">
                 <input type="checkbox" class="cat-checkbox" data-cat="4" checked />
-                <span>🏥 التعليم والصحة</span>
+                <span>التعليم والصحة</span>
               </label>
               <label class="cat-item">
                 <input type="checkbox" class="cat-checkbox" data-cat="5" checked />
-                <span>🏨 السياحة والتجارة</span>
+                <span>السياحة والتجارة</span>
               </label>
               <label class="cat-item">
                 <input type="checkbox" class="cat-checkbox" data-cat="6" checked />
-                <span>🕌 المساجد والعبادة</span>
+                <span>المساجد والعبادة</span>
               </label>
             </div>
           </div>
@@ -193,10 +226,10 @@
             <label class="section-label" data-i18n="reverseFilterKind">نوع التدقيق العكسي</label>
             <div class="status-pill-group reverse-kind-pill-group">
               <button class="reverse-filter-btn active" data-kind="all" data-i18n="kindAll">الكل</button>
-              <button class="reverse-filter-btn" data-kind="missing_backlink" data-i18n="kindMissingBacklink">🟢 روابط خلفية</button>
-              <button class="reverse-filter-btn" data-kind="broken_osm_tag" data-i18n="kindBrokenTag">🔴 وسوم تالفة</button>
-              <button class="reverse-filter-btn" data-kind="conflict" data-i18n="kindConflict">⚠️ تعارضات</button>
-              <button class="reverse-filter-btn" data-kind="review_gap" data-i18n="kindReviewGap">ℹ️ فجوات</button>
+              <button class="reverse-filter-btn" data-kind="missing_backlink"><span class="kind-dot kind-dot--missing_backlink" aria-hidden="true"></span><span data-i18n="kindMissingBacklink">روابط خلفية</span></button>
+              <button class="reverse-filter-btn" data-kind="broken_osm_tag"><span class="kind-dot kind-dot--broken_osm_tag" aria-hidden="true"></span><span data-i18n="kindBrokenTag">وسوم تالفة</span></button>
+              <button class="reverse-filter-btn" data-kind="conflict"><span class="kind-dot kind-dot--conflict" aria-hidden="true"></span><span data-i18n="kindConflict">تعارضات</span></button>
+              <button class="reverse-filter-btn" data-kind="review_gap"><span class="kind-dot kind-dot--review_gap" aria-hidden="true"></span><span data-i18n="kindReviewGap">فجوات</span></button>
             </div>
           </div>
 
@@ -204,7 +237,7 @@
           <div class="control-group">
             <label class="section-label" data-i18n="reverseConfidence">مستوى الدقة والثقة</label>
             <div class="filter-chips-container">
-              <button id="chip-rev-high" class="filter-chip active" data-conf="high" data-i18n="confHigh">⭐ دقة عالية (≥ 85%)</button>
+              <button id="chip-rev-high" class="filter-chip active" data-conf="high" data-i18n="confHigh">دقة عالية (≥ 85%)</button>
               <button id="chip-rev-med" class="filter-chip active" data-conf="medium" data-i18n="confMedium">دقة متوسطة</button>
               <button id="chip-rev-low" class="filter-chip" data-conf="low" data-i18n="confLow">دقة منخفضة</button>
             </div>
@@ -213,7 +246,7 @@
           <!-- Quick Action: Export Filtered Backlinks to QuickStatements -->
           <div class="control-group">
             <button id="btn-export-qs-batch" class="btn btn-export-qs-batch" title="تصدير جميع الروابط الخلفية عالية الدقة لـ QuickStatements بنقرة واحدة">
-              <span data-i18n="btnExportQsBatch">⚡ تصدير الروابط عالية الدقة لـ QuickStatements</span>
+              <svg class="icon" aria-hidden="true"><use href="#i-bolt"/></svg><span data-i18n="btnExportQsBatch">تصدير الروابط عالية الدقة لـ QuickStatements</span>
             </button>
           </div>
         </div>
@@ -222,16 +255,16 @@
         <div class="control-group export-center-group">
           <div class="export-btn-grid">
             <button id="btn-export-mr" class="btn btn-export-mini" data-import-only hidden title="MapRoulette GeoJSON">
-              🎯 MapRoulette
+              <svg class="icon" aria-hidden="true"><use href="#i-target"/></svg> MapRoulette
             </button>
             <button id="btn-export-josm-presets" class="btn btn-export-mini" data-import-only hidden title="تصدير قوالب ووسوم JOSM الرسمية بصيغة XML">
-              📥 JOSM XML
+              <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> JOSM XML
             </button>
             <button id="btn-export-csv" class="btn btn-export-mini btn-export-csv" title="CSV Spreadsheet">
-              📊 CSV
+              <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> CSV
             </button>
             <button id="btn-export-qs" class="btn btn-export-mini" title="QuickStatements v2 Export">
-              ⚡ QS v2
+              <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> QS v2
             </button>
           </div>
         </div>
@@ -239,14 +272,14 @@
         <!-- Maintainer & Community Contact Footer -->
         <footer class="sidebar-footer">
           <div class="footer-maintainer">
-            <span>👤 <strong data-i18n="maintainerLabel">المطور:</strong> <a href="https://www.openstreetmap.org/user/Alshowaiey" target="_blank" rel="noopener">Alshowaiey</a></span>
+            <span><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg> <strong data-i18n="maintainerLabel">المطور:</strong> <a href="https://www.openstreetmap.org/user/Alshowaiey" target="_blank" rel="noopener">Alshowaiey</a></span>
             <span class="sep-dot">·</span>
             <a href="https://github.com/Abdullah201x/osm-x-wikidata" target="_blank" rel="noopener" title="GitHub Repository">GitHub ↗</a>
           </div>
           <div class="footer-links">
-            <a href="https://www.openstreetmap.org/message/new/Alshowaiey" target="_blank" rel="noopener" class="footer-contact-link">✉️ <span data-i18n="contactOsmMsg">رسالة OSM</span></a>
-            <a href="https://t.me/OSMSaudi" target="_blank" rel="noopener" class="footer-contact-link">💬 Telegram</a>
-            <button id="link-open-dwg-policy" class="footer-contact-link footer-policy-btn">🛡️ <span data-i18n="policyLabel">السياسات وDWG</span></button>
+            <a href="https://www.openstreetmap.org/message/new/Alshowaiey" target="_blank" rel="noopener" class="footer-contact-link"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg> <span data-i18n="contactOsmMsg">رسالة OSM</span></a>
+            <a href="https://t.me/OSMSaudi" target="_blank" rel="noopener" class="footer-contact-link"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg> Telegram</a>
+            <button id="link-open-dwg-policy" class="footer-contact-link footer-policy-btn"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg> <span data-i18n="policyLabel">السياسات وDWG</span></button>
           </div>
         </footer>
 
@@ -268,14 +301,14 @@
     <!-- Floating Batch Dock Trigger (Shown when items are staged) -->
     <div id="floating-batch-btn" class="floating-batch-dock btn-open-batch-modal" title="فتح سلة التعديلات المجمعة (B)">
       <span class="pulse-indicator"></span>
-      <span>📦 <strong data-i18n="batchQueueBtn">سلة التعديلات</strong> (<span class="batch-counter">0</span>)</span>
+      <span><svg class="icon" aria-hidden="true"><use href="#i-box"/></svg> <strong data-i18n="batchQueueBtn">سلة التعديلات</strong> (<span class="batch-counter">0</span>)</span>
     </div>
 
     <!-- Inspector Drawer -->
     <aside id="inspector-drawer">
       <div id="inspector-content">
         <div class="empty-state">
-          <div class="empty-icon">📍</div>
+          <div class="empty-icon"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg></div>
           <h2 data-i18n="inspectorTitle">لوحة الفحص والمعاينة المتقدمة</h2>
           <p data-i18n="inspectorEmpty">انقر على أي عنصر على الخريطة لعرض تفاصيله وأدوات الربط والرسم.</p>
         </div>
@@ -324,13 +357,13 @@
         </p>
 
         <div class="about-progress-box">
-          <h3 data-i18n="progressHeading">📈 التقدم عبر الزمن</h3>
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg> <span data-i18n="progressHeading">التقدم عبر الزمن</span></h3>
           <p class="about-progress-desc" data-i18n="progressDesc">عدد المعالم المرتبطة والروابط العكسية المفقودة في ويكي بيانات لكل دولة، من كل تحديث للبيانات.</p>
           <div id="about-progress" class="about-progress" aria-live="polite"></div>
         </div>
 
         <div class="about-contact-box">
-          <h3 data-i18n="aboutContactHeading">👤 قنوات التواصل والمطور:</h3>
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg> <span data-i18n="aboutContactHeading">قنوات التواصل والمطور:</span></h3>
           <ul>
             <li><strong>OpenStreetMap:</strong> <a href="https://www.openstreetmap.org/user/Alshowaiey" target="_blank" rel="noopener">Alshowaiey ↗</a></li>
             <li><strong>Direct OSM Message:</strong> <a href="https://www.openstreetmap.org/message/new/Alshowaiey" target="_blank" rel="noopener" data-i18n="aboutSendMsg">إرسال رسالة مباشرة على OSM ↗</a></li>
@@ -341,7 +374,7 @@
         </div>
 
         <div class="dwg-statement-box">
-          <h3 data-i18n="dwgHeading">🛡️ التزام سياسة المجتمع وفريق العمل (DWG Compliance):</h3>
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg> <span data-i18n="dwgHeading">التزام سياسة المجتمع وفريق العمل (DWG Compliance):</span></h3>
           <p data-i18n="dwgText">
             نحن نحترم قواعد OpenStreetMap وفريق البيانات (DWG) بشكل تام. هذه الأداة لا تقوم بأي تعديلات آلية غير مراقبة. جميع التعديلات تتطلب تسجيل دخول المستخدم، وتتم على عناصر قائمة تم التحقق منها بشرياً، وتخضع للمراجعة الكاملة. إذا كان لديك أي ملاحظات أو كنت عضواً في مجتمع الخريطة أو فريق DWG ولديك أي استفسار أو اعتراض، يرجى التواصل مباشرة عبر الرسائل أو GitHub وسنتعاون فوراً.
           </p>
@@ -406,15 +439,15 @@
         
         <div class="preset-chips-row">
           <span class="preset-label" data-i18n="quickInsertPresets">إضافات سريعة:</span>
-          <button type="button" class="preset-chip single-preset-chip" data-preset="#osm-wikidata-gcc">🏷️ #osm-wikidata-gcc</button>
-          <button type="button" class="preset-chip single-preset-chip" data-preset="Verified with aerial imagery">🛰️ صور جوية</button>
-          <button type="button" class="preset-chip single-preset-chip" data-preset="Name match confirmed">🔍 مطابقة أسماء مؤكدة</button>
+          <button type="button" class="preset-chip single-preset-chip" data-preset="#osm-wikidata-gcc"><svg class="icon" aria-hidden="true"><use href="#i-tag"/></svg> #osm-wikidata-gcc</button>
+          <button type="button" class="preset-chip single-preset-chip" data-preset="Verified with aerial imagery"><svg class="icon" aria-hidden="true"><use href="#i-satellite"/></svg> صور جوية</button>
+          <button type="button" class="preset-chip single-preset-chip" data-preset="Name match confirmed"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg> مطابقة أسماء مؤكدة</button>
         </div>
       </div>
 
       <div class="modal-actions-footer">
         <button id="btn-cancel-single-link" class="btn btn-modal-cancel" data-i18n="btnCancel">إلغاء</button>
-        <button id="btn-confirm-single-link" class="btn btn-direct-link" data-i18n="btnConfirmLinkNow">🚀 تأكيد ونشر التعديل</button>
+        <button id="btn-confirm-single-link" class="btn btn-direct-link" ><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg><span data-i18n="btnConfirmLinkNow">تأكيد ونشر التعديل</span></button>
       </div>
     </div>
   </div>
@@ -461,7 +494,7 @@
 
       <div class="modal-actions-footer">
         <button id="btn-cancel-tag-repair" class="btn btn-modal-cancel" data-i18n="btnCancel">إلغاء</button>
-        <button id="btn-confirm-tag-repair" class="btn btn-osm-repair" data-i18n="tagRepairPublish">🚀 نشر الإصلاح في OSM</button>
+        <button id="btn-confirm-tag-repair" class="btn btn-osm-repair" ><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg><span data-i18n="tagRepairPublish">نشر الإصلاح في OSM</span></button>
       </div>
     </div>
   </div>
@@ -478,7 +511,7 @@
       </div>
 
       <div id="batch-modal-empty" class="batch-empty-view">
-        <div class="empty-icon">📦</div>
+        <div class="empty-icon"><svg class="icon" aria-hidden="true"><use href="#i-box"/></svg></div>
         <h3 data-i18n="batchEmptyTitle">سلة التعديلات فارغة</h3>
         <p data-i18n="batchEmptyDesc">اختر أي عنصر مرشح واضغط 'إضافة للمجموعة' لتجميع عدة معالم ونشرها في مجموعة تعديل (Changeset) واحدة وفق معايير مجتمع OSM.</p>
       </div>
@@ -497,14 +530,14 @@
           
           <div class="preset-chips-row">
             <span class="preset-label" data-i18n="quickInsertPresets">إضافات سريعة:</span>
-            <button type="button" class="preset-chip batch-preset-chip" data-preset="#osm-wikidata-gcc">🏷️ #osm-wikidata-gcc</button>
-            <button type="button" class="preset-chip batch-preset-chip" data-preset="Verified with aerial imagery">🛰️ صور جوية</button>
-            <button type="button" class="preset-chip batch-preset-chip" data-preset="Arabic name match verified">🔍 تطابق أسماء</button>
+            <button type="button" class="preset-chip batch-preset-chip" data-preset="#osm-wikidata-gcc"><svg class="icon" aria-hidden="true"><use href="#i-tag"/></svg> #osm-wikidata-gcc</button>
+            <button type="button" class="preset-chip batch-preset-chip" data-preset="Verified with aerial imagery"><svg class="icon" aria-hidden="true"><use href="#i-satellite"/></svg> صور جوية</button>
+            <button type="button" class="preset-chip batch-preset-chip" data-preset="Arabic name match verified"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg> تطابق أسماء</button>
           </div>
         </div>
 
         <div class="batch-guidelines-tip">
-          ℹ️ <strong>ملاحظة للمحرر:</strong> يتم رفع جميع هذه المعالم في مجموعة تعديل رسمية واحدة، مع إغلاق المجموعة تلقائياً وتسجيلها في سجل الإنجازات.
+          <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg> <strong>ملاحظة للمحرر:</strong> يتم رفع جميع هذه المعالم في مجموعة تعديل رسمية واحدة، مع إغلاق المجموعة تلقائياً وتسجيلها في سجل الإنجازات.
         </div>
       </div>
 
@@ -519,7 +552,7 @@
 
       <div class="modal-actions-footer">
         <button id="btn-batch-clear-all" class="btn btn-modal-cancel" data-i18n="btnClearBatch">تفريغ السلة</button>
-        <button id="btn-batch-upload-confirm" class="btn btn-direct-link" data-i18n="btnBatchUpload">🚀 رفع ونشر مجموعة التعديل</button>
+        <button id="btn-batch-upload-confirm" class="btn btn-direct-link" ><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg><span data-i18n="btnBatchUpload">رفع ونشر مجموعة التعديل</span></button>
       </div>
     </div>
   </div>
@@ -530,7 +563,7 @@
       <div class="modal-header-row">
         <div class="history-page-title-group">
           <div class="brand-title">
-            <span class="history-title-icon">📜</span>
+            <span class="history-title-icon"><svg class="icon" aria-hidden="true"><use href="#i-history"/></svg></span>
             <h2 id="history-page-modal-title" data-i18n="historyPageTitle">سجل التعديلات والإنجازات</h2>
           </div>
           <p class="history-page-subtitle" data-i18n="historyPageSubtitle">جميع مجموعات التعديل والعناصر التي تم ربطها ونشرها في OpenStreetMap عبر الأداة</p>
@@ -540,9 +573,9 @@
 
       <!-- History Tabs: OSM changesets | Wikidata edits | Reverse fixes -->
       <div class="history-tabs-row" role="tablist">
-        <button id="btn-hist-tab-osm" class="history-tab-btn active" role="tab" aria-selected="true" data-tab="osm" data-i18n="histTabOsm">🗺️ تعديلات OSM</button>
-        <button id="btn-hist-tab-wd" class="history-tab-btn" role="tab" aria-selected="false" data-tab="wikidata" data-i18n="histTabWd">🏛️ تعديلات ويكي بيانات (EditGroups)</button>
-        <button id="btn-hist-tab-fixes" class="history-tab-btn" role="tab" aria-selected="false" data-tab="fixes" data-i18n="histTabFixes">🛠️ إصلاحات الفحص العكسي</button>
+        <button id="btn-hist-tab-osm" class="history-tab-btn active" role="tab" aria-selected="true" data-tab="osm"><span data-i18n="histTabOsm">تعديلات OSM</span></button>
+        <button id="btn-hist-tab-wd" class="history-tab-btn" role="tab" aria-selected="false" data-tab="wikidata"><span data-i18n="histTabWd">تعديلات ويكي بيانات (EditGroups)</span></button>
+        <button id="btn-hist-tab-fixes" class="history-tab-btn" role="tab" aria-selected="false" data-tab="fixes"><span data-i18n="histTabFixes">إصلاحات الفحص العكسي</span></button>
       </div>
 
       <!-- Daily editing pace (local history only) -->
@@ -588,19 +621,19 @@
         </div>
         <div class="history-filter-pills">
           <button class="history-filter-btn active" data-filter="all" data-i18n="historyFilterAll">الكل</button>
-          <button class="history-filter-btn" data-filter="batch" data-i18n="historyFilterBatch">📦 مجمعة</button>
-          <button class="history-filter-btn" data-filter="single" data-i18n="historyFilterSingle">⚡ مفردة</button>
+          <button class="history-filter-btn" data-filter="batch" data-i18n="historyFilterBatch">مجمعة</button>
+          <button class="history-filter-btn" data-filter="single" data-i18n="historyFilterSingle">مفردة</button>
         </div>
         <div class="history-export-btns">
-          <button id="btn-history-export-csv" class="btn btn-history-action" title="تصدير جدول اكسل CSV">📥 CSV</button>
-          <button id="btn-history-export-json" class="btn btn-history-action" title="تصدير بيانات كاملة JSON">📥 JSON</button>
-          <button id="btn-history-clear" class="btn btn-history-action btn-danger-action" title="مسح السجل المحلي">🗑️</button>
+          <button id="btn-history-export-csv" class="btn btn-history-action" title="تصدير جدول اكسل CSV"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> CSV</button>
+          <button id="btn-history-export-json" class="btn btn-history-action" title="تصدير بيانات كاملة JSON"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> JSON</button>
+          <button id="btn-history-clear" class="btn btn-history-action btn-danger-action" title="مسح السجل المحلي" aria-label="مسح السجل المحلي / Clear local history"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
         </div>
       </div>
 
       <!-- Empty State -->
       <div id="history-empty-state" class="history-empty-view">
-        <div class="empty-icon">🗺️</div>
+        <div class="empty-icon"><svg class="icon" aria-hidden="true"><use href="#i-map"/></svg></div>
         <h3 data-i18n="historyEmptyTitle">لم يتم تسجيل أي تعديلات حتى الآن</h3>
         <p data-i18n="historyEmptyDesc">عند قيامك بربط أي معالم (سواء فردياً أو عبر سلة التعديلات)، ستظهر جميع مجموعات التعديل هنا مع تفاصيلها وروابطها الرسمية في OSM.</p>
       </div>
@@ -619,27 +652,27 @@
   </div>
 
   <!-- Leaflet & MarkerCluster JS (Self-Hosted) -->
-  <script src="vendor/leaflet/leaflet.js?v=21"></script>
-  <script src="vendor/markercluster/leaflet.markercluster.js?v=21"></script>
+  <script src="vendor/leaflet/leaflet.js?v=22"></script>
+  <script src="vendor/markercluster/leaflet.markercluster.js?v=22"></script>
 
   <!-- Application Modules -->
-  <script src="js/translations.js?v=21"></script>
-  <script src="js/arabic_utils.js?v=21"></script>
-  <script src="js/tag_generator.js?v=21"></script>
-  <script src="js/wikidata_labels.js?v=21"></script>
-  <script src="js/tools.js?v=21"></script>
-  <script src="js/osm_oauth.js?v=21"></script>
-  <script src="js/import_access.js?v=21"></script>
-  <script src="js/wikidata_auth.js?v=21"></script>
-  <script src="js/wikidata_edit.js?v=21"></script>
-  <script src="js/live_verify.js?v=21"></script>
-  <script src="js/batch_manager.js?v=21"></script>
-  <script src="js/history_manager.js?v=21"></script>
-  <script src="js/map.js?v=21"></script>
-  <script src="js/tag_repair_dialog.js?v=21"></script>
-  <script src="js/progress_chart.js?v=21"></script>
-  <script src="js/modal_a11y.js?v=21"></script>
-  <script src="js/app.js?v=21"></script>
+  <script src="js/translations.js?v=22"></script>
+  <script src="js/arabic_utils.js?v=22"></script>
+  <script src="js/tag_generator.js?v=22"></script>
+  <script src="js/wikidata_labels.js?v=22"></script>
+  <script src="js/tools.js?v=22"></script>
+  <script src="js/osm_oauth.js?v=22"></script>
+  <script src="js/import_access.js?v=22"></script>
+  <script src="js/wikidata_auth.js?v=22"></script>
+  <script src="js/wikidata_edit.js?v=22"></script>
+  <script src="js/live_verify.js?v=22"></script>
+  <script src="js/batch_manager.js?v=22"></script>
+  <script src="js/history_manager.js?v=22"></script>
+  <script src="js/map.js?v=22"></script>
+  <script src="js/tag_repair_dialog.js?v=22"></script>
+  <script src="js/progress_chart.js?v=22"></script>
+  <script src="js/modal_a11y.js?v=22"></script>
+  <script src="js/app.js?v=22"></script>
 
 </body>
 </html>

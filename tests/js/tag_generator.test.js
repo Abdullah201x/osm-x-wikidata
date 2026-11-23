@@ -117,3 +117,25 @@ describe('TagGenerator formatters', () => {
     expect(xml).not.toContain('A&B');
   });
 });
+
+describe('TagGenerator.wikipediaTag', () => {
+  it('converts an Arabic Wikipedia URL to ar:<Title>', () => {
+    expect(TagGenerator.wikipediaTag('https://ar.wikipedia.org/wiki/%D8%A7%D9%84%D8%AE%D8%A8%D8%B1'))
+      .toBe('ar:الخبر');
+  });
+
+  it('returns null for empty input', () => {
+    expect(TagGenerator.wikipediaTag('')).toBeNull();
+    expect(TagGenerator.wikipediaTag(undefined)).toBeNull();
+  });
+
+  it('skips (returns null) instead of throwing on a malformed URL', () => {
+    const warn = console.warn;
+    console.warn = () => {};
+    try {
+      expect(TagGenerator.wikipediaTag('not a url')).toBeNull();
+    } finally {
+      console.warn = warn;
+    }
+  });
+});

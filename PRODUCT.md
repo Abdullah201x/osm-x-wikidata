@@ -32,7 +32,7 @@ Unlike generic OSM editors (iD, JOSM) that require manual tag authoring from scr
 
 ## Capabilities and Constraints
 
-- **Stack**: Pure client-side static web application (HTML5, modern CSS3, Vanilla ES Modules, Leaflet, MarkerCluster). Dev tooling relies on ESLint, Vitest, and Playwright. Zero bundling step for production.
+- **Stack**: Pure client-side static web application (HTML5, modern CSS3, vanilla JS loaded as ordered global `<script>` tags (no ES module imports), Leaflet, MarkerCluster). Dev tooling relies on ESLint, Vitest, and Playwright. Zero bundling step for production.
 - **Bilingual Core**: Primary layout is Arabic RTL (`dir="rtl"`, Cairo font), with full runtime toggle to English LTR (`dir="ltr"`).
 - **Authentication**: Dual independent OAuth 2.0 sessions for OpenStreetMap and Wikidata with secure token management in client storage.
 - **Offline & Low-Bandwidth Consideration**: Caches regional GeoJSON boundaries and query responses where possible.
@@ -40,7 +40,7 @@ Unlike generic OSM editors (iD, JOSM) that require manual tag authoring from scr
 ## Brand Commitments
 
 - **Tone**: Pragmatic, authoritative, GIS-grade, dependable, non-frivolous.
-- **Aesthetic**: Modern dark cartographic theme (dark slate/navy basemaps with high-contrast thematic status accents: cyan for linked, amber for candidates, crimson/rose for missing).
+- **Aesthetic**: Modern dark cartographic theme (dark slate/navy basemaps with high-contrast thematic status accents: cyan for linked, amber for candidates, rose for missing). Iconography is a single stroke-icon sprite, never emoji. `DESIGN.md` is the source of truth for tokens; `css/style.css` mirrors it.
 - **Community Respect**: Emphasizes transparency, changeset comments with `#osm-wikidata-gcc`, explicit changelog diffs, and strict anti-vandalism safeguards.
 
 ## Evidence on Hand
@@ -55,6 +55,16 @@ Unlike generic OSM editors (iD, JOSM) that require manual tag authoring from scr
 2. **First-Class Arabic Typography**: Arabic text must remain legible at glance across all density levels without clipped ligatures or crushed line heights.
 3. **Calm Precision**: Minimize decorative noise (gimmicky neon glows, pulsing badges, ungrounded animations) in favor of crisp spatial indicators and legible data tables.
 4. **Honest Feedback**: Clearly reflect network sync states, OAuth permissions, and changeset submission status without deceptive optimism.
+
+Each principle is tied to a UX law so design decisions stay defensible (see `ai_design_principles_cognitive_ux_playbook.md`):
+
+| Principle | Law it rests on | What it means on screen |
+|---|---|---|
+| Ground Truth Over Speed | Tesler's Law | The tool absorbs complexity (live diffs, distance, version checks) so the editor reviews rather than computes. Friction before a write is deliberate, never removed for speed. |
+| First-Class Arabic Typography | Aesthetic-Usability, Miller's Law | Text floor of 11px (12px for Arabic), no truncated labels; group data into labelled chunks. |
+| Calm Precision | Von Restorff Effect | Colour is reserved for status (missing / candidate / linked) so the one thing that needs attention stands out. No emoji, glows or idle animation. |
+| Honest Feedback | Doherty Threshold, Postel's Law | Every action shows progress within 400ms; every failure says what happened and what to do, in the active language. |
+| One task per workspace | Hick's Law | Forward linking and Reverse QA are separate workspaces; secondary filters sit behind a disclosure. |
 
 ## Accessibility & Inclusion
 

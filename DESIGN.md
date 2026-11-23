@@ -13,6 +13,8 @@ colors:
   missing: "#f43f5e"
   candidate: "#f59e0b"
   linked: "#06b6d4"
+  conflict: "#ea580c"
+  gap: "#3b82f6"
   text: "#f8fafc"
   text-muted: "#94a3b8"
   text-inverse: "#0f172a"
@@ -91,6 +93,8 @@ The palette employs a deep midnight base with functional geospatial semantics:
   - **Candidate (`#f59e0b`)**: Potential geographic and name matches pending human confirmation.
   - **Missing (`#f43f5e`)**: Entities present in Wikidata with no corresponding OSM element.
   - **Success / Added (`#10b981`)**: Newly linked tags and successful changeset uploads.
+  - **Conflict (`#ea580c`)** and **Review gap (`#3b82f6`)**: Reverse-QA kinds only.
+- **Implementation:** `css/style.css` exposes each status colour as RGB channels (`--rgb-missing: 244, 63, 94`) plus a `--color-*` alias, so tints are written `rgba(var(--rgb-missing), 0.15)`. Do not add new hex literals for status colours; text on tinted backgrounds uses the lighter `--color-*-text` tones. Spacing (`--space-*`) and radius (`--rounded-*`) tokens mirror the tables above.
 - **Text & Hierarchy:**
   - `text` (`#f8fafc`): Primary reading contrast (> 12:1 against dark backgrounds).
   - `text-muted` (`#94a3b8`): Secondary metadata, coordinates, QIDs, and tags (minimum 4.5:1).
@@ -145,6 +149,14 @@ Layering relies on subtle surface luminance shifts and physical drop shadows rat
   - Structured comparative view (Old Tag vs New Tag) with distinct green (addition) and red (deletion) highlight badges, padded with minimum `8px` container insets.
 - **Lightbox / Preview Modal:**
   - High-res image display with fallback SVG placeholder to prevent empty image source warnings.
+
+## Iconography
+
+- One inline SVG sprite at the top of `index.html` (`<symbol id="i-NAME">`, 24px grid, 2px round stroke, `currentColor`). In markup: `<svg class="icon" aria-hidden="true"><use href="#i-NAME"/></svg>`; in JS templates: `${icon("NAME")}` (from `js/tools.js`).
+- Icons are decorative; the adjacent text (or an `aria-label` on icon-only buttons) carries meaning.
+- Keep icons outside `data-i18n` elements; the language switch replaces their text.
+- No emoji in UI chrome or translation strings. Plain typographic marks (`↗`, `✓`, `✕`, `➔`) are fine.
+- Status legends use `.kind-dot` with the same tokens as the map markers, so the legend always matches the map.
 
 ## Do's and Don'ts
 

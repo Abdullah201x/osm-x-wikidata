@@ -24,7 +24,7 @@ test.describe('CSP styles (no unsafe-inline)', () => {
       await expect(row).toHaveCSS('display', 'flex');
       if (target === 'osm') {
         await expect(card).toHaveClass(/reverse-action-card--osm/);
-        await expect(card.locator('.reverse-action-header')).toHaveCSS('color', 'rgb(255, 51, 102)');
+        await expect(card.locator('.reverse-action-header')).toHaveCSS('color', 'rgb(244, 63, 94)');
       }
     }
     await expect(page.locator('#inspector-content .rv-external-links .rv-btn-row')).toHaveCSS('display', 'flex');

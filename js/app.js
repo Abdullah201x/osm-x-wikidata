@@ -418,13 +418,13 @@ function selectReverseItem(item, marker = null, skipFly = false) {
       const qsUrl = `https://quickstatements.toolforge.org/#/v1=${encodeURIComponent(qid)}|${encodeURIComponent(fix.property)}|%22${encodeURIComponent(fix.value)}%22`;
       actionHtml = `
         <div class="reverse-action-card">
-          <div class="reverse-action-header">⚡ ${t.labelSuggestedFix} ${t.actionAddClaim}</div>
+          <div class="reverse-action-header">${icon("bolt")} ${t.labelSuggestedFix} ${t.actionAddClaim}</div>
           <div class="rv-desc">
             <code>${escapeHtml(qid)} ➔ ${escapeHtml(fix.property)} = "${escapeHtml(fix.value)}"</code>
           </div>
           <div class="rv-btn-row rv-btn-row--spaced">
             <button id="btn-wd-add-claim" class="btn btn-wd-claim rv-btn">
-              ${t.btnAddToWikidata || "⚡ إضافة إلى ويكي بيانات مباشرة"}
+              ${icon("bolt")} ${t.btnAddToWikidata || "إضافة إلى ويكي بيانات مباشرة"}
             </button>
             <a href="${qsUrl}" target="_blank" rel="noopener" class="btn btn-qs-action rv-btn">
               ${t.btnOpenQsDirect || "↗️ فتح في QuickStatements"}
@@ -432,10 +432,10 @@ function selectReverseItem(item, marker = null, skipFly = false) {
           </div>
           <div class="rv-btn-row">
             <button id="btn-copy-qs-line" class="btn rv-btn rv-btn-ghost">
-              📋 ${t.btnQuickStatements}
+              ${icon("copy")} ${t.btnQuickStatements}
             </button>
             <button id="btn-live-verify" class="btn btn-primary rv-btn">
-              🔍 ${t.btnLiveVerify} (V)
+              ${icon("search")} ${t.btnLiveVerify} (V)
             </button>
           </div>
         </div>
@@ -449,19 +449,19 @@ function selectReverseItem(item, marker = null, skipFly = false) {
       }
       actionHtml = `
         <div class="reverse-action-card reverse-action-card--osm">
-          <div class="reverse-action-header">🛠️ ${t.labelSuggestedFix}</div>
+          <div class="reverse-action-header">${icon("wrench")} ${t.labelSuggestedFix}</div>
           <div class="rv-desc">${desc}</div>
           <div class="rv-btn-row rv-btn-row--spaced">
             <button id="btn-osm-repair-tag" class="btn btn-osm-repair rv-btn">
-              ${t.btnOsmRepairTag || "🛠️ إصلاح الوسم في OSM مباشرة"}
+              ${icon("wrench")} ${t.btnOsmRepairTag || "إصلاح الوسم في OSM مباشرة"}
             </button>
           </div>
           <div class="rv-btn-row">
             <button id="btn-reverse-josm" class="btn rv-btn rv-btn-ghost">
-              🗺️ فتح في JOSM (J)
+              ${icon("map")} فتح في JOSM (J)
             </button>
             <button id="btn-reverse-id" class="btn rv-btn rv-btn-ghost">
-              ✏️ محرر iD (I)
+              ${icon("edit")} محرر iD (I)
             </button>
           </div>
         </div>
@@ -488,7 +488,7 @@ function selectReverseItem(item, marker = null, skipFly = false) {
     <!-- Side by Side Details -->
     <div class="reverse-card-grid">
       <div class="reverse-elem-box">
-        <h5>🗺️ ${t.labelOsmElement}</h5>
+        <h5>${icon("map")} ${t.labelOsmElement}</h5>
         <table class="meta-table">
           <tr><td>النوع:</td><td><a href="${osmUrl}" target="_blank" rel="noopener" class="qid-link"><code>${escapeHtml(fullOsmType)}/${osmId}</code> ↗</a></td></tr>
           ${osm.name ? `<tr><td>الاسم:</td><td><strong>${escapeHtml(osm.name)}</strong></td></tr>` : ""}
@@ -498,7 +498,7 @@ function selectReverseItem(item, marker = null, skipFly = false) {
       </div>
 
       <div class="reverse-elem-box">
-        <h5>🏛️ ${t.labelWdEntity}</h5>
+        <h5>${t.labelWdEntity}</h5>
         <table class="meta-table">
           <tr><td>QID:</td><td><a href="${wdUrl}" target="_blank" rel="noopener" class="qid-link"><code>${escapeHtml(qid)}</code> ↗</a></td></tr>
           ${wd.name_ar ? `<tr><td>عربي:</td><td><strong>${escapeHtml(wd.name_ar)}</strong></td></tr>` : ""}
@@ -510,7 +510,7 @@ function selectReverseItem(item, marker = null, skipFly = false) {
 
     <!-- Reasons & Matching -->
     <div class="reverse-reasons-wrap">
-      <h5>📊 ${t.labelReasons} (دقة ${Math.round((item.confidence || 0) * 100)}%)</h5>
+      <h5>${icon("chart")} ${t.labelReasons} (دقة ${Math.round((item.confidence || 0) * 100)}%)</h5>
       <ul class="reverse-reasons-list">
         ${reasonsListHtml || "<li>لا توجد ملاحظات إضافية</li>"}
       </ul>
@@ -522,10 +522,10 @@ function selectReverseItem(item, marker = null, skipFly = false) {
     <div class="inspector-section rv-external-links">
       <div class="rv-btn-row rv-btn-row--nowrap">
         <a href="${osmUrl}" target="_blank" rel="noopener" class="btn rv-btn rv-btn-ghost rv-link-btn">
-          🌐 عرض في OSM
+          ${icon("globe")} عرض في OSM
         </a>
         <a href="${wdUrl}" target="_blank" rel="noopener" class="btn rv-btn rv-btn-ghost rv-link-btn">
-          🏛️ عرض في Wikidata
+          عرض في Wikidata
         </a>
       </div>
     </div>
@@ -541,7 +541,7 @@ function selectReverseItem(item, marker = null, skipFly = false) {
       const line = `${item.qid}\t${item.suggested_fix.property}\t"${item.suggested_fix.value}"`;
       navigator.clipboard.writeText(line).then(() => {
         copyQsBtn.innerText = "✓ تم النسخ للحافظة!";
-        setTimeout(() => { copyQsBtn.innerText = `📋 ${t.btnQuickStatements}`; }, 2000);
+        setTimeout(() => { copyQsBtn.innerHTML = `${icon("copy")} ${t.btnQuickStatements}`; }, 2000);
       });
     });
   }
@@ -616,7 +616,7 @@ function selectReverseItem(item, marker = null, skipFly = false) {
       } catch (err) {
         console.error("Wikidata claim error:", err);
         wdClaimBtn.disabled = false;
-        wdClaimBtn.innerText = t.btnAddToWikidata || "⚡ إضافة إلى ويكي بيانات مباشرة";
+        wdClaimBtn.innerHTML = `${icon("bolt")} ${t.btnAddToWikidata || "إضافة إلى ويكي بيانات مباشرة"}`;
         alert(currentLang === "ar"
           ? `تعذر إتمام الإضافة إلى ويكي بيانات:\n${err.message}\n\nيمكنك استخدام زر "فتح في QuickStatements" كبديل سريع ومباشر!`
           : `Failed to add statement to Wikidata:\n${err.message}\n\nPlease try the 1-Click QuickStatements button as an instant fallback!`);
@@ -706,7 +706,7 @@ function refreshReverseViewAfterPush() {
   if (panel) {
     panel.innerHTML = `
       <div class="empty-state done-state">
-        <div class="empty-icon">✅</div>
+        <div class="empty-icon">${icon("check")}</div>
         <h4>${currentLang === "ar" ? "تم إنجاز التدقيق والربط بنجاح!" : "Action completed successfully!"}</h4>
         <p>${currentLang === "ar" ? "تم تسجيل العملية محلياً وتحديث الخريطة والقوائم فوراً." : "Recorded locally; map and lists updated."}</p>
       </div>
@@ -972,13 +972,13 @@ function selectItem(item, marker = null, skipFly = false) {
       const pct = parseInt(matchMatch[1], 10);
       const rest = matchMatch[2];
       const badgeClass = pct >= 90 ? "badge-ai-high" : (pct >= 75 ? "badge-ai-mid" : "badge-ai-low");
-      confidenceBadge = `<span class="badge-ai-conf ${badgeClass}">🤖 ${pct}% ${currentLang === 'ar' ? 'ثقة الذكاء الاصطناعي' : 'AI Confidence'}</span>`;
+      confidenceBadge = `<span class="badge-ai-conf ${badgeClass}">${pct}% ${currentLang === 'ar' ? 'ثقة الذكاء الاصطناعي' : 'AI Confidence'}</span>`;
       displayInfo = rest;
     }
     candHtml = `
       <div class="candidate-box">
         <div class="candidate-box-head">
-          <strong>🎯 ${currentLang === 'ar' ? 'عنصر مرشح مقترح بالذكاء الاصطناعي:' : 'AI Suggested OSM Candidate:'}</strong>
+          <strong>${icon("target")} ${currentLang === 'ar' ? 'عنصر مرشح مقترح بالذكاء الاصطناعي:' : 'AI Suggested OSM Candidate:'}</strong>
           ${confidenceBadge}
         </div>
         <div class="cand-details">${escapeHtml(displayInfo)} (OSM ID: <code>${escapeHtml(effectiveOsmRef)}</code>)</div>
@@ -991,14 +991,14 @@ function selectItem(item, marker = null, skipFly = false) {
     mediaHtml += `
       <div class="inspector-image-container">
         <img src="${escapeHtml(imageUrl)}?width=400" alt="${escapeHtml(nameAr || nameEn)}" class="inspector-thumb clickable" loading="lazy" title="${currentLang === 'ar' ? 'انقر لتكبير الصورة' : 'Click to enlarge'}" />
-        <div class="image-zoom-hint">🔍 ${currentLang === 'ar' ? 'تكبير' : 'Zoom'}</div>
+        <div class="image-zoom-hint">${icon("search")} ${currentLang === 'ar' ? 'تكبير' : 'Zoom'}</div>
       </div>
     `;
   }
 
   let wikiHtml = "";
   if (wikiAr) {
-    wikiHtml = `<a href="${escapeHtml(wikiAr)}" target="_blank" rel="noopener" class="btn btn-wiki">📖 ${t.labelWikipedia}</a>`;
+    wikiHtml = `<a href="${escapeHtml(wikiAr)}" target="_blank" rel="noopener" class="btn btn-wiki">${icon("book")} ${t.labelWikipedia}</a>`;
   }
 
   // NSI Dissolution Alert Banner
@@ -1022,9 +1022,9 @@ function selectItem(item, marker = null, skipFly = false) {
   if (socialPipe) {
     const parts = socialPipe.split("|").map(p => escapeHtml(p));
     const pills = [];
-    if (parts[0]) pills.push(`<a href="https://twitter.com/${parts[0]}" target="_blank" rel="noopener" class="social-badge badge-twitter" title="Twitter: ${parts[0]}">🐦 @${parts[0]}</a>`);
-    if (parts[1]) pills.push(`<a href="https://instagram.com/${parts[1]}" target="_blank" rel="noopener" class="social-badge badge-instagram" title="Instagram: ${parts[1]}">📸 ${parts[1]}</a>`);
-    if (parts[2]) pills.push(`<a href="https://facebook.com/${parts[2]}" target="_blank" rel="noopener" class="social-badge badge-facebook" title="Facebook: ${parts[2]}">📘 ${parts[2]}</a>`);
+    if (parts[0]) pills.push(`<a href="https://twitter.com/${parts[0]}" target="_blank" rel="noopener" class="social-badge badge-twitter" title="Twitter: ${parts[0]}">@${parts[0]}</a>`);
+    if (parts[1]) pills.push(`<a href="https://instagram.com/${parts[1]}" target="_blank" rel="noopener" class="social-badge badge-instagram" title="Instagram: ${parts[1]}">${parts[1]}</a>`);
+    if (parts[2]) pills.push(`<a href="https://facebook.com/${parts[2]}" target="_blank" rel="noopener" class="social-badge badge-facebook" title="Facebook: ${parts[2]}">${parts[2]}</a>`);
     if (pills.length > 0) {
       socialRow = `<tr><td>${t.socialLinks}</td><td><div class="social-badges-wrap">${pills.join(" ")}</div></td></tr>`;
     }
@@ -1034,16 +1034,16 @@ function selectItem(item, marker = null, skipFly = false) {
   const searchName = nameAr || nameEn || qid;
   const researchSuiteHtml = `
     <div class="inspector-section research-suite-card">
-      <h4>🔍 ${t.researchTitle}</h4>
+      <h4>${icon("search")} ${t.researchTitle}</h4>
       <div class="research-links-grid">
         <a href="${MappingTools.getGoogleSearchUrl(searchName)}" target="_blank" rel="noopener" class="research-link-btn btn-google" title="Search Google">
-          🌐 ${t.searchGoogle}
+          ${icon("globe")} ${t.searchGoogle}
         </a>
         <a href="${MappingTools.getWikipediaSearchUrl(searchName)}" target="_blank" rel="noopener" class="research-link-btn btn-wikipedia" title="Search Wikipedia">
-          📖 ${t.searchWikipedia}
+          ${icon("book")} ${t.searchWikipedia}
         </a>
         <a href="${MappingTools.getWikidataSearchUrl(searchName)}" target="_blank" rel="noopener" class="research-link-btn btn-wikidata" title="Search Wikidata">
-          🏛️ ${t.searchWikidata}
+          ${t.searchWikidata}
         </a>
       </div>
     </div>
@@ -1083,7 +1083,7 @@ function selectItem(item, marker = null, skipFly = false) {
       </table>
       <div class="wd-actions">
         ${wikiHtml}
-        <button id="btn-live-verify" class="btn btn-verify">⚡ ${t.btnLiveVerify}</button>
+        <button id="btn-live-verify" class="btn btn-verify">${icon("bolt")} ${t.btnLiveVerify}</button>
       </div>
       <div id="live-verify-result" class="verify-feedback"></div>
     </div>
@@ -1095,7 +1095,7 @@ function selectItem(item, marker = null, skipFly = false) {
     <div class="inspector-section">
       <div class="section-title-row">
         <h4>${t.tagProposalTitle}</h4>
-        <button id="btn-copy-tags" class="btn-copy" title="${t.btnCopyTags}">📋 ${t.btnCopyTags}</button>
+        <button id="btn-copy-tags" class="btn-copy" title="${t.btnCopyTags}">${icon("copy")} ${t.btnCopyTags}</button>
       </div>
       <pre class="tags-code-block" id="tags-code">${escapeHtml(tagsLines)}</pre>
     </div>
@@ -1104,19 +1104,19 @@ function selectItem(item, marker = null, skipFly = false) {
     <div class="inspector-actions">
       ${effectiveStatus === 1 ? `
         <button id="btn-single-link-trigger" class="btn btn-direct-link" title="${t.linkSingleNow || 'Link Now (Single Changeset)'} - Shortcut: L">
-          ⚡ ${t.linkSingleNow || 'ربط فوري (مفرد)'} <kbd class="kbd-inline">L</kbd>
+          ${icon("bolt")} ${t.linkSingleNow || 'ربط فوري (مفرد)'} <kbd class="kbd-inline">L</kbd>
         </button>
         <button id="btn-batch-toggle-trigger" class="btn ${typeof BatchManager !== 'undefined' && BatchManager.isStaged(qid) ? 'btn-in-batch' : 'btn-add-batch'}" title="${t.batchQueueBtn}">
-          ${typeof BatchManager !== 'undefined' && BatchManager.isStaged(qid) ? `✓ ${t.btnInBatch}` : `➕ ${t.btnAddToBatch}`}
+          ${typeof BatchManager !== 'undefined' && BatchManager.isStaged(qid) ? `✓ ${t.btnInBatch}` : `${icon("plus")} ${t.btnAddToBatch}`}
         </button>
       ` : ""}
-      <button id="btn-josm-zoom" class="btn btn-josm" title="Shortcut: J">🎯 ${t.btnJosmZoom} <kbd class="kbd-inline">J</kbd></button>
-      ${effectiveStatus === 1 ? `<button id="btn-josm-tags" class="btn btn-josm-action" title="Shortcut: T">🏷️ ${t.btnJosmAddTags} <kbd class="kbd-inline">T</kbd></button>` : ""}
-      ${effectiveStatus === 0 && ImportAccess.canImport() ? `<button id="btn-josm-add-node" class="btn btn-josm-action">➕ ${t.btnJosmAddNode}</button>` : ""}
-      <button id="btn-overpass-turbo" class="btn btn-overpass" title="Shortcut: O">⚡ Overpass <kbd class="kbd-inline">O</kbd></button>
-      <a href="${MappingTools.getIdEditorUrl(lat, lon)}" target="_blank" rel="noopener" class="btn btn-id" title="Shortcut: I">✏️ ${t.btnEditId} <kbd class="kbd-inline">I</kbd></a>
-      <button id="btn-add-note" class="btn btn-note">📝 ${t.btnAddNote}</button>
-      <button id="btn-copy-qs" class="btn btn-qs">⚡ ${t.btnQuickStatements}</button>
+      <button id="btn-josm-zoom" class="btn btn-josm" title="Shortcut: J">${icon("target")} ${t.btnJosmZoom} <kbd class="kbd-inline">J</kbd></button>
+      ${effectiveStatus === 1 ? `<button id="btn-josm-tags" class="btn btn-josm-action" title="Shortcut: T">${icon("tag")} ${t.btnJosmAddTags} <kbd class="kbd-inline">T</kbd></button>` : ""}
+      ${effectiveStatus === 0 && ImportAccess.canImport() ? `<button id="btn-josm-add-node" class="btn btn-josm-action">${icon("plus")} ${t.btnJosmAddNode}</button>` : ""}
+      <button id="btn-overpass-turbo" class="btn btn-overpass" title="Shortcut: O">${icon("bolt")} Overpass <kbd class="kbd-inline">O</kbd></button>
+      <a href="${MappingTools.getIdEditorUrl(lat, lon)}" target="_blank" rel="noopener" class="btn btn-id" title="Shortcut: I">${icon("edit")} ${t.btnEditId} <kbd class="kbd-inline">I</kbd></a>
+      <button id="btn-add-note" class="btn btn-note">${icon("edit")} ${t.btnAddNote}</button>
+      <button id="btn-copy-qs" class="btn btn-qs">${icon("bolt")} ${t.btnQuickStatements}</button>
     </div>
   `;
 
@@ -1147,7 +1147,7 @@ function selectItem(item, marker = null, skipFly = false) {
     navigator.clipboard.writeText(tagsLines).then(() => {
       const b = document.getElementById("btn-copy-tags");
       b.innerText = `✓ ${t.btnCopied}`;
-      setTimeout(() => b.innerText = `📋 ${t.btnCopyTags}`, 2000);
+      setTimeout(() => { b.innerHTML = `${icon("copy")} ${t.btnCopyTags}`; }, 2000);
     });
   };
 
@@ -1250,11 +1250,11 @@ function selectItem(item, marker = null, skipFly = false) {
                     · <span class="cand-reason-tag">${escapeHtml(cand.matchedReason)}</span>
                   </div>
                   <div class="cand-button-bar">
-                    <button class="btn btn-cand-mini btn-cand-direct-link" data-action="link">⚡ ${t.linkSingleNow || 'ربط فوري'}</button>
-                    <button class="btn btn-cand-mini ${isStaged ? 'btn-cand-in-batch' : 'btn-cand-add-batch'}" data-action="batch">${isStaged ? `✓ ${t.btnInBatch}` : `➕ ${t.btnAddToBatch}`}</button>
-                    <button class="btn btn-cand-mini" data-action="josm">🎯 JOSM</button>
-                    <button class="btn btn-cand-mini" data-action="josm-tags">🏷️ ${t.btnJosmAddTags}</button>
-                    <a href="${MappingTools.getIdEditorUrl(cand.lat, cand.lon)}" target="_blank" rel="noopener" class="btn btn-cand-mini">✏️ iD</a>
+                    <button class="btn btn-cand-mini btn-cand-direct-link" data-action="link">${icon("bolt")} ${t.linkSingleNow || 'ربط فوري'}</button>
+                    <button class="btn btn-cand-mini ${isStaged ? 'btn-cand-in-batch' : 'btn-cand-add-batch'}" data-action="batch">${isStaged ? `✓ ${t.btnInBatch}` : `${icon("plus")} ${t.btnAddToBatch}`}</button>
+                    <button class="btn btn-cand-mini" data-action="josm">${icon("target")} JOSM</button>
+                    <button class="btn btn-cand-mini" data-action="josm-tags">${icon("tag")} ${t.btnJosmAddTags}</button>
+                    <a href="${MappingTools.getIdEditorUrl(cand.lat, cand.lon)}" target="_blank" rel="noopener" class="btn btn-cand-mini">${icon("edit")} iD</a>
                   </div>
                 </div>
               `;
@@ -1325,14 +1325,8 @@ window.openSingleLinkModal = function(osmRef, qid, featureName, callback) {
   // Extract extra tags (like wikipedia)
   let extraTags = {};
   if (selectedItem && `Q${selectedItem[0]}` === cleanQid) {
-    const wikiAr = selectedItem[11];
-    if (wikiAr) {
-      try {
-        const u = new URL(wikiAr);
-        const art = decodeURIComponent(u.pathname.replace(/^\/wiki\//, ""));
-        if (art) extraTags.wikipedia = `ar:${art}`;
-      } catch (e) {}
-    }
+    const wikipedia = TagGenerator.wikipediaTag(selectedItem[11]);
+    if (wikipedia) extraTags.wikipedia = wikipedia;
   }
 
   // Pre-fill improved smart comment
@@ -1370,7 +1364,7 @@ window.openSingleLinkModal = function(osmRef, qid, featureName, callback) {
   if (confirmBtn) {
     confirmBtn.onclick = async () => {
       confirmBtn.disabled = true;
-      confirmBtn.innerText = `⏳ ${t.linkingInProgress || 'Linking...'}`;
+      (confirmBtn.querySelector("[data-i18n]") || confirmBtn).textContent = t.linkingInProgress || "Linking...";
 
       try {
         const finalComment = commentInput.value.trim() || defaultComment;
@@ -1420,10 +1414,10 @@ window.openSingleLinkModal = function(osmRef, qid, featureName, callback) {
         if (callback) callback(res);
       } catch (err) {
         console.error("Direct link error:", err);
-        alert(`❌ ${t.linkError || 'Error:'} ${err.message}`);
+        alert(`${t.linkError || 'Error:'} ${err.message}`);
       } finally {
         confirmBtn.disabled = false;
-        confirmBtn.innerText = t.btnConfirmLinkNow || 'Confirm & Upload';
+        (confirmBtn.querySelector("[data-i18n]") || confirmBtn).textContent = t.btnConfirmLinkNow || "Confirm & Upload";
       }
     };
   }
@@ -1457,14 +1451,9 @@ window.toggleCandidateBatch = function(osmRef, qid, candidateName = "") {
       ];
     }
 
-    let extraTags = {};
-    if (itemData[11]) {
-      try {
-        const u = new URL(itemData[11]);
-        const art = decodeURIComponent(u.pathname.replace(/^\/wiki\//, ""));
-        if (art) extraTags.wikipedia = `ar:${art}`;
-      } catch (e) {}
-    }
+    const extraTags = {};
+    const wikipedia = TagGenerator.wikipediaTag(itemData[11]);
+    if (wikipedia) extraTags.wikipedia = wikipedia;
 
     if (typeof BatchManager !== "undefined") {
       BatchManager.add(itemData, osmRef, candidateName, extraTags, currentCountry);
@@ -1589,7 +1578,7 @@ function updateAuthUI() {
     }
     if (wdUserLabel) {
       wdUserLabel.style.display = "inline-flex";
-      wdUserLabel.innerText = `🏛️ ${wdUser.username || "Wikidata"}`;
+      wdUserLabel.innerText = `${wdUser.username || "Wikidata"}`;
     }
   } else {
     if (wdLoginBtn) {
@@ -1782,7 +1771,7 @@ function setupKeyboardShortcuts() {
       if (btnDirectLink) {
         btnDirectLink.click();
       } else {
-        alert(currentLang === "ar" ? "الربط المباشر متاح للعناصر المرشحة (🟡) أو بعد التحقق المباشر." : "Direct linking is available for candidate matches (🟡) or verified items.");
+        alert(currentLang === "ar" ? "الربط المباشر متاح للعناصر المرشحة (الصفراء) أو بعد التحقق المباشر." : "Direct linking is available for candidate (amber) matches or verified items.");
       }
     } else if (key === "t" || key === "T") {
       e.preventDefault();
@@ -2138,7 +2127,7 @@ function itemShareUrl() {
 
 function copyLinkButtonHtml(t) {
   const label = escapeHtml(t.btnCopyItemLink || "Copy link");
-  return `<button type="button" id="btn-copy-item-link" class="btn-copy-link" title="${label}" aria-label="${label}">🔗</button>`;
+  return `<button type="button" id="btn-copy-item-link" class="btn-copy-link" title="${label}" aria-label="${label}">${icon("link")}</button>`;
 }
 
 function wireCopyLinkButton(t) {
@@ -2152,7 +2141,7 @@ function wireCopyLinkButton(t) {
       btn.classList.add("is-copied");
       btn.setAttribute("aria-label", t.btnCopied);
       setTimeout(() => {
-        btn.textContent = "🔗";
+        btn.innerHTML = icon("link");
         btn.classList.remove("is-copied");
         btn.setAttribute("aria-label", t.btnCopyItemLink);
       }, 2000);

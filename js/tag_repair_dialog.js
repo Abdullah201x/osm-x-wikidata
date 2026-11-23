@@ -75,6 +75,8 @@ const TagRepairDialog = (() => {
     const noChangeBox = $("tag-repair-nochange");
     const errorBox = $("tag-repair-error");
     const confirmBtn = $("btn-confirm-tag-repair");
+    // Write into the label span so the button keeps its icon.
+    const confirmLabel = confirmBtn.querySelector("[data-i18n]") || confirmBtn;
     const cancelBtn = $("btn-cancel-tag-repair");
     const closeBtn = $("btn-close-tag-repair");
     const link = $("tag-repair-element-link");
@@ -103,7 +105,7 @@ const TagRepairDialog = (() => {
 
     const publishLabel = t.tagRepairPublish || "Publish";
     const blocked = preview.stale || !preview.changed;
-    confirmBtn.textContent = publishLabel;
+    confirmLabel.textContent = publishLabel;
     confirmBtn.disabled = blocked;
     comment.disabled = blocked;
 
@@ -141,7 +143,7 @@ const TagRepairDialog = (() => {
         confirmBtn.disabled = true;
         cancelBtn.disabled = true;
         comment.disabled = true;
-        confirmBtn.textContent = t.tagRepairPublishing || "Publishing...";
+        confirmLabel.textContent = t.tagRepairPublishing || "Publishing...";
         errorBox.hidden = true;
         try {
           const result = await onConfirm(comment.value.trim() || preview.defaultComment);
@@ -152,7 +154,7 @@ const TagRepairDialog = (() => {
           confirmBtn.disabled = false;
           cancelBtn.disabled = false;
           comment.disabled = false;
-          confirmBtn.textContent = publishLabel;
+          confirmLabel.textContent = publishLabel;
           errorBox.textContent = errorText(err, t);
           errorBox.hidden = false;
           modal.style.display = "flex";

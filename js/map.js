@@ -116,7 +116,7 @@ const MapController = {
 
       // 1. Dashed connector line
       const line = L.polyline([targetCoords, [cand.lat, cand.lon]], {
-        color: "#ffb703",
+        color: "#f59e0b", // --color-candidate (DESIGN.md)
         weight: 2.5,
         dashArray: "6, 6",
         opacity: 0.85,

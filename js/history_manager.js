@@ -243,17 +243,17 @@ const HistoryManager = {
           <div class="history-card-header">
             <div class="history-header-left">
               <a href="${escapeHtml(wdUrl)}" target="_blank" rel="noopener" class="history-cs-link">
-                🏛️ ${escapeHtml(it.qid)} ↗
+                ${escapeHtml(it.qid)} ↗
               </a>
               <span class="history-type-pill batch">
                 <a href="${escapeHtml(egUrl)}" target="_blank" rel="noopener" class="link-plain">
-                  📦 EditGroups: <code>${escapeHtml(it.batchId)}</code> ↗
+                  ${icon("box")} EditGroups: <code>${escapeHtml(it.batchId)}</code> ↗
                 </a>
               </span>
               <span class="history-date">${formattedDate}</span>
             </div>
             <div class="history-user-tag">
-              👤 ${escapeHtml(it.user || 'Wikidata Mapper')}
+              ${icon("user")} ${escapeHtml(it.user || 'Wikidata Mapper')}
             </div>
           </div>
 
@@ -354,10 +354,10 @@ const HistoryManager = {
 
       const isRepair = this.isRepairRecord(cs);
       const typeBadge = isRepair
-        ? `<span class="history-type-pill repair">🛠️ ${t.histRepairPill || 'Repair'}${cs.repairType ? ` (${escapeHtml(cs.repairType)})` : ''}</span>`
+        ? `<span class="history-type-pill repair">${icon("wrench")} ${t.histRepairPill || 'Repair'}${cs.repairType ? ` (${escapeHtml(cs.repairType)})` : ''}</span>`
         : cs.isBatch
-          ? `<span class="history-type-pill batch">📦 ${t.statBatchChangesets || 'Batch'} (${cs.itemCount || cs.items.length})</span>`
-          : `<span class="history-type-pill single">⚡ ${t.statSingleChangesets || 'Single'}</span>`;
+          ? `<span class="history-type-pill batch">${icon("box")} ${t.statBatchChangesets || 'Batch'} (${cs.itemCount || cs.items.length})</span>`
+          : `<span class="history-type-pill single">${icon("bolt")} ${t.statSingleChangesets || 'Single'}</span>`;
 
       const itemsHtml = (cs.items || []).map(it => {
         const ref = OsmAuth.parseOsmRef(it.osmRef);
@@ -379,7 +379,7 @@ const HistoryManager = {
               <a href="${escapeHtml(osmUrl)}" target="_blank" rel="noopener" class="osm-link"><code>${escapeHtml(it.osmRef)}</code> ${it.version ? `(v${escapeHtml(it.version)})` : ''} ↗</a>
             </div>
             <div class="history-sub-actions">
-              ${hasCoords ? `<button class="btn btn-history-zoom" data-lat="${Number(it.lat)}" data-lon="${Number(it.lon)}" data-qid="${escapeHtml(it.qid)}">📍 ${t.btnShowOnMap || 'Show on Map'}</button>` : ''}
+              ${hasCoords ? `<button class="btn btn-history-zoom" data-lat="${Number(it.lat)}" data-lon="${Number(it.lon)}" data-qid="${escapeHtml(it.qid)}">${icon("pin")} ${t.btnShowOnMap || 'Show on Map'}</button>` : ''}
             </div>
           </div>
         `;
@@ -396,12 +396,12 @@ const HistoryManager = {
               <span class="history-date">${formattedDate}</span>
             </div>
             <div class="history-user-tag">
-              👤 ${escapeHtml(cs.user || 'OSM Mapper')}
+              ${icon("user")} ${escapeHtml(cs.user || 'OSM Mapper')}
             </div>
           </div>
           
           <div class="history-comment-bubble">
-            <span class="comment-quote-icon">💬</span>
+            <span class="comment-quote-icon">${icon("chat")}</span>
             <span class="comment-text">${escapeHtml(cs.comment || '(No comment)')}</span>
           </div>
 

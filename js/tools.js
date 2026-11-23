@@ -33,7 +33,16 @@ function commonsImageUrl(url) {
   return safeUrl(url).replace(/^http:\/\/(commons|upload)\.wikimedia\.org\//i, (m, host) => `https://${host.toLowerCase()}.wikimedia.org/`);
 }
 
+/**
+ * Markup for an icon from the inline SVG sprite in index.html (#i-<name>).
+ * Decorative only: the surrounding text carries the meaning.
+ */
+function icon(name) {
+  return `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+}
+
 window.escapeHtml = escapeHtml;
+window.icon = icon;
 window.safeUrl = safeUrl;
 window.commonsImageUrl = commonsImageUrl;
 
@@ -133,9 +142,9 @@ const MappingTools = {
 
   /**
    * Generates NSI-style interactive Overpass Turbo query with 3-color MapCSS:
-   * 🔴 Red: Features matching name in OSM
-   * 🟡 Yellow: Features matching the category tag in OSM without wikidata link
-   * 🟢 Green: Features correctly linked with wikidata=Q...
+   * Red (missing): Features matching name in OSM
+   * Amber (candidate): Features matching the category tag in OSM without wikidata link
+   * Green (linked): Features correctly linked with wikidata=Q...
    */
   generateOverpassQuery(item, tags) {
     const qid = `Q${item[0]}`;
@@ -171,22 +180,22 @@ out skel qt;
 
 {{style:
 node, way, relation {
-  color: #ff3366;
-  fill-color: #ff3366;
+  color: #f43f5e;
+  fill-color: #f43f5e;
   fill-opacity: 0.3;
 }
 node["${mainK}"="${mainV}"],
 way["${mainK}"="${mainV}"],
 relation["${mainK}"="${mainV}"] {
-  color: #ffb703;
-  fill-color: #ffb703;
+  color: #f59e0b;
+  fill-color: #f59e0b;
   fill-opacity: 0.4;
 }
 node["wikidata"="${qid}"],
 way["wikidata"="${qid}"],
 relation["wikidata"="${qid}"] {
-  color: #00ff87;
-  fill-color: #00ff87;
+  color: #10b981;
+  fill-color: #10b981;
   fill-opacity: 0.6;
 }
 }}`;
