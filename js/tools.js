@@ -64,7 +64,7 @@ const MappingTools = {
       await fetch(url);
       return true;
     } catch (e) {
-      alert(TRANSLATIONS[currentLang || "ar"].josmError);
+      Notify.error(i18n("josmError"));
       return false;
     }
   },
@@ -83,7 +83,7 @@ const MappingTools = {
       await fetch(url);
       return true;
     } catch (e) {
-      alert(TRANSLATIONS[currentLang || "ar"].josmError);
+      Notify.error(i18n("josmError"));
       return false;
     }
   },

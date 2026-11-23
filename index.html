@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <!-- Old GitHub Pages URL -> wikidata.saudiosm.org -->
-  <script src="js/pages_redirect.js?v=22"></script>
+  <script src="js/pages_redirect.js?v=23"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ربط أوبن ستريت ماب وويكي بيانات لدول الخليج</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2242%22 r=%2230%22 fill=%22none%22 stroke=%22%2300f2fe%22 stroke-width=%2212%22/><path d=%22M50 96 28 64h44z%22 fill=%22%2300f2fe%22/></svg>" />
   
   <!-- Leaflet & MarkerCluster CSS (Self-Hosted) -->
-  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=22" />
-  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css?v=22" />
-  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.Default.css?v=22" />
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=23" />
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css?v=23" />
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.Default.css?v=23" />
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="css/style.css?v=22" />
+  <link rel="stylesheet" href="css/style.css?v=23" />
 </head>
 <body>
   <!-- Icon sprite: one stroke family (24px grid, 2px stroke, currentColor). Use via <svg class="icon"><use href="#i-NAME"/></svg>. -->
@@ -122,12 +122,12 @@
           <div class="scope-row">
             <div class="scope-country-col">
               <select id="country-select" class="select-custom scope-select" aria-label="اختر الدولة / Select Country">
-                <option value="sa" selected>🇸🇦 السعودية (SA)</option>
-                <option value="ae">🇦🇪 الإمارات (AE)</option>
-                <option value="kw">🇰🇼 الكويت (KW)</option>
-                <option value="qa">🇶🇦 قطر (QA)</option>
-                <option value="om">🇴🇲 عمان (OM)</option>
-                <option value="bh">🇧🇭 البحرين (BH)</option>
+                <option value="sa" selected>السعودية (SA)</option>
+                <option value="ae">الإمارات (AE)</option>
+                <option value="kw">الكويت (KW)</option>
+                <option value="qa">قطر (QA)</option>
+                <option value="om">عمان (OM)</option>
+                <option value="bh">البحرين (BH)</option>
               </select>
             </div>
             <div class="scope-search-col">
@@ -645,34 +645,38 @@
     </div>
   </div>
 
+  <!-- Notifications (js/notify.js): replaces alert(); errors persist, others auto-dismiss -->
+  <div id="toast-region" class="toast-region"></div>
+
   <!-- Loading Overlay -->
   <div id="loading-indicator" role="status" aria-live="polite">
     <div class="spinner"></div>
-    <div class="loading-indicator-label">جارٍ تحميل البيانات...</div>
+    <div class="loading-indicator-label" data-i18n="loadingData">جارٍ تحميل البيانات…</div>
   </div>
 
   <!-- Leaflet & MarkerCluster JS (Self-Hosted) -->
-  <script src="vendor/leaflet/leaflet.js?v=22"></script>
-  <script src="vendor/markercluster/leaflet.markercluster.js?v=22"></script>
+  <script src="vendor/leaflet/leaflet.js?v=23"></script>
+  <script src="vendor/markercluster/leaflet.markercluster.js?v=23"></script>
 
   <!-- Application Modules -->
-  <script src="js/translations.js?v=22"></script>
-  <script src="js/arabic_utils.js?v=22"></script>
-  <script src="js/tag_generator.js?v=22"></script>
-  <script src="js/wikidata_labels.js?v=22"></script>
-  <script src="js/tools.js?v=22"></script>
-  <script src="js/osm_oauth.js?v=22"></script>
-  <script src="js/import_access.js?v=22"></script>
-  <script src="js/wikidata_auth.js?v=22"></script>
-  <script src="js/wikidata_edit.js?v=22"></script>
-  <script src="js/live_verify.js?v=22"></script>
-  <script src="js/batch_manager.js?v=22"></script>
-  <script src="js/history_manager.js?v=22"></script>
-  <script src="js/map.js?v=22"></script>
-  <script src="js/tag_repair_dialog.js?v=22"></script>
-  <script src="js/progress_chart.js?v=22"></script>
-  <script src="js/modal_a11y.js?v=22"></script>
-  <script src="js/app.js?v=22"></script>
+  <script src="js/translations.js?v=23"></script>
+  <script src="js/arabic_utils.js?v=23"></script>
+  <script src="js/tag_generator.js?v=23"></script>
+  <script src="js/wikidata_labels.js?v=23"></script>
+  <script src="js/tools.js?v=23"></script>
+  <script src="js/notify.js?v=23"></script>
+  <script src="js/osm_oauth.js?v=23"></script>
+  <script src="js/import_access.js?v=23"></script>
+  <script src="js/wikidata_auth.js?v=23"></script>
+  <script src="js/wikidata_edit.js?v=23"></script>
+  <script src="js/live_verify.js?v=23"></script>
+  <script src="js/batch_manager.js?v=23"></script>
+  <script src="js/history_manager.js?v=23"></script>
+  <script src="js/map.js?v=23"></script>
+  <script src="js/tag_repair_dialog.js?v=23"></script>
+  <script src="js/progress_chart.js?v=23"></script>
+  <script src="js/modal_a11y.js?v=23"></script>
+  <script src="js/app.js?v=23"></script>
 
 </body>
 </html>

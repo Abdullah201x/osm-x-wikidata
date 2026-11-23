@@ -180,11 +180,13 @@ describe('JOSM remote control', () => {
     expect(url).toContain(encodeURIComponent('https://www.openstreetmap.org/way/5'));
   });
 
-  it('alerts and resolves false when JOSM is not running', async () => {
+  it('shows an error toast and resolves false when JOSM is not running', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
-    const alertMock = vi.fn();
-    vi.stubGlobal('alert', alertMock);
+    loadScript('translations.js', ['TRANSLATIONS', 'i18n']);
+    loadScript('notify.js', ['Notify']).Notify.clear();
     expect(await MappingTools.josmLoadAndZoom(24, 46)).toBe(false);
-    expect(alertMock).toHaveBeenCalledOnce();
+    const toast = document.querySelector('#toast-region .toast--error');
+    expect(toast.getAttribute('role')).toBe('alert');
+    expect(toast.textContent).toContain('JOSM');
   });
 });

@@ -101,8 +101,8 @@ describe('handleCallback', () => {
   it('rejects a forged wd_ state as CSRF without calling the token endpoint', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.spyOn(window.history, 'replaceState').mockImplementation(() => {});
-    const alertMock = vi.fn();
-    vi.stubGlobal('alert', alertMock);
+    loadScript('translations.js', ['TRANSLATIONS', 'i18n']);
+    loadScript('notify.js', ['Notify']).Notify.clear();
     sessionStorage.setItem('wd_oauth_state', 'wd_real');
     sessionStorage.setItem('wd_code_verifier', 'v');
     at('?code=abc&state=wd_forged');
@@ -113,6 +113,7 @@ describe('handleCallback', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(localStorage.getItem('wd_access_token')).toBeNull();
     expect(sessionStorage.getItem('wd_oauth_state')).toBeNull();
+    expect(document.querySelector('#toast-region .toast--error')?.getAttribute('role')).toBe('alert');
   });
 
   it('exchanges the code with the stored verifier and saves tokens plus expiry', async () => {

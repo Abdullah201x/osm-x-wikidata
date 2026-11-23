@@ -312,7 +312,7 @@ const OsmAuth = {
   exportHistoryCsv() {
     const history = this.getChangesetHistory();
     if (!history || history.length === 0) {
-      alert("No changesets recorded in history to export.");
+      Notify.info(i18n("noHistoryToExport"));
       return;
     }
 

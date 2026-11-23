@@ -89,13 +89,12 @@ describe('forward mode item shortcuts', () => {
     expect(globalThis.MappingTools.josmAddTags).toHaveBeenCalledWith('w9', 'Q123');
   });
 
-  it('t alerts instead of tagging when there is no candidate', () => {
-    const alertMock = vi.fn();
-    vi.stubGlobal('alert', alertMock);
+  it('t explains instead of tagging when there is no candidate', () => {
+    Notify.clear();
     app.__app.set({ selectedItem: [123, 24.5, 46.5, 5, 0, 'ا', 'A', '', ''] });
     press('t');
     expect(globalThis.MappingTools.josmAddTags).not.toHaveBeenCalled();
-    expect(alertMock).toHaveBeenCalledOnce();
+    expect(document.querySelectorAll('#toast-region .toast--info')).toHaveLength(1);
   });
 
   it('i opens the iD editor in a new tab', () => {

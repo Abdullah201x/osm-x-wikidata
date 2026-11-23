@@ -62,7 +62,7 @@ const BatchManager = {
     };
 
     if (!stagedItem.osmRef) {
-      alert(window.currentLang === "ar" ? "لا يمكن إضافة عنصر بدون تحديد عنصر OSM المرشح للربط." : "Cannot add to batch without a candidate OSM element reference.");
+      Notify.info(i18n("batchNeedsCandidate"));
       return false;
     }
 

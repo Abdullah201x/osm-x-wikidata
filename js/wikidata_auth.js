@@ -100,7 +100,7 @@ const WikidataAuth = {
 
     if (state !== savedState) {
       console.error("Wikidata OAuth state mismatch. Possible CSRF attack.");
-      alert("Wikidata authentication error: invalid OAuth state parameter.");
+      Notify.error(i18n("wdAuthStateError"));
       this.cleanUrlParams(returnHash);
       return false;
     }
@@ -140,7 +140,7 @@ const WikidataAuth = {
       }
     } catch (e) {
       console.error("Failed to complete Wikidata OAuth login:", e);
-      alert("Failed to authenticate with Wikidata. Please verify OAuth app status or try QuickStatements fallback.");
+      Notify.error(i18n("wdAuthFailed"));
     } finally {
       this.cleanUrlParams(returnHash);
     }

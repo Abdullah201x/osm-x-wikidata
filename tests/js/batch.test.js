@@ -32,10 +32,10 @@ describe('BatchManager staging queue', () => {
   });
 
   it('refuses an item without any OSM reference and tells the user', () => {
-    const alertMock = vi.fn();
-    vi.stubGlobal('alert', alertMock);
+    loadScript('translations.js', ['TRANSLATIONS', 'i18n']);
+    loadScript('notify.js', ['Notify']).Notify.clear();
     expect(BatchManager.add(tuple(11, ''))).toBe(false);
-    expect(alertMock).toHaveBeenCalledOnce();
+    expect(document.querySelectorAll('#toast-region .toast--info')).toHaveLength(1);
     expect(BatchManager.count()).toBe(0);
   });
 

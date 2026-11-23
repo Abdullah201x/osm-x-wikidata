@@ -218,7 +218,7 @@ const TRANSLATIONS = {
     kindMissingBacklink: "روابط خلفية",
     kindBrokenTag: "وسوم تالفة",
     kindConflict: "تعارضات",
-    kindReviewGap: "ℹ️ فجوات مراجعة",
+    kindReviewGap: "فجوات مراجعة",
     confHigh: "دقة عالية (≥ 85%)",
     confMedium: "دقة متوسطة",
     confLow: "دقة منخفضة",
@@ -280,6 +280,38 @@ const TRANSLATIONS = {
     toastWdSuccess: "تمت إضافة المعرف إلى ويكي بيانات بنجاح!",
     toastOsmSuccess: "تم تعديل الوسم في OpenStreetMap بنجاح!",
 
+    dismiss: "إغلاق",
+    btnRetry: "إعادة المحاولة",
+    loadingData: "جارٍ تحميل البيانات…",
+    loadingCountry: "جارٍ تحميل بيانات {country}…",
+    loadFailed: "تعذر تحميل بيانات {country}. تحقق من اتصالك ثم أعد المحاولة.",
+    loadReverseFailed: "تعذر تحميل بيانات التدقيق العكسي لـ {country}. الخريطة فارغة لأن التحميل فشل، وليس لعدم وجود ما يُصلح.",
+    wdLoginPrompt: "لم تسجّل الدخول إلى ويكي بيانات بعد. هل تريد تسجيل الدخول عبر ويكيميديا الآن؟\n(يمكنك أيضاً استخدام زر QuickStatements دون تسجيل دخول.)",
+    wdAdding: "جارٍ الإضافة إلى ويكي بيانات…",
+    wdClaimExists: "الإفادة {ref} موجودة بالفعل في {qid}. لم يُجرَ أي تعديل.",
+    wdClaimAdded: "أُضيفت {ref} إلى {qid}.",
+    wdClaimFailed: "تعذرت الإضافة إلى ويكي بيانات: {error}\nيمكنك استخدام زر QuickStatements بديلاً.",
+    viewEditGroups: "عرض في EditGroups",
+    loginOsmFirst: "سجّل الدخول بحساب OpenStreetMap أولاً.",
+    verifying: "جارٍ التحقق…",
+    verifyOk: "تم التحقق",
+    verifyOkDetail: "العنصر موجود في ويكي بيانات (نسخة {rev}).",
+    verifyFailed: "تعذر التحقق الآن: {error}",
+    copiedToClipboard: "نُسخ إلى الحافظة",
+    xmlCopied: "نُسخ كود XML للنقطة. في JOSM اضغط Ctrl+V للصقه.",
+    qsCopied: "نُسخ سطر QuickStatements:\n{qs}",
+    noteFailed: "تعذر إرسال الملاحظة: {error}",
+    directLinkUnavailable: "الربط المباشر متاح للعناصر المرشحة (الكهرمانية) أو بعد التحقق المباشر.",
+    noCandidateToTag: "لا يوجد عنصر مرشح محدد لإرسال الوسم إليه في JOSM.",
+    noItemsToExport: "لا توجد عناصر مطابقة للتصدير.",
+    noReverseItemsToExport: "لا توجد عناصر مطابقة للتصدير إلى QuickStatements.",
+    noBacklinkItems: "لا توجد عناصر تحتاج إلى إضافة روابط في ويكي بيانات ضمن القائمة المفلترة.",
+    qsBatchCopied: "نُسخ {count} من أوامر QuickStatements. الصقها في quickstatements.toolforge.org",
+    openQuickStatements: "فتح QuickStatements",
+    batchNeedsCandidate: "لا يمكن إضافة عنصر دون تحديد عنصر OSM المرشح للربط.",
+    noHistoryToExport: "لا توجد مجموعات تعديل في السجل لتصديرها.",
+    wdAuthStateError: "فشل تسجيل الدخول إلى ويكي بيانات: رمز الحالة غير صالح. أعد المحاولة.",
+    wdAuthFailed: "تعذر تسجيل الدخول إلى ويكي بيانات. يمكنك استخدام QuickStatements بديلاً.",
     footerText: 'بيانات <a href="https://www.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> و <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> · مجتمع OSM السعودي: <a href="https://t.me/OSMSaudi" target="_blank" rel="noopener">تيليجرام</a>'
   },
   en: {
@@ -497,7 +529,7 @@ const TRANSLATIONS = {
     kindMissingBacklink: "Missing Back-links",
     kindBrokenTag: "Broken Tags",
     kindConflict: "Conflicts",
-    kindReviewGap: "ℹ️ Review Gaps",
+    kindReviewGap: "Review Gaps",
     confHigh: "High Confidence (≥ 85%)",
     confMedium: "Medium Confidence",
     confLow: "Low Confidence",
@@ -559,7 +591,51 @@ const TRANSLATIONS = {
     toastWdSuccess: "Statement added to Wikidata with EditGroups batch successfully!",
     toastOsmSuccess: "OSM element updated successfully!",
 
+    dismiss: "Dismiss",
+    btnRetry: "Retry",
+    loadingData: "Loading data…",
+    loadingCountry: "Loading {country} data…",
+    loadFailed: "Couldn't load data for {country}. Check your connection and retry.",
+    loadReverseFailed: "Couldn't load Reverse QA data for {country}. The map is empty because loading failed, not because there is nothing to fix.",
+    wdLoginPrompt: "You're not logged in to Wikidata yet. Log in via Wikimedia now?\n(You can also use the QuickStatements button without logging in.)",
+    wdAdding: "Adding to Wikidata…",
+    wdClaimExists: "{ref} is already on {qid}. Nothing was changed.",
+    wdClaimAdded: "Added {ref} to {qid}.",
+    wdClaimFailed: "Couldn't add the statement to Wikidata: {error}\nThe QuickStatements button is a fallback.",
+    viewEditGroups: "View in EditGroups",
+    loginOsmFirst: "Log in with your OpenStreetMap account first.",
+    verifying: "Verifying…",
+    verifyOk: "Verified",
+    verifyOkDetail: "The item exists on Wikidata (revision {rev}).",
+    verifyFailed: "Couldn't verify right now: {error}",
+    copiedToClipboard: "Copied to clipboard",
+    xmlCopied: "Node XML copied. In JOSM, press Ctrl+V to paste.",
+    qsCopied: "QuickStatements line copied:\n{qs}",
+    noteFailed: "Couldn't submit the note: {error}",
+    directLinkUnavailable: "Direct linking is available for candidate (amber) matches or verified items.",
+    noCandidateToTag: "No candidate element selected to tag in JOSM.",
+    noItemsToExport: "No filtered items to export.",
+    noReverseItemsToExport: "No filtered Reverse QA items to export to QuickStatements.",
+    noBacklinkItems: "No items in the filtered list need Wikidata back-link statements.",
+    qsBatchCopied: "Copied {count} QuickStatements commands. Paste them into quickstatements.toolforge.org",
+    openQuickStatements: "Open QuickStatements",
+    batchNeedsCandidate: "Can't add to the batch without a candidate OSM element.",
+    noHistoryToExport: "No changesets in history to export.",
+    wdAuthStateError: "Wikidata login failed: invalid OAuth state. Please try again.",
+    wdAuthFailed: "Couldn't log in to Wikidata. You can use QuickStatements instead.",
     footerText: 'Data from <a href="https://www.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> & <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> · Saudi OSM Community: <a href="https://t.me/OSMSaudi" target="_blank" rel="noopener">Telegram</a>'
   }
 };
 
+
+/**
+ * Translated string for the active language, with {placeholder} substitution.
+ * Falls back to English, then to the key itself, so a missing key is visible, never blank.
+ */
+function i18n(key, vars = {}) {
+  const lang = (typeof window !== "undefined" && window.currentLang) || "ar";
+  const raw = (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) ?? TRANSLATIONS.en[key] ?? key;
+  return String(raw).replace(/\{(\w+)\}/g, (m, name) => (name in vars ? String(vars[name]) : m));
+}
+
+window.i18n = i18n;

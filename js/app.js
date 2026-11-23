@@ -40,6 +40,37 @@ Object.defineProperty(window, "currentLang", { get: () => currentLang });
 Object.defineProperty(window, "currentCountry", { get: () => currentCountry });
 Object.defineProperty(window, "currentMode", { get: () => currentMode });
 
+// Arabic uses the short, everyday names; Intl gives the long official form ("المملكة العربية السعودية").
+const COUNTRY_NAMES_AR = { SA: "السعودية", AE: "الإمارات", KW: "الكويت", QA: "قطر", OM: "عُمان", BH: "البحرين" };
+
+/** Localised country name from its ISO code ("sa" -> "Saudi Arabia" / "السعودية"). */
+function countryName(code) {
+  const cc = String(code || "").toUpperCase();
+  if (currentLang === "ar" && COUNTRY_NAMES_AR[cc]) return COUNTRY_NAMES_AR[cc];
+  try {
+    return new Intl.DisplayNames([currentLang], { type: "region" }).of(cc) || cc;
+  } catch {
+    return cc;
+  }
+}
+
+/** Relabels the country <select> in the active language (the markup ships Arabic). */
+function localizeCountryOptions() {
+  document.querySelectorAll("#country-select option").forEach((opt) => {
+    opt.textContent = `${countryName(opt.value)} (${opt.value.toUpperCase()})`;
+  });
+}
+
+/** Shows the loading overlay naming what is loading; returns the element for the caller's finally. */
+function showLoading(code) {
+  const el = document.getElementById("loading-indicator");
+  if (!el) return null;
+  const label = el.querySelector(".loading-indicator-label");
+  if (label) label.textContent = i18n("loadingCountry", { country: countryName(code) });
+  el.style.display = "flex";
+  return el;
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   // Initialize UI language
   setLanguage(currentLang);
@@ -202,8 +233,7 @@ async function loadCountry(code) {
     return;
   }
 
-  const loadingEl = document.getElementById("loading-indicator");
-  if (loadingEl) loadingEl.style.display = "flex";
+  const loadingEl = showLoading(currentCountry);
 
   try {
     const vParam = summaryData?.updated_at ? `?v=${encodeURIComponent(summaryData.updated_at)}` : "";
@@ -226,7 +256,9 @@ async function loadCountry(code) {
     renderSummaryStats();
   } catch (e) {
     console.error("Failed to load country data:", e);
-    alert(`Failed to load dataset for ${code.toUpperCase()}. Please check data/${code}.json.`);
+    Notify.error(i18n("loadFailed", { country: countryName(currentCountry) }), {
+      action: { label: i18n("btnRetry"), onClick: () => loadCountry(currentCountry) },
+    });
   } finally {
     if (loadingEl) loadingEl.style.display = "none";
   }
@@ -234,8 +266,7 @@ async function loadCountry(code) {
 
 async function loadReverseData(country) {
   currentCountry = country.toLowerCase();
-  const loadingEl = document.getElementById("loading-indicator");
-  if (loadingEl) loadingEl.style.display = "flex";
+  const loadingEl = showLoading(currentCountry);
 
   try {
     const vParam = summaryData?.updated_at ? `?v=${encodeURIComponent(summaryData.updated_at)}` : "";
@@ -277,6 +308,10 @@ async function loadReverseData(country) {
     loadedReverseDataset = { country: currentCountry.toUpperCase(), counts: {}, items: [] };
     renderReverseSummaryStats();
     applyReverseFilters();
+    // An empty map would otherwise read as "nothing to fix"; say that loading failed.
+    Notify.error(i18n("loadReverseFailed", { country: countryName(currentCountry) }), {
+      action: { label: i18n("btnRetry"), onClick: () => loadReverseData(currentCountry) },
+    });
   } finally {
     if (loadingEl) loadingEl.style.display = "none";
   }
@@ -540,7 +575,7 @@ function selectReverseItem(item, marker = null, skipFly = false) {
     copyQsBtn.addEventListener("click", () => {
       const line = `${item.qid}\t${item.suggested_fix.property}\t"${item.suggested_fix.value}"`;
       navigator.clipboard.writeText(line).then(() => {
-        copyQsBtn.innerText = "✓ تم النسخ للحافظة!";
+        copyQsBtn.textContent = `✓ ${i18n("copiedToClipboard")}`;
         setTimeout(() => { copyQsBtn.innerHTML = `${icon("copy")} ${t.btnQuickStatements}`; }, 2000);
       });
     });
@@ -548,22 +583,26 @@ function selectReverseItem(item, marker = null, skipFly = false) {
 
   const verifyBtn = document.getElementById("btn-live-verify");
   if (verifyBtn) {
-    verifyBtn.addEventListener("click", async () => {
+    const idleVerifyHtml = verifyBtn.innerHTML;
+    const runVerify = async () => {
       verifyBtn.disabled = true;
-      verifyBtn.innerText = "جارٍ التحقق...";
+      verifyBtn.textContent = i18n("verifying");
       try {
         const res = await fetch(`/api/v1/verify/${item.qid}?osm_type=${fullOsmType}&osm_id=${osmId}`);
-        if (res.ok) {
-          const vData = await res.json();
-          verifyBtn.innerText = "✓ تم التحقق بنجاح!";
-          alert(`تحقق مباشر ناجح:\nالعنصر موجود في ويكي بيانات (${vData.wikidata?.lastrevid ? 'نسخة ' + vData.wikidata.lastrevid : 'موجود'}).`);
-        } else {
-          verifyBtn.innerText = "تعذر الوصول للخدمة";
-        }
-      } catch (e) {
-        verifyBtn.innerText = "خطأ في الاتصال";
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const vData = await res.json();
+        verifyBtn.innerHTML = `${icon("check")} ${escapeHtml(i18n("verifyOk"))}`;
+        Notify.success(i18n("verifyOkDetail", { rev: vData.wikidata?.lastrevid ?? "–" }));
+      } catch (err) {
+        // Give the button back so the editor can retry instead of a dead "error" label.
+        verifyBtn.disabled = false;
+        verifyBtn.innerHTML = idleVerifyHtml;
+        Notify.error(i18n("verifyFailed", { error: err.message }), {
+          action: { label: i18n("btnRetry"), onClick: runVerify },
+        });
       }
-    });
+    };
+    verifyBtn.addEventListener("click", runVerify);
   }
 
   const josmBtn = document.getElementById("btn-reverse-josm");
@@ -584,9 +623,7 @@ function selectReverseItem(item, marker = null, skipFly = false) {
   if (wdClaimBtn && item.suggested_fix) {
     wdClaimBtn.addEventListener("click", async () => {
       if (typeof WikidataAuth === "undefined" || !WikidataAuth.isAuthenticated()) {
-        const wantLogin = confirm(currentLang === "ar"
-          ? "أنت غير مسجل الدخول بـ Wikidata بعد.\n\nهل ترغب في تسجيل الدخول عبر ويكيميديا الآن؟\n(ملاحظة: يمكنك استخدام زر QuickStatements المباشر بدون تسجيل دخول)"
-          : "You are not logged into Wikidata yet.\n\nWould you like to log in via Wikimedia OAuth now?\n(Note: you can also use the 1-Click QuickStatements button without logging in)");
+        const wantLogin = confirm(i18n("wdLoginPrompt"));
         if (wantLogin && typeof WikidataAuth !== "undefined") {
           WikidataAuth.startLogin();
         }
@@ -594,7 +631,7 @@ function selectReverseItem(item, marker = null, skipFly = false) {
       }
 
       wdClaimBtn.disabled = true;
-      wdClaimBtn.innerText = currentLang === "ar" ? "جارٍ الإضافة إلى ويكي بيانات..." : "Adding statement to Wikidata...";
+      wdClaimBtn.textContent = i18n("wdAdding");
 
       try {
         // One edit the user just clicked: tolerate the WDQS lag that blocks the strict default.
@@ -602,24 +639,23 @@ function selectReverseItem(item, marker = null, skipFly = false) {
           maxlag: WikidataEdit.MAXLAG_INTERACTIVE_SECONDS
         });
         window.dispatchEvent(new CustomEvent("osm-history-updated"));
+        const ref = `${fullOsmType}/${osmId}`;
         if (result.skipped) {
-          alert(currentLang === "ar"
-            ? `الإفادة ${fullOsmType}/${osmId} موجودة بالفعل في ويكي بيانات (${qid}). لم يتم إجراء أي تعديل.`
-            : `Statement ${fullOsmType}/${osmId} already exists on Wikidata (${qid}). Nothing was changed.`);
+          Notify.info(i18n("wdClaimExists", { ref, qid }));
           refreshReverseViewAfterPush();
           return;
         }
-        alert(currentLang === "ar"
-          ? `✓ تمت إضافة المعرف ${fullOsmType}/${osmId} إلى ويكي بيانات (${qid}) بنجاح!\n\nحزمة التوثيق في EditGroups:\nhttps://editgroups.toolforge.org/b/CB/${WikidataEdit.getBatchId()}/`
-          : `✓ Statement ${fullOsmType}/${osmId} added to Wikidata (${qid}) successfully!\n\nEditGroups batch details:\nhttps://editgroups.toolforge.org/b/CB/${WikidataEdit.getBatchId()}/`);
+        Notify.success(i18n("wdClaimAdded", { ref, qid }), {
+          link: { href: `https://editgroups.toolforge.org/b/CB/${WikidataEdit.getBatchId()}/`, label: i18n("viewEditGroups") },
+        });
         refreshReverseViewAfterPush();
       } catch (err) {
         console.error("Wikidata claim error:", err);
         wdClaimBtn.disabled = false;
         wdClaimBtn.innerHTML = `${icon("bolt")} ${t.btnAddToWikidata || "إضافة إلى ويكي بيانات مباشرة"}`;
-        alert(currentLang === "ar"
-          ? `تعذر إتمام الإضافة إلى ويكي بيانات:\n${err.message}\n\nيمكنك استخدام زر "فتح في QuickStatements" كبديل سريع ومباشر!`
-          : `Failed to add statement to Wikidata:\n${err.message}\n\nPlease try the 1-Click QuickStatements button as an instant fallback!`);
+        Notify.error(i18n("wdClaimFailed", { error: err.message }), {
+          action: { label: i18n("btnRetry"), onClick: () => wdClaimBtn.click() },
+        });
       }
     });
   }
@@ -628,7 +664,7 @@ function selectReverseItem(item, marker = null, skipFly = false) {
   if (osmRepairBtn && item.suggested_fix) {
     osmRepairBtn.addEventListener("click", async () => {
       if (typeof OsmAuth === "undefined" || !OsmAuth.isLoggedIn()) {
-        alert(currentLang === "ar" ? "يرجى تسجيل الدخول بحساب OpenStreetMap أولاً." : "Please log in with your OpenStreetMap account first.");
+        Notify.info(i18n("loginOsmFirst"));
         if (typeof OsmAuth !== "undefined") {
           OsmAuth.startLogin();
         }
@@ -661,20 +697,22 @@ function selectReverseItem(item, marker = null, skipFly = false) {
       // someone edited it since and the dialog blocks the repair.
       opts.expectedValue = item.qid;
 
-      const idleLabel = osmRepairBtn.innerText;
+      const idleHtml = osmRepairBtn.innerHTML;
       osmRepairBtn.disabled = true;
-      osmRepairBtn.innerText = t.tagRepairLoading;
+      osmRepairBtn.textContent = t.tagRepairLoading;
 
       let preview;
       try {
         preview = await OsmAuth.previewOsmTagRepair(`${fullOsmType}/${osmId}`, repairType, opts);
       } catch (err) {
         console.error("OSM repair preview error:", err);
-        alert(`${t.tagRepairFetchFailed}\n${err.message}`);
+        Notify.error(`${t.tagRepairFetchFailed} ${err.message}`, {
+          action: { label: i18n("btnRetry"), onClick: () => osmRepairBtn.click() },
+        });
         return;
       } finally {
         osmRepairBtn.disabled = false;
-        osmRepairBtn.innerText = idleLabel;
+        osmRepairBtn.innerHTML = idleHtml;
       }
 
       const res = await TagRepairDialog.open(preview, {
@@ -1181,7 +1219,7 @@ function selectItem(item, marker = null, skipFly = false) {
     btnJosmAddNode.onclick = () => {
       MappingTools.josmLoadAndZoom(lat, lon);
       navigator.clipboard.writeText(osmXml).then(() => {
-        alert(currentLang === "ar" ? "تم نسخ كود XML للنقطة! في JOSM، اضغط Ctrl+V للصقها." : "OSM XML copied! In JOSM, press Ctrl+V to paste.");
+        Notify.success(i18n("xmlCopied"));
       });
     };
   }
@@ -1196,7 +1234,7 @@ function selectItem(item, marker = null, skipFly = false) {
   document.getElementById("btn-copy-qs").onclick = () => {
     const qs = MappingTools.getQuickStatements(qid, effectiveOsmRef);
     navigator.clipboard.writeText(qs).then(() => {
-      alert(`${currentLang === 'ar' ? 'تم نسخ سطر QuickStatements للذاكرة:' : 'QuickStatements copied:'}\n${qs}`);
+      Notify.success(i18n("qsCopied", { qs }));
     });
   };
 
@@ -1282,7 +1320,7 @@ function selectItem(item, marker = null, skipFly = false) {
       } else {
         MapController.clearCandidatesFromMap();
         resBox.className = "verify-feedback info";
-        resBox.innerText = `ℹ ${t.liveNotFound} (${result.count_nearby} nearby elements checked).`;
+        resBox.innerText = `${t.liveNotFound} (${result.count_nearby} nearby elements checked).`;
       }
     } catch (err) {
       resBox.className = "verify-feedback error";
@@ -1386,7 +1424,7 @@ window.openSingleLinkModal = function(osmRef, qid, featureName, callback) {
 
         if (res.alreadyLinked) {
           feedbackEl.className = "verify-feedback info";
-          feedbackEl.innerHTML = `ℹ️ ${t.alreadyLinkedNotice} (<code>${escapeHtml(osmRef)}</code>)`;
+          feedbackEl.innerHTML = `${icon("info")} ${t.alreadyLinkedNotice} (<code>${escapeHtml(osmRef)}</code>)`;
         } else {
           feedbackEl.className = "verify-feedback success";
           feedbackEl.innerHTML = `
@@ -1414,7 +1452,7 @@ window.openSingleLinkModal = function(osmRef, qid, featureName, callback) {
         if (callback) callback(res);
       } catch (err) {
         console.error("Direct link error:", err);
-        alert(`${t.linkError || 'Error:'} ${err.message}`);
+        Notify.error(`${t.linkError} ${err.message}`);
       } finally {
         confirmBtn.disabled = false;
         (confirmBtn.querySelector("[data-i18n]") || confirmBtn).textContent = t.btnConfirmLinkNow || "Confirm & Upload";
@@ -1516,10 +1554,10 @@ function openNoteModal(lat, lon, name, qid) {
     if (!text) return;
     try {
       await OsmAuth.submitNote(lat, lon, text);
-      alert(TRANSLATIONS[currentLang].noteSuccess);
+      Notify.success(i18n("noteSuccess"));
       modal.style.display = "none";
     } catch (err) {
-      alert(`Failed to submit note: ${err.message}`);
+      Notify.error(i18n("noteFailed", { error: err.message }));
     }
   };
 
@@ -1610,6 +1648,7 @@ function setLanguage(lang) {
 
   const langBtn = document.getElementById("btn-toggle-lang");
   if (langBtn) langBtn.innerText = t.langLabel;
+  localizeCountryOptions();
 
   // The data-i18n pass above resets the auth button to "login"; restore the real login/logout state
   updateAuthUI();
@@ -1771,14 +1810,14 @@ function setupKeyboardShortcuts() {
       if (btnDirectLink) {
         btnDirectLink.click();
       } else {
-        alert(currentLang === "ar" ? "الربط المباشر متاح للعناصر المرشحة (الصفراء) أو بعد التحقق المباشر." : "Direct linking is available for candidate (amber) matches or verified items.");
+        Notify.info(i18n("directLinkUnavailable"));
       }
     } else if (key === "t" || key === "T") {
       e.preventDefault();
       if (osmRef) {
         MappingTools.josmAddTags(osmRef, qid);
       } else {
-        alert(currentLang === "ar" ? "لا يوجد عنصر مرشح محدد لإرسال الوسم إليه في JOSM." : "No candidate element specified to tag.");
+        Notify.info(i18n("noCandidateToTag"));
       }
     } else if (key === "i" || key === "I") {
       e.preventDefault();
@@ -1994,7 +2033,7 @@ function setupEventListeners() {
   if (exportJosmBtn) {
     exportJosmBtn.addEventListener("click", () => {
       if (!ImportAccess.canImport() || !filteredItems || filteredItems.length === 0) {
-        alert(currentLang === "ar" ? "لا توجد عناصر مطابقة للتصدير." : "No filtered items to export.");
+        Notify.info(i18n("noItemsToExport"));
         return;
       }
       MappingTools.exportJosmPresets(filteredItems, currentCountry.toUpperCase());
@@ -2050,20 +2089,20 @@ function setupEventListeners() {
   if (btnExportQsBatch) {
     btnExportQsBatch.addEventListener("click", async () => {
       if (!filteredReverseItems || filteredReverseItems.length === 0) {
-        alert(currentLang === "ar" ? "لا توجد عناصر مطابقة للتصدير إلى QuickStatements." : "No filtered reverse items to export to QuickStatements.");
+        Notify.info(i18n("noReverseItemsToExport"));
         return;
       }
       const qsText = MappingTools.generateQuickStatementsBatch(filteredReverseItems);
       if (!qsText || qsText.trim() === "") {
-        alert(currentLang === "ar" ? "لا توجد عناصر بحاجة لإضافة وسوم إلى ويكي بيانات في القائمة المفلترة." : "No items requiring Wikidata backlink statements in the filtered list.");
+        Notify.info(i18n("noBacklinkItems"));
         return;
       }
       try {
         await navigator.clipboard.writeText(qsText);
         const count = qsText.trim().split("\n").length;
-        alert(currentLang === "ar" 
-          ? `تم نسخ ${count} من أوامر QuickStatements إلى الحافظة بنجاح!\nالصقها في https://quickstatements.toolforge.org`
-          : `Copied ${count} QuickStatements commands to clipboard!\nPaste into https://quickstatements.toolforge.org`);
+        Notify.success(i18n("qsBatchCopied", { count }), {
+          link: { href: "https://quickstatements.toolforge.org/", label: i18n("openQuickStatements") },
+        });
       } catch (err) {
         console.error("Clipboard write error:", err);
         // Fallback prompt for copying
