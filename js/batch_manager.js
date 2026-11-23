@@ -233,7 +233,7 @@ const BatchManager = {
     const t = TRANSLATIONS[window.currentLang || "ar"];
 
     if (!OsmAuth.isLoggedIn()) {
-      const doLogin = confirm(`${t.needLoginToLink}\n\n${window.currentLang === "ar" ? "هل ترغب في تسجيل الدخول الآن عبر OpenStreetMap؟" : "Would you like to log in with OpenStreetMap now?"}`);
+      const doLogin = confirm(`${t.needLoginToLink}\n\n${i18n("loginOsmNowPrompt")}`);
       if (doLogin) {
         OsmAuth.startLogin();
       }
@@ -246,9 +246,7 @@ const BatchManager = {
     const commentInput = document.getElementById("batch-comment-input");
     const comment = commentInput ? commentInput.value.trim() : "";
 
-    const confirmMsg = window.currentLang === "ar"
-      ? `هل تؤكد رفع مجموعة التعديل بعدد (${items.length}) عناصر إلى خوادم OpenStreetMap؟`
-      : `Confirm uploading changeset with (${items.length}) items to OpenStreetMap?`;
+    const confirmMsg = i18n("confirmBatchUpload", { n: items.length });
 
     if (!confirm(confirmMsg)) return;
 
@@ -309,9 +307,9 @@ const BatchManager = {
         progressBox.innerHTML = `
           <div class="batch-success-box">
             <div class="batch-success-icon">${res.failCount > 0 ? icon("alert") : icon("check")}</div>
-            <h4>${t.batchSuccessTitle || "Changeset Uploaded Successfully!"}</h4>
+            <h4>${escapeHtml(res.failCount > 0 ? i18n("batchPartialTitle", { ok: res.successCount, failed: res.failCount }) : t.batchSuccessTitle)}</h4>
             ${res.failCount > 0
-              ? `<p>${window.currentLang === "ar" ? "العناصر التي فشل رفعها بقيت في السلة لإعادة المحاولة." : "Items that failed to upload were kept in the batch queue for retry."}</p>`
+              ? `<p>${escapeHtml(i18n("batchFailedKept"))}</p>`
               : `<p>${t.batchSuccessMessage || "All items were linked in a single changeset on OSM."}</p>`}
             <div class="batch-success-links">
               <a href="${res.changesetUrl}" target="_blank" rel="noopener" class="btn btn-direct-link">
@@ -322,8 +320,8 @@ const BatchManager = {
               </button>
             </div>
             <div class="batch-success-stats">
-              <span>✓ ${res.successCount} ${window.currentLang === "ar" ? "عنصر تم ربطه بنجاح" : "items linked successfully"}</span>
-              ${res.failCount > 0 ? `<span class="text-missing">✕ ${res.failCount} failed</span>` : ""}
+              <span>✓ ${escapeHtml(i18n("batchLinkedCount", { n: res.successCount }))}</span>
+              ${res.failCount > 0 ? `<span class="text-missing">✕ ${escapeHtml(i18n("batchFailedCount", { n: res.failCount }))}</span>` : ""}
             </div>
           </div>
         `;
@@ -367,7 +365,7 @@ const BatchManager = {
     const clearAllBtn = document.getElementById("btn-batch-clear-all");
     if (clearAllBtn) {
       clearAllBtn.onclick = () => {
-        const msg = window.currentLang === "ar" ? "هل ترغب في تفريغ سلة التعديلات بالكامل؟" : "Clear all items from batch queue?";
+        const msg = i18n("confirmClearBatch");
         if (confirm(msg)) {
           this.clear();
           this.renderModalContent();

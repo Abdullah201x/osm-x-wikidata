@@ -492,9 +492,7 @@ const HistoryManager = {
     const btnClear = document.getElementById("btn-history-clear");
     if (btnClear) {
       btnClear.onclick = () => {
-        const msg = window.currentLang === "ar"
-          ? "هل أنت متأكد من تفريغ سجل التعديلات المحلي؟ لن يؤثر ذلك على التعديلات المنشورة في OSM."
-          : "Are you sure you want to clear local changeset history? This will not affect edits on OSM.";
+        const msg = i18n("confirmClearHistory");
         if (confirm(msg)) {
           OsmAuth.clearChangesetHistory();
           this.render();

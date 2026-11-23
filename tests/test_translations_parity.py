@@ -69,3 +69,21 @@ def test_html_data_i18n_keys_exist():
 
     missing_keys = html_keys - set(ar_dict.keys())
     assert not missing_keys, f"HTML references undefined data-i18n keys: {missing_keys}"
+
+
+def test_html_attribute_i18n_keys_exist():
+    """data-i18n-aria / -title / -placeholder keys must exist (setLanguage applies them)."""
+    ar_dict, _ = load_translations()
+    html_text = INDEX_HTML.read_text(encoding="utf-8")
+
+    attr_keys = set(re.findall(r'data-i18n-(?:aria|title|placeholder)="([^"]+)"', html_text))
+    assert attr_keys, "Expected translated attributes in index.html"
+    missing_keys = attr_keys - set(ar_dict.keys())
+    assert not missing_keys, f"HTML references undefined attribute i18n keys: {missing_keys}"
+
+
+def test_no_bilingual_attribute_strings():
+    """Attributes hold one language at a time; "عربي / English" strings are read twice by screen readers."""
+    html_text = INDEX_HTML.read_text(encoding="utf-8")
+    crammed = re.findall(r'(?:title|aria-label|placeholder)="[^"]*[؀-ۿ][^"]*/ [A-Za-z][^"]*"', html_text)
+    assert not crammed, f"Bilingual attribute strings: {crammed}"

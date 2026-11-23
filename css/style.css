@@ -1585,7 +1585,7 @@ kbd, .kbd-inline {
 }
 .cand-details {
   font-size: 0.8rem;
-  color: var(--color-text-main);
+  color: var(--color-text);
   margin-top: 5px;
   line-height: 1.4;
 }
@@ -1604,14 +1604,15 @@ kbd, .kbd-inline {
   border: 1px solid rgba(var(--rgb-accent), 0.4);
 }
 .badge-ai-mid {
-  background: rgba(234, 179, 8, 0.18);
-  color: #fbbf24;
-  border: 1px solid rgba(234, 179, 8, 0.4);
+  background: rgba(var(--rgb-candidate), 0.18);
+  color: var(--color-candidate-text);
+  border: 1px solid rgba(var(--rgb-candidate), 0.4);
 }
+/* Low match confidence is information, not an error: neutral, never the "missing" red. */
 .badge-ai-low {
-  background: rgba(239, 68, 68, 0.18);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: var(--color-surface-hover);
+  color: var(--color-text-muted);
+  border: 1px solid var(--panel-border);
 }
 
 /* Sidebar Footer & Maintainer Contact */
@@ -1685,7 +1686,7 @@ kbd, .kbd-inline {
   line-height: 1.6;
 }
 .about-lead-text {
-  color: var(--color-text-main);
+  color: var(--color-text);
   background: rgba(255, 255, 255, 0.04);
   padding: 10px 12px;
   border-radius: 8px;
@@ -3283,3 +3284,74 @@ kbd, .kbd-inline {
   line-height: 1.4;
   color: var(--color-text-muted);
 }
+
+/* ---- Craft pass (Phase 4) ---- */
+
+/* Links inside panels were unstyled (#0000EE on near-black). */
+.qid-link,
+#inspector-content a:not(.btn):not(.social-badge),
+.about-content a,
+.history-timeline-scroll a:not(.btn) {
+  color: var(--color-linked-text);
+  text-decoration-color: rgba(var(--rgb-linked), 0.5);
+  text-underline-offset: 2px;
+}
+.qid-link:hover,
+#inspector-content a:not(.btn):not(.social-badge):hover { color: var(--color-text); }
+
+/* Text floor: 11px (DESIGN.md). */
+.stat-lbl { font-size: 0.6875rem; }
+.stat-sub-inview { font-size: 0.6875rem; }
+
+/* Pointer targets: >= 32px on desktop. */
+.shortcuts-btn { width: 32px; height: 32px; }
+.lang-btn { height: 32px; }
+.nav-pill-btn { min-height: 32px; height: auto; }
+.btn-copy-link { min-width: 32px; height: 32px; }
+.osm-btn, .wd-btn { min-height: 28px; height: auto; }
+.auth-chip-group { min-height: 34px; height: auto; }
+
+/* Touch: 44px targets (WCAG 2.5.5) wherever the primary pointer is coarse. */
+@media (pointer: coarse) {
+  .btn, .shortcuts-btn, .lang-btn, .nav-pill-btn, .mode-btn, .filter-chip,
+  .reverse-filter-btn, .basemap-btn, .stat-card, .osm-btn, .wd-btn,
+  .refine-panel > summary, .toast-action, .toast-close, .btn-close-modal, .btn-copy-link {
+    min-height: 44px;
+  }
+  .shortcuts-btn, .toast-close, .btn-close-modal, .btn-copy-link { min-width: 44px; }
+  .cat-item { min-height: 44px; }
+}
+
+/* Small screens are read-only (browse + inspect). Publishing needs side-by-side imagery
+   and careful review, so write actions are desktop-only. */
+.mobile-readonly-note { display: none; }
+@media (max-width: 899px) {
+  .batch-pill-btn,
+  #floating-batch-btn,
+  .auth-bar,
+  #auth-hint,
+  #btn-single-link-trigger,
+  #btn-batch-toggle-trigger,
+  #btn-josm-zoom,
+  #btn-josm-tags,
+  #btn-josm-add-node,
+  .btn-cand-direct-link,
+  .btn-cand-add-batch,
+  .btn-cand-in-batch,
+  #btn-wd-add-claim,
+  #btn-osm-repair-tag,
+  #btn-reverse-josm,
+  #btn-export-qs-batch,
+  .export-center-group {
+    display: none !important;
+  }
+  .mobile-readonly-note {
+    display: block;
+    margin: var(--space-sm) 0 0;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+}
+
+/* Relative time is prose ("قبل 7 ساعات"); a monospace face breaks Arabic joining. */
+.freshness-time { font-family: var(--font-body); font-variant-numeric: tabular-nums; }

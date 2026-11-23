@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <!-- Old GitHub Pages URL -> wikidata.saudiosm.org -->
-  <script src="js/pages_redirect.js?v=24"></script>
+  <script src="js/pages_redirect.js?v=25"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ربط أوبن ستريت ماب وويكي بيانات لدول الخليج</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2242%22 r=%2230%22 fill=%22none%22 stroke=%22%2300f2fe%22 stroke-width=%2212%22/><path d=%22M50 96 28 64h44z%22 fill=%22%2300f2fe%22/></svg>" />
   
   <!-- Leaflet & MarkerCluster CSS (Self-Hosted) -->
-  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=24" />
-  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css?v=24" />
-  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.Default.css?v=24" />
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=25" />
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css?v=25" />
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.Default.css?v=25" />
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="css/style.css?v=24" />
+  <link rel="stylesheet" href="css/style.css?v=25" />
 </head>
 <body>
   <!-- Icon sprite: one stroke family (24px grid, 2px stroke, currentColor). Use via <svg class="icon"><use href="#i-NAME"/></svg>. -->
@@ -62,14 +62,14 @@
             <h1 data-i18n="mainTitle">ربط OSM × ويكي بيانات</h1>
           </div>
           <div class="header-right-actions">
-            <button id="btn-about-modal" class="shortcuts-btn" title="حول الأداة والتواصل / About & Contact" aria-label="حول الأداة / About"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg></button>
-            <button id="btn-shortcuts-modal" class="shortcuts-btn" title="اختصارات لوحة المفاتيح / Keyboard Shortcuts" aria-label="اختصارات لوحة المفاتيح / Keyboard shortcuts"><svg class="icon" aria-hidden="true"><use href="#i-keyboard"/></svg></button>
-            <button id="btn-toggle-lang" class="lang-btn" title="تبديل اللغة / Toggle Language">English</button>
+            <button id="btn-about-modal" class="shortcuts-btn" title="حول الأداة والتواصل" aria-label="حول الأداة والتواصل" data-i18n-title="attrAbout" data-i18n-aria="attrAbout"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg></button>
+            <button id="btn-shortcuts-modal" class="shortcuts-btn" title="اختصارات لوحة المفاتيح (?)" aria-label="اختصارات لوحة المفاتيح (?)" data-i18n-title="attrShortcuts" data-i18n-aria="attrShortcuts"><svg class="icon" aria-hidden="true"><use href="#i-keyboard"/></svg></button>
+            <button id="btn-toggle-lang" class="lang-btn" title="تبديل اللغة" data-i18n-title="attrToggleLang">English</button>
           </div>
         </div>
 
         <div class="freshness-row">
-          <div id="data-freshness-tag" class="freshness-tag" role="status" title="تاريخ آخر تحديث للبيانات / Dataset last updated">
+          <div id="data-freshness-tag" class="freshness-tag" role="status" title="تاريخ آخر تحديث للبيانات" data-i18n-title="attrFreshness">
             <span class="freshness-dot" aria-hidden="true">●</span>
             <span class="freshness-lbl" data-i18n="dataFreshnessLabel">بيانات:</span>
             <time id="freshness-data-time" class="freshness-time" datetime="">–</time>
@@ -78,12 +78,12 @@
         
         <!-- Quick Nav Actions: Batch Staging & History Page -->
         <div class="quick-nav-bar">
-          <button id="btn-header-batch" class="nav-pill-btn batch-pill-btn btn-open-batch-modal" title="سلة التعديلات المجمعة (B)">
+          <button id="btn-header-batch" class="nav-pill-btn batch-pill-btn btn-open-batch-modal" title="سلة التعديلات المجمعة (B)" data-i18n-title="attrBatchPill">
             <span class="pill-icon"><svg class="icon" aria-hidden="true"><use href="#i-box"/></svg></span>
             <span data-i18n="batchQueueBtn">سلة التعديلات</span>
             <span class="batch-counter">0</span>
           </button>
-          <button id="btn-header-history" class="nav-pill-btn history-pill-btn btn-open-history-modal" title="سجل العمليات ومجموعات التعديل (H)">
+          <button id="btn-header-history" class="nav-pill-btn history-pill-btn btn-open-history-modal" title="سجل العمليات ومجموعات التعديل (H)" data-i18n-title="attrHistoryPill">
             <span class="pill-icon"><svg class="icon" aria-hidden="true"><use href="#i-history"/></svg></span>
             <span data-i18n="historyPageTitle">سجل الإنجازات</span>
             <span class="history-counter">0</span>
@@ -92,18 +92,18 @@
 
         <!-- Workspace switch: Forward linking | Reverse QA (one task per workspace) -->
         <div class="mode-switcher-wrap" role="group" data-i18n-aria="workspaceLabel" aria-label="مساحة العمل">
-          <button id="btn-mode-forward" class="mode-btn active" aria-pressed="true" data-mode="forward" title="ويكي بيانات ← OSM (الوضع الافتراضي)">
+          <button id="btn-mode-forward" class="mode-btn active" aria-pressed="true" data-mode="forward" title="ربط عناصر ويكي بيانات بمعالم OSM" data-i18n-title="attrModeForward">
             <span class="mode-icon"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></span>
             <span data-i18n="modeForward">Wikidata → OSM</span>
           </button>
-          <button id="btn-mode-reverse" class="mode-btn" aria-pressed="false" data-mode="reverse" title="تدقيق معالم OSM الموسومة بـ wikidata=* وربطها بويكي بيانات">
+          <button id="btn-mode-reverse" class="mode-btn" aria-pressed="false" data-mode="reverse" title="تدقيق معالم OSM الموسومة بـ wikidata=* وإضافة الروابط الخلفية" data-i18n-title="attrModeReverse">
             <span class="mode-icon"><svg class="icon" aria-hidden="true"><use href="#i-swap"/></svg></span>
             <span data-i18n="modeReverse">OSM → Wikidata (Reverse QA)</span>
           </button>
         </div>
 
         <!-- Dual Auth Bar (OSM & Wikidata) -->
-        <div class="auth-bar" role="region" aria-label="حسابات الربط والتحرير">
+        <div class="auth-bar" role="region" aria-label="حسابات التحرير" data-i18n-aria="attrAccounts">
           <div class="auth-chip-group" id="osm-auth-card">
             <span id="osm-user-badge"></span>
             <button id="btn-osm-login" class="osm-btn" data-i18n="loginOsm">تسجيل الدخول بـ OSM</button>
@@ -123,7 +123,7 @@
         <div class="control-group scope-group">
           <div class="scope-row">
             <div class="scope-country-col">
-              <select id="country-select" class="select-custom scope-select" aria-label="اختر الدولة / Select Country">
+              <select id="country-select" class="select-custom scope-select" aria-label="الدولة" data-i18n-aria="attrCountry">
                 <option value="sa" selected>السعودية (SA)</option>
                 <option value="ae">الإمارات (AE)</option>
                 <option value="kw">الكويت (KW)</option>
@@ -134,7 +134,7 @@
             </div>
             <div class="scope-search-col">
               <span class="search-icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg></span>
-              <input type="text" id="search-input" class="search-box scope-search-input" placeholder="بحث بالاسم أو QID... (/)" aria-label="بحث بالاسم أو QID / Search by name or QID" />
+              <input type="text" id="search-input" class="search-box scope-search-input" placeholder="بحث بالاسم أو QID... (/)" aria-label="بحث بالاسم أو QID" data-i18n-aria="attrSearch" />
             </div>
           </div>
         </div>
@@ -143,12 +143,12 @@
         <div class="control-group stats-control-group">
           <div class="stats-header-row">
             <label class="section-label" data-i18n="filterStatus">حالة الربط والإحصائيات</label>
-            <button id="btn-toggle-viewport-stats" class="viewport-toggle-btn" title="حساب الإحصائيات لمجال الرؤية الحالي فقط">
+            <button id="btn-toggle-viewport-stats" class="viewport-toggle-btn" title="حساب الإحصائيات لمجال الرؤية الحالي فقط" data-i18n-title="attrViewportStats">
               <span class="vp-dot"></span>
               <span data-i18n="toggleViewportStats">نطاق الرؤية</span>
             </button>
           </div>
-          <div class="stats-grid status-metric-grid" role="group" aria-label="حالة الربط والإحصائيات">
+          <div class="stats-grid status-metric-grid" role="group" aria-label="حالة الربط والإحصائيات" data-i18n-aria="filterStatus">
             <button type="button" class="stat-card status-filter-btn active" data-status="all" id="stat-total-card">
               <span class="stat-val" id="stat-total-val">0</span>
               <span class="stat-sub-inview" id="stat-total-inview"></span>
@@ -180,6 +180,7 @@
             <kbd class="kbd-inline">N</kbd>
           </button>
           <p id="review-remaining" class="review-remaining" aria-live="polite"></p>
+          <p class="mobile-readonly-note" data-i18n="mobileReadOnly">التحرير متاح على شاشة الحاسوب؛ هنا يمكنك التصفح والمعاينة.</p>
         </div>
 
         <!-- Forward Linker Controls (Visible in Forward Mode) -->
@@ -260,7 +261,7 @@
 
           <!-- Quick Action: Export Filtered Backlinks to QuickStatements -->
           <div class="control-group">
-            <button id="btn-export-qs-batch" class="btn btn-export-qs-batch" title="تصدير جميع الروابط الخلفية عالية الدقة لـ QuickStatements بنقرة واحدة">
+            <button id="btn-export-qs-batch" class="btn btn-export-qs-batch" title="تصدير كل الروابط الخلفية عالية الدقة إلى QuickStatements" data-i18n-title="attrExportQsBatch">
               <svg class="icon" aria-hidden="true"><use href="#i-bolt"/></svg><span data-i18n="btnExportQsBatch">تصدير الروابط عالية الدقة لـ QuickStatements</span>
             </button>
           </div>
@@ -274,7 +275,7 @@
             <button id="btn-export-mr" class="btn btn-export-mini" data-import-only hidden title="MapRoulette GeoJSON">
               <svg class="icon" aria-hidden="true"><use href="#i-target"/></svg> MapRoulette
             </button>
-            <button id="btn-export-josm-presets" class="btn btn-export-mini" data-import-only hidden title="تصدير قوالب ووسوم JOSM الرسمية بصيغة XML">
+            <button id="btn-export-josm-presets" class="btn btn-export-mini" data-import-only hidden title="تصدير قوالب JOSM بصيغة XML" data-i18n-title="attrExportJosm">
               <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> JOSM XML
             </button>
             <button id="btn-export-csv" class="btn btn-export-mini btn-export-csv" title="CSV Spreadsheet">
@@ -308,7 +309,7 @@
     <main id="map"></main>
 
     <!-- Floating Basemap Bar -->
-    <nav class="floating-basemap-bar" aria-label="خريطة الأساس">
+    <nav class="floating-basemap-bar" aria-label="خريطة الأساس" data-i18n-aria="attrBasemap">
       <button class="basemap-btn" data-bm="dark" data-i18n="bmDark">داكن</button>
       <button class="basemap-btn" data-bm="light" data-i18n="bmLight">فاتح</button>
       <button class="basemap-btn active" data-bm="streets" data-i18n="bmStreets">شوارع</button>
@@ -317,7 +318,7 @@
     </nav>
 
     <!-- Floating Batch Dock Trigger (Shown when items are staged) -->
-    <div id="floating-batch-btn" class="floating-batch-dock btn-open-batch-modal" title="فتح سلة التعديلات المجمعة (B)">
+    <div id="floating-batch-btn" class="floating-batch-dock btn-open-batch-modal" title="سلة التعديلات المجمعة (B)" data-i18n-title="attrBatchPill">
       <span class="pulse-indicator"></span>
       <span><svg class="icon" aria-hidden="true"><use href="#i-box"/></svg> <strong data-i18n="batchQueueBtn">سلة التعديلات</strong> (<span class="batch-counter">0</span>)</span>
     </div>
@@ -340,7 +341,7 @@
     <div class="modal-card shortcuts-modal-card">
       <div class="modal-header-row">
         <h2 id="shortcuts-modal-title" data-i18n="shortcutsTitle">اختصارات لوحة المفاتيح</h2>
-        <button type="button" class="btn-close-modal" id="btn-close-shortcuts" aria-label="إغلاق / Close">&times;</button>
+        <button type="button" class="btn-close-modal" id="btn-close-shortcuts" aria-label="إغلاق" data-i18n-aria="attrClose">&times;</button>
       </div>
       <div class="shortcuts-grid">
         <div class="shortcut-row"><kbd>B</kbd> <span data-i18n="shortcutBatch">فتح سلة التعديلات المجمعة</span></div>
@@ -364,7 +365,7 @@
     <div class="modal-card about-modal-card">
       <div class="modal-header-row">
         <h2 id="about-modal-title" data-i18n="aboutModalTitle">حول المشروع، التواصل، وسياسات فريق البيانات (DWG)</h2>
-        <button type="button" class="btn-close-modal" id="btn-close-about" aria-label="إغلاق / Close">&times;</button>
+        <button type="button" class="btn-close-modal" id="btn-close-about" aria-label="إغلاق" data-i18n-aria="attrClose">&times;</button>
       </div>
       <div class="about-content">
         <p class="about-lead-desc subtitle" data-i18n="subtitle">
@@ -402,9 +403,9 @@
   </div>
 
   <!-- Image Lightbox Modal -->
-  <div id="image-lightbox-modal" class="modal-overlay lightbox-overlay" role="dialog" aria-modal="true" aria-label="معاينة الصورة / Image preview">
+  <div id="image-lightbox-modal" class="modal-overlay lightbox-overlay" role="dialog" aria-modal="true" aria-label="معاينة الصورة" data-i18n-aria="attrImagePreview">
     <div class="lightbox-content">
-      <button type="button" class="btn-close-modal lightbox-close" id="btn-close-lightbox" aria-label="إغلاق / Close">&times;</button>
+      <button type="button" class="btn-close-modal lightbox-close" id="btn-close-lightbox" aria-label="إغلاق" data-i18n-aria="attrClose">&times;</button>
       <img id="lightbox-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3C/svg%3E" alt="Enlarged preview" />
       <div class="lightbox-meta">
         <span id="lightbox-caption"></span>
@@ -418,9 +419,9 @@
     <div class="modal-card">
       <h2 id="note-modal-title" data-i18n="noteModalTitle">إرسال ملاحظة إلى OpenStreetMap</h2>
       <div class="note-modal-hint">
-        الإحداثيات: <code id="note-coords"></code>
+        <span data-i18n="coordsLabel">الإحداثيات:</span> <code id="note-coords"></code>
       </div>
-      <textarea id="note-text-input" placeholder="اكتب تفاصيل الملاحظة هنا..."></textarea>
+      <textarea id="note-text-input" placeholder="اكتب تفاصيل الملاحظة هنا…" data-i18n-placeholder="attrNotePlaceholder"></textarea>
       <div class="modal-actions-right">
         <button id="btn-cancel-note" class="btn btn-secondary-cancel" data-i18n="btnCancel">إلغاء</button>
         <button id="btn-submit-note-confirm" class="btn btn-josm-action" data-i18n="btnSubmitNote">إرسال الملاحظة</button>
@@ -433,7 +434,7 @@
     <div class="modal-card single-link-card">
       <div class="modal-header-row">
         <h2 id="single-link-modal-title" data-i18n="singleLinkTitle">مراجعة وتأكيد الربط الفردي</h2>
-        <button type="button" class="btn-close-modal" id="btn-close-single-link" aria-label="إغلاق / Close">&times;</button>
+        <button type="button" class="btn-close-modal" id="btn-close-single-link" aria-label="إغلاق" data-i18n-aria="attrClose">&times;</button>
       </div>
       <p class="modal-sub-desc" data-i18n="singleLinkDesc">إنشاء مجموعة تعديل مستقلة لهذا المعلم وتحديث وسومه في خوادم OpenStreetMap.</p>
       
@@ -451,15 +452,15 @@
       <div class="comment-field-group">
         <div class="comment-field-header">
           <label class="section-label" data-i18n="changesetCommentLabel">تعليق مجموعة التعديل (Changeset Comment):</label>
-          <span class="char-counter"><span id="single-link-char-count">0</span> حرف</span>
+          <span class="char-counter"><span id="single-link-char-count">0</span> <span data-i18n="charsSuffix">حرف</span></span>
         </div>
-        <textarea id="single-link-comment-input" class="comment-textarea" rows="3" placeholder="اكتب تعليقاً يوضح التعديل..."></textarea>
+        <textarea id="single-link-comment-input" class="comment-textarea" rows="3" placeholder="اكتب تعليقاً يوضح التعديل…" data-i18n-placeholder="attrCommentPlaceholder"></textarea>
         
         <div class="preset-chips-row">
           <span class="preset-label" data-i18n="quickInsertPresets">إضافات سريعة:</span>
           <button type="button" class="preset-chip single-preset-chip" data-preset="#osm-wikidata-gcc"><svg class="icon" aria-hidden="true"><use href="#i-tag"/></svg> #osm-wikidata-gcc</button>
-          <button type="button" class="preset-chip single-preset-chip" data-preset="Verified with aerial imagery"><svg class="icon" aria-hidden="true"><use href="#i-satellite"/></svg> صور جوية</button>
-          <button type="button" class="preset-chip single-preset-chip" data-preset="Name match confirmed"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg> مطابقة أسماء مؤكدة</button>
+          <button type="button" class="preset-chip single-preset-chip" data-preset="Verified with aerial imagery"><svg class="icon" aria-hidden="true"><use href="#i-satellite"/></svg> <span data-i18n="presetAerial">صور جوية</span></button>
+          <button type="button" class="preset-chip single-preset-chip" data-preset="Name match confirmed"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg> <span data-i18n="presetNameMatch">مطابقة أسماء مؤكدة</span></button>
         </div>
       </div>
 
@@ -475,7 +476,7 @@
     <div class="modal-card tag-repair-card">
       <div class="modal-header-row">
         <h2 id="tag-repair-modal-title" data-i18n="tagRepairTitle">مراجعة إصلاح الوسم</h2>
-        <button type="button" class="btn-close-modal" id="btn-close-tag-repair" aria-label="إغلاق / Close">&times;</button>
+        <button type="button" class="btn-close-modal" id="btn-close-tag-repair" aria-label="إغلاق" data-i18n-aria="attrClose">&times;</button>
       </div>
       <p class="modal-sub-desc" data-i18n="tagRepairDesc">هذه وسوم العنصر الحالية على OpenStreetMap الآن. راجع التغيير قبل النشر.</p>
 
@@ -523,9 +524,9 @@
       <div class="modal-header-row">
         <div class="batch-title-wrap">
           <h2 id="batch-modal-title" data-i18n="batchModalTitle">مجموعة التعديل المجمعة (Batch Changeset)</h2>
-          <span class="batch-count-pill"><span id="batch-modal-count">0</span> عناصر مجهزة</span>
+          <span class="batch-count-pill"><span id="batch-modal-count">0</span> <span data-i18n="itemsStaged">عناصر مجهزة</span></span>
         </div>
-        <button type="button" class="btn-close-modal" id="btn-close-batch-modal" aria-label="إغلاق / Close">&times;</button>
+        <button type="button" class="btn-close-modal" id="btn-close-batch-modal" aria-label="إغلاق" data-i18n-aria="attrClose">&times;</button>
       </div>
 
       <div id="batch-modal-empty" class="batch-empty-view">
@@ -542,26 +543,26 @@
         <div class="comment-field-group">
           <div class="comment-field-header">
             <label class="section-label" data-i18n="changesetCommentLabel">تعليق مجموعة التعديل (Changeset Comment):</label>
-            <span class="char-counter"><span id="batch-comment-char-count">0</span> حرف</span>
+            <span class="char-counter"><span id="batch-comment-char-count">0</span> <span data-i18n="charsSuffix">حرف</span></span>
           </div>
-          <textarea id="batch-comment-input" class="comment-textarea" rows="2" placeholder="تعليق مجموعة التعديل المجمعة..."></textarea>
+          <textarea id="batch-comment-input" class="comment-textarea" rows="2" placeholder="تعليق مجموعة التعديل…" data-i18n-placeholder="attrBatchCommentPlaceholder"></textarea>
           
           <div class="preset-chips-row">
             <span class="preset-label" data-i18n="quickInsertPresets">إضافات سريعة:</span>
             <button type="button" class="preset-chip batch-preset-chip" data-preset="#osm-wikidata-gcc"><svg class="icon" aria-hidden="true"><use href="#i-tag"/></svg> #osm-wikidata-gcc</button>
-            <button type="button" class="preset-chip batch-preset-chip" data-preset="Verified with aerial imagery"><svg class="icon" aria-hidden="true"><use href="#i-satellite"/></svg> صور جوية</button>
-            <button type="button" class="preset-chip batch-preset-chip" data-preset="Arabic name match verified"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg> تطابق أسماء</button>
+            <button type="button" class="preset-chip batch-preset-chip" data-preset="Verified with aerial imagery"><svg class="icon" aria-hidden="true"><use href="#i-satellite"/></svg> <span data-i18n="presetAerial">صور جوية</span></button>
+            <button type="button" class="preset-chip batch-preset-chip" data-preset="Arabic name match verified"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg> <span data-i18n="presetArNameMatch">تطابق أسماء</span></button>
           </div>
         </div>
 
         <div class="batch-guidelines-tip">
-          <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg> <strong>ملاحظة للمحرر:</strong> يتم رفع جميع هذه المعالم في مجموعة تعديل رسمية واحدة، مع إغلاق المجموعة تلقائياً وتسجيلها في سجل الإنجازات.
+          <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg> <strong data-i18n="batchTipLead">ملاحظة للمحرر:</strong> <span data-i18n="batchTipText">تُرفع هذه المعالم في مجموعة تعديل واحدة تُغلق تلقائياً وتُسجَّل في سجل الإنجازات.</span>
         </div>
       </div>
 
       <div id="batch-progress-box" class="batch-progress-container">
         <div class="batch-progress-header">
-          <span id="batch-progress-text">جارٍ التحضير...</span>
+          <span id="batch-progress-text" data-i18n="preparing">جارٍ التحضير…</span>
         </div>
         <div class="batch-progress-bar-track">
           <div id="batch-progress-bar-fill" class="batch-progress-bar-fill"></div>
@@ -586,7 +587,7 @@
           </div>
           <p class="history-page-subtitle" data-i18n="historyPageSubtitle">جميع مجموعات التعديل والعناصر التي تم ربطها ونشرها في OpenStreetMap عبر الأداة</p>
         </div>
-        <button type="button" class="btn-close-modal" id="btn-close-history-modal" aria-label="إغلاق / Close">&times;</button>
+        <button type="button" class="btn-close-modal" id="btn-close-history-modal" aria-label="إغلاق" data-i18n-aria="attrClose">&times;</button>
       </div>
 
       <!-- History Tabs: OSM changesets | Wikidata edits | Reverse fixes -->
@@ -635,7 +636,7 @@
       <!-- Controls & Search Toolbar -->
       <div class="history-toolbar-row">
         <div class="history-search-wrap">
-          <input type="text" id="history-search-input" class="search-box" placeholder="بحث في السجل بالاسم، رمز QID، أو رقم المجموعة..." />
+          <input type="text" id="history-search-input" class="search-box" placeholder="بحث بالاسم أو QID أو رقم المجموعة…" data-i18n-placeholder="attrHistorySearch" />
         </div>
         <div class="history-filter-pills">
           <button class="history-filter-btn active" data-filter="all" data-i18n="historyFilterAll">الكل</button>
@@ -643,9 +644,9 @@
           <button class="history-filter-btn" data-filter="single" data-i18n="historyFilterSingle">مفردة</button>
         </div>
         <div class="history-export-btns">
-          <button id="btn-history-export-csv" class="btn btn-history-action" title="تصدير جدول اكسل CSV"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> CSV</button>
-          <button id="btn-history-export-json" class="btn btn-history-action" title="تصدير بيانات كاملة JSON"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> JSON</button>
-          <button id="btn-history-clear" class="btn btn-history-action btn-danger-action" title="مسح السجل المحلي" aria-label="مسح السجل المحلي / Clear local history"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
+          <button id="btn-history-export-csv" class="btn btn-history-action" title="تصدير CSV" data-i18n-title="attrHistoryCsv"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> CSV</button>
+          <button id="btn-history-export-json" class="btn btn-history-action" title="تصدير JSON" data-i18n-title="attrHistoryJson"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> JSON</button>
+          <button id="btn-history-clear" class="btn btn-history-action btn-danger-action" title="مسح السجل المحلي" aria-label="مسح السجل المحلي" data-i18n-title="attrHistoryClear" data-i18n-aria="attrHistoryClear"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
         </div>
       </div>
 
@@ -673,28 +674,28 @@
   </div>
 
   <!-- Leaflet & MarkerCluster JS (Self-Hosted) -->
-  <script src="vendor/leaflet/leaflet.js?v=24"></script>
-  <script src="vendor/markercluster/leaflet.markercluster.js?v=24"></script>
+  <script src="vendor/leaflet/leaflet.js?v=25"></script>
+  <script src="vendor/markercluster/leaflet.markercluster.js?v=25"></script>
 
   <!-- Application Modules -->
-  <script src="js/translations.js?v=24"></script>
-  <script src="js/arabic_utils.js?v=24"></script>
-  <script src="js/tag_generator.js?v=24"></script>
-  <script src="js/wikidata_labels.js?v=24"></script>
-  <script src="js/tools.js?v=24"></script>
-  <script src="js/notify.js?v=24"></script>
-  <script src="js/osm_oauth.js?v=24"></script>
-  <script src="js/import_access.js?v=24"></script>
-  <script src="js/wikidata_auth.js?v=24"></script>
-  <script src="js/wikidata_edit.js?v=24"></script>
-  <script src="js/live_verify.js?v=24"></script>
-  <script src="js/batch_manager.js?v=24"></script>
-  <script src="js/history_manager.js?v=24"></script>
-  <script src="js/map.js?v=24"></script>
-  <script src="js/tag_repair_dialog.js?v=24"></script>
-  <script src="js/progress_chart.js?v=24"></script>
-  <script src="js/modal_a11y.js?v=24"></script>
-  <script src="js/app.js?v=24"></script>
+  <script src="js/translations.js?v=25"></script>
+  <script src="js/arabic_utils.js?v=25"></script>
+  <script src="js/tag_generator.js?v=25"></script>
+  <script src="js/wikidata_labels.js?v=25"></script>
+  <script src="js/tools.js?v=25"></script>
+  <script src="js/notify.js?v=25"></script>
+  <script src="js/osm_oauth.js?v=25"></script>
+  <script src="js/import_access.js?v=25"></script>
+  <script src="js/wikidata_auth.js?v=25"></script>
+  <script src="js/wikidata_edit.js?v=25"></script>
+  <script src="js/live_verify.js?v=25"></script>
+  <script src="js/batch_manager.js?v=25"></script>
+  <script src="js/history_manager.js?v=25"></script>
+  <script src="js/map.js?v=25"></script>
+  <script src="js/tag_repair_dialog.js?v=25"></script>
+  <script src="js/progress_chart.js?v=25"></script>
+  <script src="js/modal_a11y.js?v=25"></script>
+  <script src="js/app.js?v=25"></script>
 
 </body>
 </html>

@@ -129,16 +129,13 @@ function formatDataRelativeAge(isoString, lang) {
   const hours = Math.floor(diffSec / 3600);
   const days = Math.floor(diffSec / 86400);
 
+  // Latin digits in Arabic too, matching every other number in the UI.
+  const rtf = new Intl.RelativeTimeFormat(lang === "ar" ? "ar-u-nu-latn" : "en", { numeric: "auto", style: "narrow" });
   let text;
-  if (mins < 1) {
-    text = lang === "ar" ? "الآن" : "just now";
-  } else if (hours < 1) {
-    text = lang === "ar" ? `منذ ${mins} د` : `${mins}m ago`;
-  } else if (days < 1) {
-    text = lang === "ar" ? `منذ ${hours} س` : `${hours}h ago`;
-  } else {
-    text = lang === "ar" ? `منذ ${days} ي` : `${days}d ago`;
-  }
+  if (mins < 1) text = rtf.format(0, "minute");
+  else if (hours < 1) text = rtf.format(-mins, "minute");
+  else if (days < 1) text = rtf.format(-hours, "hour");
+  else text = rtf.format(-days, "day");
 
   let status = "fresh";
   if (hours >= 216) {
@@ -159,9 +156,7 @@ function renderDataFreshness() {
   timeEl.textContent = text;
   tagEl.className = status ? `freshness-tag ${status}` : "freshness-tag";
   const pbf = summaryData.pbf_file ? ` (${summaryData.pbf_file})` : "";
-  tagEl.title = currentLang === "ar"
-    ? `آخر تحديث للبيانات: ${summaryData.updated_at}${pbf}`
-    : `Dataset updated: ${summaryData.updated_at}${pbf}`;
+  tagEl.title = i18n("datasetUpdatedTitle", { date: summaryData.updated_at, pbf });
 }
 
 async function loadSummary() {
@@ -461,17 +456,17 @@ function selectReverseItem(item, marker = null, skipFly = false) {
           </div>
           <div class="rv-btn-row rv-btn-row--spaced">
             <button id="btn-wd-add-claim" class="btn btn-wd-claim rv-btn">
-              ${icon("bolt")} ${t.btnAddToWikidata || "إضافة إلى ويكي بيانات مباشرة"}
+              ${icon("bolt")} ${t.btnAddToWikidata}
             </button>
             <a href="${qsUrl}" target="_blank" rel="noopener" class="btn btn-qs-action rv-btn">
-              ${t.btnOpenQsDirect || "↗️ فتح في QuickStatements"}
+              ${t.btnOpenQsDirect}
             </a>
           </div>
           <div class="rv-btn-row">
             <button id="btn-copy-qs-line" class="btn rv-btn rv-btn-ghost">
               ${icon("copy")} ${t.btnQuickStatements}
             </button>
-            <button id="btn-live-verify" class="btn btn-primary rv-btn">
+            <button id="btn-live-verify" class="btn rv-btn rv-btn-ghost">
               ${icon("search")} ${t.btnLiveVerify} (V)
             </button>
           </div>
@@ -490,15 +485,15 @@ function selectReverseItem(item, marker = null, skipFly = false) {
           <div class="rv-desc">${desc}</div>
           <div class="rv-btn-row rv-btn-row--spaced">
             <button id="btn-osm-repair-tag" class="btn btn-osm-repair rv-btn">
-              ${icon("wrench")} ${t.btnOsmRepairTag || "إصلاح الوسم في OSM مباشرة"}
+              ${icon("wrench")} ${t.btnOsmRepairTag}
             </button>
           </div>
           <div class="rv-btn-row">
             <button id="btn-reverse-josm" class="btn rv-btn rv-btn-ghost">
-              ${icon("map")} فتح في JOSM (J)
+              ${icon("map")} ${t.btnJosmZoom} <kbd class="kbd-inline">J</kbd>
             </button>
             <button id="btn-reverse-id" class="btn rv-btn rv-btn-ghost">
-              ${icon("edit")} محرر iD (I)
+              ${icon("edit")} ${t.btnEditId} <kbd class="kbd-inline">I</kbd>
             </button>
           </div>
         </div>
@@ -527,10 +522,10 @@ function selectReverseItem(item, marker = null, skipFly = false) {
       <div class="reverse-elem-box">
         <h5>${icon("map")} ${t.labelOsmElement}</h5>
         <table class="meta-table">
-          <tr><td>النوع:</td><td><a href="${osmUrl}" target="_blank" rel="noopener" class="qid-link"><code>${escapeHtml(fullOsmType)}/${osmId}</code> ↗</a></td></tr>
-          ${osm.name ? `<tr><td>الاسم:</td><td><strong>${escapeHtml(osm.name)}</strong></td></tr>` : ""}
-          ${osm.name_ar && osm.name_ar !== osm.name ? `<tr><td>عربي:</td><td>${escapeHtml(osm.name_ar)}</td></tr>` : ""}
-          ${osm.main_key ? `<tr><td>الوسم:</td><td><code>${escapeHtml(osm.main_key)}=${escapeHtml(osm.main_val)}</code></td></tr>` : ""}
+          <tr><td>${t.lblOsmType}</td><td><a href="${osmUrl}" target="_blank" rel="noopener" class="qid-link"><code>${escapeHtml(fullOsmType)}/${osmId}</code> ↗</a></td></tr>
+          ${osm.name ? `<tr><td>${t.lblName}</td><td><strong>${escapeHtml(osm.name)}</strong></td></tr>` : ""}
+          ${osm.name_ar && osm.name_ar !== osm.name ? `<tr><td>${t.lblArabic}</td><td>${escapeHtml(osm.name_ar)}</td></tr>` : ""}
+          ${osm.main_key ? `<tr><td>${t.lblTag}</td><td><code>${escapeHtml(osm.main_key)}=${escapeHtml(osm.main_val)}</code></td></tr>` : ""}
         </table>
       </div>
 
@@ -538,18 +533,18 @@ function selectReverseItem(item, marker = null, skipFly = false) {
         <h5>${t.labelWdEntity}</h5>
         <table class="meta-table">
           <tr><td>QID:</td><td><a href="${wdUrl}" target="_blank" rel="noopener" class="qid-link"><code>${escapeHtml(qid)}</code> ↗</a></td></tr>
-          ${wd.name_ar ? `<tr><td>عربي:</td><td><strong>${escapeHtml(wd.name_ar)}</strong></td></tr>` : ""}
-          ${wd.name_en ? `<tr><td>إنجليزي:</td><td>${escapeHtml(wd.name_en)}</td></tr>` : ""}
-          ${wd.dist_m !== undefined && wd.dist_m !== null ? `<tr><td>المسافة:</td><td><code>${wd.dist_m}m</code></td></tr>` : ""}
+          ${wd.name_ar ? `<tr><td>${t.lblArabic}</td><td><strong>${escapeHtml(wd.name_ar)}</strong></td></tr>` : ""}
+          ${wd.name_en ? `<tr><td>${t.lblEnglish}</td><td>${escapeHtml(wd.name_en)}</td></tr>` : ""}
+          ${wd.dist_m !== undefined && wd.dist_m !== null ? `<tr><td>${t.lblDistance}</td><td><code>${wd.dist_m}m</code></td></tr>` : ""}
         </table>
       </div>
     </div>
 
     <!-- Reasons & Matching -->
     <div class="reverse-reasons-wrap">
-      <h5>${icon("chart")} ${t.labelReasons} (دقة ${Math.round((item.confidence || 0) * 100)}%)</h5>
+      <h5>${icon("chart")} ${t.labelReasons} (${escapeHtml(i18n("confidencePct", { n: Math.round((item.confidence || 0) * 100) }))})</h5>
       <ul class="reverse-reasons-list">
-        ${reasonsListHtml || "<li>لا توجد ملاحظات إضافية</li>"}
+        ${reasonsListHtml || `<li>${t.noExtraNotes}</li>`}
       </ul>
     </div>
 
@@ -559,10 +554,10 @@ function selectReverseItem(item, marker = null, skipFly = false) {
     <div class="inspector-section rv-external-links">
       <div class="rv-btn-row rv-btn-row--nowrap">
         <a href="${osmUrl}" target="_blank" rel="noopener" class="btn rv-btn rv-btn-ghost rv-link-btn">
-          ${icon("globe")} عرض في OSM
+          ${icon("globe")} ${t.viewInOsm} ↗
         </a>
         <a href="${wdUrl}" target="_blank" rel="noopener" class="btn rv-btn rv-btn-ghost rv-link-btn">
-          عرض في Wikidata
+          ${t.viewInWikidata} ↗
         </a>
       </div>
     </div>
@@ -654,7 +649,7 @@ function selectReverseItem(item, marker = null, skipFly = false) {
       } catch (err) {
         console.error("Wikidata claim error:", err);
         wdClaimBtn.disabled = false;
-        wdClaimBtn.innerHTML = `${icon("bolt")} ${t.btnAddToWikidata || "إضافة إلى ويكي بيانات مباشرة"}`;
+        wdClaimBtn.innerHTML = `${icon("bolt")} ${t.btnAddToWikidata}`;
         Notify.error(i18n("wdClaimFailed", { error: err.message }), {
           action: { label: i18n("btnRetry"), onClick: () => wdClaimBtn.click() },
         });
@@ -747,8 +742,8 @@ function refreshReverseViewAfterPush() {
     panel.innerHTML = `
       <div class="empty-state done-state">
         <div class="empty-icon">${icon("check")}</div>
-        <h4>${currentLang === "ar" ? "تم إنجاز التدقيق والربط بنجاح!" : "Action completed successfully!"}</h4>
-        <p>${currentLang === "ar" ? "تم تسجيل العملية محلياً وتحديث الخريطة والقوائم فوراً." : "Recorded locally; map and lists updated."}</p>
+        <h4>${escapeHtml(i18n("doneTitle"))}</h4>
+        <p>${escapeHtml(i18n("doneDesc"))}</p>
       </div>
     `;
   }
@@ -1118,13 +1113,13 @@ function selectItem(item, marker = null, skipFly = false) {
       const pct = parseInt(matchMatch[1], 10);
       const rest = matchMatch[2];
       const badgeClass = pct >= 90 ? "badge-ai-high" : (pct >= 75 ? "badge-ai-mid" : "badge-ai-low");
-      confidenceBadge = `<span class="badge-ai-conf ${badgeClass}">${pct}% ${currentLang === 'ar' ? 'ثقة الذكاء الاصطناعي' : 'AI Confidence'}</span>`;
+      confidenceBadge = `<span class="badge-ai-conf ${badgeClass}">${escapeHtml(i18n("matchConfidence", { n: pct }))}</span>`;
       displayInfo = rest;
     }
     candHtml = `
       <div class="candidate-box">
         <div class="candidate-box-head">
-          <strong>${icon("target")} ${currentLang === 'ar' ? 'عنصر مرشح مقترح بالذكاء الاصطناعي:' : 'AI Suggested OSM Candidate:'}</strong>
+          <strong>${icon("target")} ${escapeHtml(i18n("suggestedCandidate"))}</strong>
           ${confidenceBadge}
         </div>
         <div class="cand-details">${escapeHtml(displayInfo)} (OSM ID: <code>${escapeHtml(effectiveOsmRef)}</code>)</div>
@@ -1136,8 +1131,8 @@ function selectItem(item, marker = null, skipFly = false) {
   if (imageUrl) {
     mediaHtml += `
       <div class="inspector-image-container">
-        <img src="${escapeHtml(imageUrl)}?width=400" alt="${escapeHtml(nameAr || nameEn)}" class="inspector-thumb clickable" loading="lazy" title="${currentLang === 'ar' ? 'انقر لتكبير الصورة' : 'Click to enlarge'}" />
-        <div class="image-zoom-hint">${icon("search")} ${currentLang === 'ar' ? 'تكبير' : 'Zoom'}</div>
+        <img src="${escapeHtml(imageUrl)}?width=400" alt="${escapeHtml(nameAr || nameEn)}" class="inspector-thumb clickable" loading="lazy" title="${escapeHtml(i18n("clickToEnlarge"))}" />
+        <div class="image-zoom-hint">${icon("search")} ${escapeHtml(i18n("zoomImage"))}</div>
       </div>
     `;
   }
@@ -1250,7 +1245,7 @@ function selectItem(item, marker = null, skipFly = false) {
     <div class="inspector-actions">
       ${effectiveStatus === 1 ? `
         <button id="btn-single-link-trigger" class="btn btn-direct-link" title="${t.linkSingleNow || 'Link Now (Single Changeset)'} - Shortcut: L">
-          ${icon("bolt")} ${t.linkSingleNow || 'ربط فوري (مفرد)'} <kbd class="kbd-inline">L</kbd>
+          ${icon("bolt")} ${t.linkSingleNow} <kbd class="kbd-inline">L</kbd>
         </button>
         <button id="btn-batch-toggle-trigger" class="btn ${typeof BatchManager !== 'undefined' && BatchManager.isStaged(qid) ? 'btn-in-batch' : 'btn-add-batch'}" title="${t.batchQueueBtn}">
           ${typeof BatchManager !== 'undefined' && BatchManager.isStaged(qid) ? `✓ ${t.btnInBatch}` : `${icon("plus")} ${t.btnAddToBatch}`}
@@ -1396,7 +1391,7 @@ function selectItem(item, marker = null, skipFly = false) {
                     · <span class="cand-reason-tag">${escapeHtml(cand.matchedReason)}</span>
                   </div>
                   <div class="cand-button-bar">
-                    <button class="btn btn-cand-mini btn-cand-direct-link" data-action="link">${icon("bolt")} ${t.linkSingleNow || 'ربط فوري'}</button>
+                    <button class="btn btn-cand-mini btn-cand-direct-link" data-action="link">${icon("bolt")} ${t.linkSingleNow}</button>
                     <button class="btn btn-cand-mini ${isStaged ? 'btn-cand-in-batch' : 'btn-cand-add-batch'}" data-action="batch">${isStaged ? `✓ ${t.btnInBatch}` : `${icon("plus")} ${t.btnAddToBatch}`}</button>
                     <button class="btn btn-cand-mini" data-action="josm">${icon("target")} JOSM</button>
                     <button class="btn btn-cand-mini" data-action="josm-tags">${icon("tag")} ${t.btnJosmAddTags}</button>
@@ -1444,7 +1439,7 @@ window.openSingleLinkModal = function(osmRef, qid, featureName, callback) {
   const t = TRANSLATIONS[currentLang];
 
   if (!OsmAuth.isLoggedIn()) {
-    const doLogin = confirm(`${t.needLoginToLink}\n\n${currentLang === "ar" ? "هل ترغب في تسجيل الدخول الآن عبر OpenStreetMap؟" : "Would you like to log in with OpenStreetMap now?"}`);
+    const doLogin = confirm(`${t.needLoginToLink}\n\n${i18n("loginOsmNowPrompt")}`);
     if (doLogin) {
       OsmAuth.startLogin();
     }
@@ -1651,9 +1646,7 @@ function openNoteModal(lat, lon, name, qid) {
   if (!modal || !textInput) return;
 
   coordsEl.innerText = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-  textInput.value = currentLang === "ar"
-    ? `يرجى إضافة / تحديث المعلم: ${name} (معرف ويكي بيانات: ${qid})`
-    : `Please add/update feature: ${name} (Wikidata QID: ${qid})`;
+  textInput.value = i18n("noteDefaultText", { name, qid });
 
   modal.style.display = "flex";
 
@@ -1716,7 +1709,7 @@ function updateAuthUI() {
 
   if (wdUser && typeof WikidataAuth !== "undefined" && WikidataAuth.isAuthenticated()) {
     if (wdLoginBtn) {
-      wdLoginBtn.innerText = t.logoutWd || "خروج (Wikidata)";
+      wdLoginBtn.innerText = t.logoutWd;
       wdLoginBtn.onclick = () => {
         WikidataAuth.logout();
         updateAuthUI();
@@ -1728,7 +1721,7 @@ function updateAuthUI() {
     }
   } else {
     if (wdLoginBtn) {
-      wdLoginBtn.innerText = t.loginWd || "تسجيل الدخول بـ Wikidata";
+      wdLoginBtn.innerText = t.loginWd;
       wdLoginBtn.onclick = () => WikidataAuth.startLogin();
     }
     if (wdUserLabel) wdUserLabel.style.display = "none";
@@ -1750,10 +1743,13 @@ function setLanguage(lang) {
     const key = el.getAttribute("data-i18n");
     if (t[key]) el.innerText = t[key];
   });
-  document.querySelectorAll("[data-i18n-aria]").forEach(el => {
-    const key = el.getAttribute("data-i18n-aria");
-    if (t[key]) el.setAttribute("aria-label", t[key]);
-  });
+  // Attributes: one language at a time (screen readers read "AR / EN" strings twice).
+  for (const [dataAttr, attr] of [["data-i18n-aria", "aria-label"], ["data-i18n-title", "title"], ["data-i18n-placeholder", "placeholder"]]) {
+    document.querySelectorAll(`[${dataAttr}]`).forEach(el => {
+      const key = el.getAttribute(dataAttr);
+      if (t[key]) el.setAttribute(attr, t[key]);
+    });
+  }
 
   // Placeholder translations
   const searchInput = document.getElementById("search-input");
@@ -2200,7 +2196,7 @@ function setupEventListeners() {
       } catch (err) {
         console.error("Clipboard write error:", err);
         // Fallback prompt for copying
-        window.prompt(currentLang === "ar" ? "انسخ أوامر QuickStatements:" : "Copy QuickStatements commands:", qsText);
+        window.prompt(i18n("copyQsPrompt"), qsText);
       }
     });
   }

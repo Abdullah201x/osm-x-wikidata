@@ -54,7 +54,13 @@ for (const mode of MODES) {
         const guard = await guardPage(page, baseURL);
         await openApp(page, { lang, mode });
 
+        const phone = test.info().project.name === 'mobile';
         for (const [opener, modal, closer] of MODALS) {
+          // Small screens are read-only: the batch queue is a desktop editing tool.
+          if (phone && opener === '#btn-header-batch') {
+            await expect(page.locator(opener)).toBeHidden();
+            continue;
+          }
           await page.locator(opener).click();
           await expect(page.locator(modal)).toBeVisible();
           await page.locator(closer).click();
