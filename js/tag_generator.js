@@ -62,7 +62,10 @@ const TagGenerator = {
   wikipediaTag(wikiUrl) {
     if (!wikiUrl) return null;
     try {
-      const article = decodeURIComponent(new URL(wikiUrl).pathname.replace(/^\/wiki\//, ""));
+      // URLs encode spaces as "_"; OSM wants the human title with real spaces.
+      const article = decodeURIComponent(new URL(wikiUrl).pathname.replace(/^\/wiki\//, ""))
+        .replace(/_/g, " ")
+        .trim();
       return article ? `ar:${article}` : null;
     } catch (err) {
       console.warn("Skipping wikipedia tag; unparseable article URL:", wikiUrl, err);

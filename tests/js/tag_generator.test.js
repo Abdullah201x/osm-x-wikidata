@@ -124,6 +124,11 @@ describe('TagGenerator.wikipediaTag', () => {
       .toBe('ar:الخبر');
   });
 
+  it('turns underscores from the URL into spaces', () => {
+    expect(TagGenerator.wikipediaTag('https://ar.wikipedia.org/wiki/%D8%A8%D8%B1%D8%AC_%D8%A7%D9%84%D9%85%D9%85%D9%84%D9%83%D8%A9'))
+      .toBe('ar:برج المملكة');
+  });
+
   it('returns null for empty input', () => {
     expect(TagGenerator.wikipediaTag('')).toBeNull();
     expect(TagGenerator.wikipediaTag(undefined)).toBeNull();
