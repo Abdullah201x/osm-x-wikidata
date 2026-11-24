@@ -1,19 +1,19 @@
 {
-  "updated_at": "2026-11-23T14:10:46Z",
+  "updated_at": "2026-11-24T14:37:07Z",
   "pbf_file": "gcc-states-latest.osm.pbf",
-  "total_items": 93750,
-  "total_missing": 83965,
-  "total_candidates": 6015,
-  "total_linked": 3770,
+  "total_items": 93854,
+  "total_missing": 84064,
+  "total_candidates": 6019,
+  "total_linked": 3771,
   "countries": {
     "KW": {
       "name_en": "Kuwait",
       "name_ar": "الكويت",
       "file": "kw.json",
       "counts": {
-        "total": 404,
+        "total": 405,
         "missing": 223,
-        "candidates": 93,
+        "candidates": 94,
         "linked": 88,
         "filtered_non_physical": 206
       },
@@ -78,8 +78,8 @@
       "file": "om.json",
       "counts": {
         "total": 2801,
-        "missing": 1667,
-        "candidates": 390,
+        "missing": 1668,
+        "candidates": 389,
         "linked": 744,
         "filtered_non_physical": 628
       },
@@ -99,11 +99,11 @@
       "name_ar": "المملكة العربية السعودية",
       "file": "sa.json",
       "counts": {
-        "total": 83404,
-        "missing": 77600,
-        "candidates": 4455,
-        "linked": 1349,
-        "filtered_non_physical": 4274
+        "total": 83507,
+        "missing": 77699,
+        "candidates": 4458,
+        "linked": 1350,
+        "filtered_non_physical": 4275
       },
       "reverse_counts": {
         "total_tagged": 3342,
@@ -122,8 +122,8 @@
       "file": "bh.json",
       "counts": {
         "total": 544,
-        "missing": 279,
-        "candidates": 78,
+        "missing": 278,
+        "candidates": 79,
         "linked": 187,
         "filtered_non_physical": 69
       },
@@ -139,7 +139,7 @@
       }
     }
   },
-  "total_filtered_non_physical": 6326,
+  "total_filtered_non_physical": 6327,
   "reverse_totals": {
     "total_tagged": 6378,
     "missing_backlink": 3304,
