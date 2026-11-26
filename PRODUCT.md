@@ -47,7 +47,7 @@ Unlike generic OSM editors (iD, JOSM) that require manual tag authoring from scr
 
 - Production codebase with functional Leaflet mapping, Overpass data fetching, and OAuth integration (`index.html`, `css/style.css`, `js/`).
 - Historical datasets and regional boundary polygons (`sa_boundary.geojson`, `data/`).
-- Documented community guidelines (`OSM_IMPORT_GUIDELINES.md`, `CHANGELOG.md`, `SECURITY.md`).
+- Documented community guidelines (`docs/OSM_IMPORT_GUIDELINES.md`, `CHANGELOG.md`, `SECURITY.md`).
 
 ## Product Principles
 
@@ -56,7 +56,7 @@ Unlike generic OSM editors (iD, JOSM) that require manual tag authoring from scr
 3. **Calm Precision**: Minimize decorative noise (gimmicky neon glows, pulsing badges, ungrounded animations) in favor of crisp spatial indicators and legible data tables.
 4. **Honest Feedback**: Clearly reflect network sync states, OAuth permissions, and changeset submission status without deceptive optimism.
 
-Each principle is tied to a UX law so design decisions stay defensible (see `ai_design_principles_cognitive_ux_playbook.md`):
+Each principle is tied to a UX law so design decisions stay defensible (see `docs/ai_design_principles_cognitive_ux_playbook.md`):
 
 | Principle | Law it rests on | What it means on screen |
 |---|---|---|

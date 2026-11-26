@@ -128,7 +128,7 @@ The workbench operates seamlessly in two specialized modes via a top navigation 
 │   └── markercluster/        # Leaflet.markercluster 1.4.1 CSS & JS
 ├── Dockerfile                # Multi-stage production web container (Brotli + Caddy)
 ├── index.html                # Single-page application entrypoint
-├── OSM_IMPORT_GUIDELINES.md  # Official OSM Import Policy & Compliance Guide
+├── docs/                     # Project map, import guidelines, and planning docs
 ├── package.json              # Dev-only frontend tooling (eslint, vitest, playwright)
 ├── pytest.ini                # Pytest configuration
 ├── requirements.txt          # Root Python dependencies (pipeline + tests)
@@ -236,7 +236,7 @@ docker compose -f deploy/docker-compose.coolify.yml up -d --build
 
 * **OSM Ground Truth Rule**: All candidate matches must be verified visually via aerial imagery or on-the-ground knowledge before uploading.
 * **No Blind Automated Edits**: Edits are staged for explicit human review. No automated bots.
-* **OSM Import Guidelines**: Adding missing features from Wikidata is governed by the [OSMF Import Guidelines](https://wiki.openstreetmap.org/wiki/Import/Guidelines). Read **[`OSM_IMPORT_GUIDELINES.md`](OSM_IMPORT_GUIDELINES.md)** before performing batch edits.
+* **OSM Import Guidelines**: Adding missing features from Wikidata is governed by the [OSMF Import Guidelines](https://wiki.openstreetmap.org/wiki/Import/Guidelines). Read **[`docs/OSM_IMPORT_GUIDELINES.md`](docs/OSM_IMPORT_GUIDELINES.md)** before performing batch edits.
 * **Wikimedia Edit Policy**: All Wikidata edits use authenticated OAuth 2.0 PKCE with `maxlag=5` and `baserevid` collision guards.
 * **Tile Usage**: Map tiles come from Esri only (Dark/Light Gray, Streets, Topo, World Imagery, plus label overlays); no API key is needed. **Zero traffic is routed to `tile.openstreetmap.org`**.
 
