@@ -447,7 +447,7 @@ function selectReverseItem(item, marker = null, skipFly = false) {
   if (item.suggested_fix) {
     const fix = item.suggested_fix;
     if (fix.target === "wikidata" && fix.action === "add_claim") {
-      const qsUrl = `https://quickstatements.toolforge.org/#/v1=${encodeURIComponent(qid)}|${encodeURIComponent(fix.property)}|%22${encodeURIComponent(fix.value)}%22`;
+      const qsUrl = MappingTools.getQuickStatementsUrl(qid, fix.property, fix.value);
       actionHtml = `
         <div class="reverse-action-card">
           <div class="reverse-action-header">${icon("bolt")} ${t.labelSuggestedFix} ${t.actionAddClaim}</div>
@@ -570,7 +570,7 @@ function selectReverseItem(item, marker = null, skipFly = false) {
   const copyQsBtn = document.getElementById("btn-copy-qs-line");
   if (copyQsBtn && item.suggested_fix) {
     copyQsBtn.addEventListener("click", () => {
-      const line = `${item.qid}\t${item.suggested_fix.property}\t"${item.suggested_fix.value}"`;
+      const line = MappingTools.getQuickStatements(item.qid, `${fullOsmType}/${osmId}`);
       navigator.clipboard.writeText(line).then(() => {
         copyQsBtn.textContent = `✓ ${i18n("copiedToClipboard")}`;
         setTimeout(() => { copyQsBtn.innerHTML = `${icon("copy")} ${t.btnQuickStatements}`; }, 2000);
@@ -589,7 +589,14 @@ function selectReverseItem(item, marker = null, skipFly = false) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const vData = await res.json();
         verifyBtn.innerHTML = `${icon("check")} ${escapeHtml(i18n("verifyOk"))}`;
-        Notify.success(i18n("verifyOkDetail", { rev: vData.wikidata?.lastrevid ?? "–" }));
+        const missing = vData.wikidata?.missing_constraints || [];
+        if (missing.length > 0) {
+          Notify.info(i18n("verifyOkMissingConstraints", { rev: vData.wikidata?.lastrevid ?? "–", props: missing.join(", ") }), {
+            link: { href: wdUrl, label: t.viewInWikidata },
+          });
+        } else {
+          Notify.success(i18n("verifyOkDetail", { rev: vData.wikidata?.lastrevid ?? "–" }));
+        }
       } catch (err) {
         // Give the button back so the editor can retry instead of a dead "error" label.
         verifyBtn.disabled = false;
@@ -645,6 +652,29 @@ function selectReverseItem(item, marker = null, skipFly = false) {
         Notify.success(i18n("wdClaimAdded", { ref, qid }), {
           link: { href: `https://editgroups.toolforge.org/b/CB/${WikidataEdit.getBatchId()}/`, label: i18n("viewEditGroups") },
         });
+        const missing = result.missingConstraints || [];
+        if (missing.length > 0) {
+          const coordLat = result.osmCoords?.lat ?? lat;
+          const coordLon = result.osmCoords?.lon ?? lon;
+          const canAddP625 = missing.includes("P625") && Number.isFinite(Number(coordLat)) && Number.isFinite(Number(coordLon));
+          Notify.info(i18n("wdMissingConstraints", { qid, props: missing.join(", ") }), {
+            link: { href: wdUrl, label: t.viewInWikidata },
+            action: canAddP625 ? {
+              label: i18n("btnAddP625"),
+              onClick: async () => {
+                try {
+                  await WikidataEdit.addCoordinateStatement(qid, coordLat, coordLon, fullOsmType, osmId, null, {
+                    maxlag: WikidataEdit.MAXLAG_INTERACTIVE_SECONDS
+                  });
+                  window.dispatchEvent(new CustomEvent("osm-history-updated"));
+                  Notify.success(i18n("wdP625Added", { qid }));
+                } catch (p625Err) {
+                  Notify.error(i18n("wdP625Failed", { qid, error: p625Err.message }));
+                }
+              }
+            } : undefined
+          });
+        }
         refreshReverseViewAfterPush();
       } catch (err) {
         console.error("Wikidata claim error:", err);

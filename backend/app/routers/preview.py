@@ -109,6 +109,19 @@ async def preview_edit(request: Request, payload: EditPreviewRequest):
                 "warnings": [f"Entity {qid} has class {bad_class} which is not eligible for direct OSM element back-linking."]
             }
 
+    # Check Wikidata item-requires-statement constraints for OSM IDs (P625, P131)
+    missing_constraints: List[str] = []
+    if not claims.get("P625"):
+        missing_constraints.append("P625")
+        warnings.append(
+            f"Entity {qid} is missing coordinate location (P625); Wikidata requires P625 on items with {payload.property}."
+        )
+    if not claims.get("P131"):
+        missing_constraints.append("P131")
+        warnings.append(
+            f"Entity {qid} is missing administrative territorial entity (P131); Wikidata requires P131 on items with {payload.property}."
+        )
+
     # Check existing statements for target property
     existing_vals = claim_values(claims, payload.property)
 
@@ -120,7 +133,8 @@ async def preview_edit(request: Request, payload: EditPreviewRequest):
             "baserevid": baserevid,
             "property": payload.property,
             "osm_id": payload.osm_id,
-            "warnings": [f"Statement {payload.property}={str_oid} already exists on {qid}."]
+            "missing_constraints": missing_constraints,
+            "warnings": [f"Statement {payload.property}={str_oid} already exists on {qid}.", *warnings]
         }
     elif existing_vals:
         warnings.append(f"Wikidata already has a different {payload.property} statement: {', '.join(existing_vals)}.")
@@ -128,13 +142,20 @@ async def preview_edit(request: Request, payload: EditPreviewRequest):
     # 2. Check live OSM element
     api_type = norm_type
     osm_url = f"https://api.openstreetmap.org/api/0.6/{api_type}/{payload.osm_id}.json"
+    osm_coords = None
     try:
         osm_resp = await client.get(osm_url)
         raise_if_rate_limited(osm_resp, "OpenStreetMap")
         if osm_resp.status_code == 200:
             osm_elements = osm_resp.json().get("elements", [])
             if osm_elements:
-                tags = osm_elements[0].get("tags", {})
+                el = osm_elements[0]
+                tags = el.get("tags", {})
+                if el.get("lat") is not None and el.get("lon") is not None:
+                    osm_coords = {
+                        "lat": round(float(el["lat"]), 6),
+                        "lon": round(float(el["lon"]), 6),
+                    }
                 current_wd = tags.get("wikidata", "").strip()
                 if current_wd != qid:
                     warnings.append(f"OSM element {api_type}/{payload.osm_id} currently carries 'wikidata={current_wd}' (not '{qid}').")
@@ -171,6 +192,8 @@ async def preview_edit(request: Request, payload: EditPreviewRequest):
         "baserevid": baserevid,
         "property": payload.property,
         "osm_id": payload.osm_id,
+        "missing_constraints": missing_constraints,
+        "osm_coords": osm_coords,
         "statement_json": statement_json,
         "warnings": warnings
     }

@@ -22,14 +22,23 @@ const items = [
 
 describe('QuickStatements', () => {
   it.each([
-    ['n123', 'P11693', '123'],
-    ['node/123', 'P11693', '123'],
-    ['w456', 'P10689', '456'],
-    ['way/456', 'P10689', '456'],
-    ['r789', 'P402', '789'],
-    ['relation/789', 'P402', '789'],
-  ])('maps %s to %s with the bare numeric id', (ref, prop, id) => {
-    expect(MappingTools.getQuickStatements('Q1', ref)).toBe(`Q1\t${prop}\t"${id}"`);
+    ['n123', 'P11693', 'node', '123'],
+    ['node/123', 'P11693', 'node', '123'],
+    ['w456', 'P10689', 'way', '456'],
+    ['way/456', 'P10689', 'way', '456'],
+    ['r789', 'P402', 'relation', '789'],
+    ['relation/789', 'P402', 'relation', '789'],
+  ])('maps %s to %s with the bare numeric id and OSM reference', (ref, prop, osmType, id) => {
+    expect(MappingTools.getQuickStatements('Q1', ref, '2026-11-26')).toBe(
+      `Q1\t${prop}\t"${id}"\tS248\tQ936\tS854\t"https://www.openstreetmap.org/${osmType}/${id}"\tS813\t+2026-11-26T00:00:00Z/11`
+    );
+  });
+
+  it('builds a direct QuickStatements v1 URL with OSM provenance reference', () => {
+    const url = MappingTools.getQuickStatementsUrl('Q1', 'P11693', '123', '2026-11-26');
+    expect(url).toContain('https://quickstatements.toolforge.org/#/v1=Q1|P11693|%22123%22|S248|Q936|S854|');
+    expect(url).toContain(encodeURIComponent('"https://www.openstreetmap.org/node/123"'));
+    expect(url).toContain(encodeURIComponent('+2026-11-26T00:00:00Z/11'));
   });
 
   it('emits an empty-value command when the reference is unusable', () => {
@@ -37,15 +46,18 @@ describe('QuickStatements', () => {
     expect(MappingTools.getQuickStatements('Q1', 'garbage')).toBe('Q1|P11693|""');
   });
 
-  it('batch export only includes missing_backlink fixes that target wikidata', () => {
+  it('batch export only includes missing_backlink fixes that target wikidata with OSM references', () => {
     const out = MappingTools.generateQuickStatementsBatch([
       { kind: 'missing_backlink', qid: 'Q1', suggested_fix: { target: 'wikidata', property: 'P11693', value: '10' } },
       { kind: 'missing_backlink', qid: 'Q2', suggested_fix: { target: 'wikidata', property: 'P10689', value: '20' } },
       { kind: 'broken_tag', qid: 'Q3', suggested_fix: { target: 'osm', property: 'wikidata', value: 'Q9' } },
       { kind: 'missing_backlink', qid: 'Q4', suggested_fix: { target: 'wikidata', property: 'P402' } },
       { kind: 'missing_backlink', qid: 'Q5' },
-    ]);
-    expect(out).toBe('Q1\tP11693\t"10"\nQ2\tP10689\t"20"');
+    ], '2026-11-26');
+    expect(out).toBe(
+      'Q1\tP11693\t"10"\tS248\tQ936\tS854\t"https://www.openstreetmap.org/node/10"\tS813\t+2026-11-26T00:00:00Z/11\n' +
+      'Q2\tP10689\t"20"\tS248\tQ936\tS854\t"https://www.openstreetmap.org/way/20"\tS813\t+2026-11-26T00:00:00Z/11'
+    );
   });
 
   it('batch export of nothing is an empty string', () => {

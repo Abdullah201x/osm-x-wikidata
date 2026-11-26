@@ -163,6 +163,8 @@ async def verify_qid(
             "desc_ar": descs.get("ar", ""),
             "desc_en": descs.get("en", ""),
             "p31": p31_ids,
+            "p131": claim_item_ids(claims, "P131"),
+            "missing_constraints": [p for p in ("P625", "P131") if not claims.get(p)],
             "lat": lat,
             "lon": lon,
             "p11693": claim_values(claims, "P11693"), # node

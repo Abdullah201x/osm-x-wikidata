@@ -268,6 +268,30 @@ def test_preview_requests_redirects_yes_and_flags_redirect_items(client):
     assert len(seen) == 1  # no OSM lookup for an unwritable item
 
 
+def test_preview_reports_missing_p625_and_p131_and_osm_coords(client):
+    def handler(request):
+        if "wikidata.org" in str(request.url):
+            return httpx.Response(200, json={"entities": {"Q42": {
+                "id": "Q42", "lastrevid": 10, "claims": {}
+            }}})
+        return httpx.Response(200, json={"elements": [{
+            "type": "node", "id": 1313924745, "lat": 24.7136, "lon": 46.6753,
+            "tags": {"wikidata": "Q42"}
+        }]})
+
+    _install_mock_upstream(client, handler)
+    body = {"qid": "Q42", "property": "P11693", "osm_type": "node", "osm_id": 1313924745}
+    r = client.post("/api/v1/edits/preview", json=body, headers={"X-Real-IP": "198.51.100.95"})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["valid"] is True
+    assert data["status"] == "ready"
+    assert data["missing_constraints"] == ["P625", "P131"]
+    assert data["osm_coords"] == {"lat": 24.7136, "lon": 46.6753}
+    assert any("P625" in w for w in data["warnings"])
+    assert any("P131" in w for w in data["warnings"])
+
+
 # --- healthz freshness: both timestamp formats ---
 
 from datetime import datetime, timedelta, timezone

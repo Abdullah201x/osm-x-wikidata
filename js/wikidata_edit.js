@@ -157,9 +157,115 @@ const WikidataEdit = {
     return endpoints.wikidataBase === "https://www.wikidata.org";
   },
 
+  _todayUtcDate() {
+    return new Date().toISOString().slice(0, 10);
+  },
+
+  /**
+   * Builds Action API `wbsetreference` snaks citing the live OpenStreetMap element
+   * (P248 = Q936 OpenStreetMap, P854 = OSM URL, P813 = retrieved date).
+   */
+  buildOsmReferenceSnaks(osmType, osmId, dateIso = null) {
+    const osmUrl = `https://www.openstreetmap.org/${osmType}/${osmId}`;
+    const timeStr = `+${dateIso || this._todayUtcDate()}T00:00:00Z`;
+    return {
+      P248: [{
+        snaktype: "value",
+        property: "P248",
+        datavalue: {
+          type: "wikibase-entityid",
+          value: { "entity-type": "item", "numeric-id": 936, id: "Q936" }
+        }
+      }],
+      P854: [{
+        snaktype: "value",
+        property: "P854",
+        datavalue: { type: "string", value: osmUrl }
+      }],
+      P813: [{
+        snaktype: "value",
+        property: "P813",
+        datavalue: {
+          type: "time",
+          value: {
+            time: timeStr,
+            timezone: 0,
+            before: 0,
+            after: 0,
+            precision: 11,
+            calendarmodel: "http://www.wikidata.org/entity/Q1985727"
+          }
+        }
+      }]
+    };
+  },
+
+  /**
+   * Builds Wikibase REST API v1 `references` array citing the live OpenStreetMap element.
+   */
+  buildRestOsmReferences(osmType, osmId, dateIso = null) {
+    const osmUrl = `https://www.openstreetmap.org/${osmType}/${osmId}`;
+    const timeStr = `+${dateIso || this._todayUtcDate()}T00:00:00Z`;
+    return [{
+      parts: [
+        { property: { id: "P248" }, value: { type: "value", content: "Q936" } },
+        { property: { id: "P854" }, value: { type: "value", content: osmUrl } },
+        {
+          property: { id: "P813" },
+          value: {
+            type: "value",
+            content: {
+              time: timeStr,
+              precision: 11,
+              calendarmodel: "http://www.wikidata.org/entity/Q1985727"
+            }
+          }
+        }
+      ]
+    }];
+  },
+
+  /**
+   * Attaches an OpenStreetMap provenance reference to an already-created statement.
+   * Best-effort: returns true on success, false on error without failing the claim write.
+   */
+  async _attachOsmReference(statementId, osmType, osmId, token, csrfToken, endpoints, summary, maxlag, baserevid = 0) {
+    if (!statementId) return false;
+    try {
+      const refFields = {
+        action: "wbsetreference",
+        format: "json",
+        statement: statementId,
+        snaks: JSON.stringify(this.buildOsmReferenceSnaks(osmType, osmId)),
+        summary: summary,
+        maxlag: String(maxlag),
+        token: csrfToken
+      };
+      if (baserevid > 0) refFields.baserevid = String(baserevid);
+
+      const refJson = await this._actionApiRequest(`${endpoints.wikidataApi}?crossorigin=1`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Api-User-Agent": "OSMxWikidataLinker/2.0 (https://wikidata.saudiosm.org)",
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: new URLSearchParams(refFields).toString()
+      });
+      if (refJson.error) {
+        console.warn("wbsetreference returned error:", refJson.error);
+        return false;
+      }
+      return true;
+    } catch (refErr) {
+      console.warn("Could not attach OSM reference to statement:", refErr);
+      return false;
+    }
+  },
+
   /**
    * Adds an OpenStreetMap backlink statement to a Wikidata item.
-   * Uses Action API wbcreateclaim with fallback to Wikibase REST API v1.
+   * Uses Action API wbcreateclaim + wbsetreference with fallback to Wikibase REST API v1.
    * 
    * @param {string} qid - Wikidata entity ID (e.g. "Q12345")
    * @param {string} osmType - "node", "way", or "relation"
@@ -192,9 +298,13 @@ const WikidataEdit = {
     // 0. Pre-flight: dry-run on the backend before anything is written.
     let baserevid = options.baserevid;
     let warnings = [];
+    let missingConstraints = [];
+    let osmCoords = null;
     if (this._previewApplies(endpoints)) {
       const preview = await this.previewEdit(cleanQid, type, idStr, property);
       warnings = preview.warnings || [];
+      missingConstraints = preview.missing_constraints || [];
+      osmCoords = preview.osm_coords || null;
 
       if (!preview.valid) {
         const err = new Error(warnings.join(" ") || `Edit rejected by pre-flight check (${preview.status}).`);
@@ -210,14 +320,15 @@ const WikidataEdit = {
           action: "already_linked",
           resolved_at: Date.now()
         });
-        return { success: true, skipped: true, method: "already_linked", warnings };
+        return { success: true, skipped: true, method: "already_linked", warnings, missingConstraints, osmCoords };
       }
       if (baserevid === undefined && preview.baserevid > 0) baserevid = preview.baserevid;
     }
 
+    const effectiveMaxlag = options.maxlag ?? this.MAXLAG_SECONDS;
     let lastError = null;
 
-    // 1. Try Wikibase Action API: wbcreateclaim
+    // 1. Try Wikibase Action API: wbcreateclaim + wbsetreference
     try {
       const csrfToken = await this.getCsrfToken(token);
       const fields = {
@@ -228,7 +339,7 @@ const WikidataEdit = {
         snaktype: "value",
         value: JSON.stringify(idStr), // Wikibase requires string value JSON-encoded: "\"12345\""
         summary: summary,
-        maxlag: String(options.maxlag ?? this.MAXLAG_SECONDS),
+        maxlag: String(effectiveMaxlag),
         token: csrfToken
       };
       if (baserevid > 0) fields.baserevid = String(baserevid);
@@ -248,6 +359,17 @@ const WikidataEdit = {
         throw new Error(json.error.info || json.error.code || "Wikidata API returned error");
       }
       if (json.claim) {
+        const referenced = await this._attachOsmReference(
+          json.claim.id,
+          type,
+          idStr,
+          token,
+          csrfToken,
+          endpoints,
+          summary,
+          effectiveMaxlag,
+          json.pageinfo?.lastrevid || 0
+        );
         const editRecord = {
           id: json.claim.id,
           qid: cleanQid,
@@ -268,7 +390,15 @@ const WikidataEdit = {
           action: "wikidata_backlink",
           resolved_at: Date.now()
         });
-        return { success: true, method: "wbcreateclaim", data: json, warnings };
+        return {
+          success: true,
+          method: "wbcreateclaim",
+          data: json,
+          warnings,
+          referenced,
+          missingConstraints,
+          osmCoords
+        };
       }
     } catch (err) {
       // The server asked us to slow down; a second write path would ignore that.
@@ -277,7 +407,7 @@ const WikidataEdit = {
       lastError = err;
     }
 
-    // 2. Fallback to Wikibase REST API v1
+    // 2. Fallback to Wikibase REST API v1 (includes reference inline)
     try {
       const restUrl = `${endpoints.wikidataRest}/entities/items/${cleanQid}/statements`;
       const payload = {
@@ -286,7 +416,8 @@ const WikidataEdit = {
           value: {
             type: "value",
             content: idStr
-          }
+          },
+          references: this.buildRestOsmReferences(type, idStr)
         },
         comment: summary
       };
@@ -323,7 +454,15 @@ const WikidataEdit = {
           action: "wikidata_backlink",
           resolved_at: Date.now()
         });
-        return { success: true, method: "rest_v1", data: restJson, warnings };
+        return {
+          success: true,
+          method: "rest_v1",
+          data: restJson,
+          warnings,
+          referenced: true,
+          missingConstraints,
+          osmCoords
+        };
       } else {
         const errText = await restRes.text();
         throw new Error(`REST API failed: HTTP ${restRes.status} ${errText}`);
@@ -332,6 +471,91 @@ const WikidataEdit = {
       console.error("Both wbcreateclaim and REST API failed:", restErr);
       throw lastError || restErr;
     }
+  },
+
+  /**
+   * Adds a P625 (coordinate location) statement sourced from OpenStreetMap.
+   * Intended for human-in-the-loop enrichment when an item is missing P625.
+   */
+  async addCoordinateStatement(qid, lat, lon, osmType, osmId, batchId = null, options = {}) {
+    const token = await WikidataAuth.ensureAccessToken();
+    if (!token) {
+      throw new Error("Not authenticated with Wikidata. Please sign in via the top bar.");
+    }
+
+    const cleanQid = qid.toUpperCase().trim();
+    const type = osmType.toLowerCase().trim();
+    const idStr = String(osmId).trim();
+    const numLat = Number(lat);
+    const numLon = Number(lon);
+    if (!Number.isFinite(numLat) || !Number.isFinite(numLon) || numLat < -90 || numLat > 90 || numLon < -180 || numLon > 180) {
+      throw new Error("Invalid coordinates for P625 statement.");
+    }
+
+    const activeBatch = batchId || this.getBatchId();
+    const summary = `Add coordinate location (P625) from OpenStreetMap ${type} ${idStr} via OSMxWikidata GCC Linker ([[:toolforge:editgroups/b/CB/${activeBatch}|details]])`;
+    const endpoints = WikidataAuth.getEndpoints();
+    const effectiveMaxlag = options.maxlag ?? this.MAXLAG_INTERACTIVE_SECONDS;
+
+    const coordValue = {
+      latitude: Number(numLat.toFixed(6)),
+      longitude: Number(numLon.toFixed(6)),
+      precision: 0.0001,
+      globe: "http://www.wikidata.org/entity/Q2"
+    };
+
+    const csrfToken = await this.getCsrfToken(token);
+    const fields = {
+      action: "wbcreateclaim",
+      format: "json",
+      entity: cleanQid,
+      property: "P625",
+      snaktype: "value",
+      value: JSON.stringify(coordValue),
+      summary: summary,
+      maxlag: String(effectiveMaxlag),
+      token: csrfToken
+    };
+
+    const json = await this._actionApiRequest(`${endpoints.wikidataApi}?crossorigin=1`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Api-User-Agent": "OSMxWikidataLinker/2.0 (https://wikidata.saudiosm.org)",
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams(fields).toString()
+    });
+
+    if (json.error) {
+      throw new Error(json.error.info || json.error.code || "Wikidata API returned error");
+    }
+
+    const referenced = await this._attachOsmReference(
+      json.claim?.id,
+      type,
+      idStr,
+      token,
+      csrfToken,
+      endpoints,
+      summary,
+      effectiveMaxlag,
+      json.pageinfo?.lastrevid || 0
+    );
+
+    this.logHistory({
+      id: json.claim?.id || `${cleanQid}$P625`,
+      qid: cleanQid,
+      property: "P625",
+      osmType: type,
+      osmId: idStr,
+      batchId: activeBatch,
+      timestamp: Date.now(),
+      user: WikidataAuth.getUser()?.username || "You",
+      url: `https://www.wikidata.org/wiki/${cleanQid}`
+    });
+
+    return { success: true, method: "wbcreateclaim", data: json, referenced };
   },
 
   /**

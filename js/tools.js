@@ -95,22 +95,47 @@ const MappingTools = {
     return `https://www.openstreetmap.org/edit?editor=id#map=19/${lat}/${lon}`;
   },
 
+  _qsTodayUtc(dateIso = null) {
+    return dateIso || new Date().toISOString().slice(0, 10);
+  },
+
+  _qsOsmReference(osmType, osmId, sep = "\t", dateIso = null) {
+    const url = `https://www.openstreetmap.org/${osmType}/${osmId}`;
+    const retrieved = `+${this._qsTodayUtc(dateIso)}T00:00:00Z/11`;
+    return ["S248", "Q936", "S854", `"${url}"`, "S813", retrieved].join(sep);
+  },
+
   /**
-   * Generates QuickStatements v2 format string.
+   * Generates QuickStatements v2 format string with OSM provenance reference.
    */
-  getQuickStatements(qid, osmRef) {
+  getQuickStatements(qid, osmRef, dateIso = null) {
     const ref = osmRef ? OsmAuth.parseOsmRef(osmRef) : null;
     if (!ref) return `${qid}|P11693|""`;
     // Each OSM element type has its own Wikidata property, and the value is the bare numeric ID:
     // P11693 = OpenStreetMap node ID, P10689 = OpenStreetMap way ID, P402 = OpenStreetMap relation ID
     const prop = { node: "P11693", way: "P10689", relation: "P402" }[ref.type];
-    return `${qid}\t${prop}\t"${ref.id}"`;
+    return `${qid}\t${prop}\t"${ref.id}"\t${this._qsOsmReference(ref.type, ref.id, "\t", dateIso)}`;
+  },
+
+  /**
+   * Generates a direct QuickStatements v1 URL with OSM provenance reference.
+   */
+  getQuickStatementsUrl(qid, prop, osmId, dateIso = null) {
+    const type = { P11693: "node", P10689: "way", P402: "relation" }[prop];
+    const parts = [qid, prop, `"${osmId}"`];
+    if (type) {
+      const url = `https://www.openstreetmap.org/${type}/${osmId}`;
+      const retrieved = `+${this._qsTodayUtc(dateIso)}T00:00:00Z/11`;
+      parts.push("S248", "Q936", "S854", `"${url}"`, "S813", retrieved);
+    }
+    return `https://quickstatements.toolforge.org/#/v1=${parts.map(p => encodeURIComponent(p)).join("|")}`;
   },
 
   /**
    * Generates QuickStatements v2 batch lines for high-confidence reverse back-links.
    */
-  generateQuickStatementsBatch(reverseItems) {
+  generateQuickStatementsBatch(reverseItems, dateIso = null) {
+    const propToType = { P11693: "node", P10689: "way", P402: "relation" };
     const lines = [];
     for (const it of reverseItems) {
       if (it.kind === "missing_backlink" && it.suggested_fix && it.suggested_fix.target === "wikidata") {
@@ -118,7 +143,9 @@ const MappingTools = {
         const prop = it.suggested_fix.property;
         const val = it.suggested_fix.value;
         if (qid && prop && val) {
-          lines.push(`${qid}\t${prop}\t"${val}"`);
+          const osmType = propToType[prop];
+          const refPart = osmType ? `\t${this._qsOsmReference(osmType, val, "\t", dateIso)}` : "";
+          lines.push(`${qid}\t${prop}\t"${val}"${refPart}`);
         }
       }
     }

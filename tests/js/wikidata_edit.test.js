@@ -63,15 +63,49 @@ describe('getCsrfToken', () => {
 });
 
 describe('addOsmBacklink request shape', () => {
-  it('runs the preview before the write, in that order', async () => {
+  it('runs the preview before the write and attaches an OSM reference', async () => {
     const order = [];
     routeFetch([
       ['/api/v1/edits/preview', () => (order.push('preview'), okPreview())],
       ['meta=tokens', () => (order.push('csrf'), csrf())],
-      ['crossorigin=1', () => (order.push('write'), created())],
+      ['crossorigin=1', (_url, init) => {
+        const action = new URLSearchParams(init.body).get('action');
+        order.push(action);
+        return created();
+      }],
     ]);
-    await WikidataEdit.addOsmBacklink('q1', 'node', 99);
-    expect(order).toEqual(['preview', 'csrf', 'write']);
+    const res = await WikidataEdit.addOsmBacklink('q1', 'node', 99);
+    expect(order).toEqual(['preview', 'csrf', 'wbcreateclaim', 'wbsetreference']);
+    expect(res.referenced).toBe(true);
+  });
+
+  it('attaches P248=Q936, P854 OSM URL, and P813 retrieved date via wbsetreference', async () => {
+    const calls = routeFetch([['/api/v1/edits/preview', okPreview], ['meta=tokens', csrf], ['crossorigin=1', created]]);
+    await WikidataEdit.addOsmBacklink('Q1', 'node', 99);
+    const refCall = writeCalls(calls).find((c) => new URLSearchParams(c.init.body).get('action') === 'wbsetreference');
+    expect(refCall).toBeTruthy();
+    const body = new URLSearchParams(refCall.init.body);
+    expect(body.get('statement')).toBe('Q1$abc');
+    const snaks = JSON.parse(body.get('snaks'));
+    expect(snaks.P248[0].datavalue.value.id).toBe('Q936');
+    expect(snaks.P854[0].datavalue.value).toBe('https://www.openstreetmap.org/node/99');
+    expect(snaks.P813[0].datavalue.value.time).toMatch(/^\+\d{4}-\d{2}-\d{2}T00:00:00Z$/);
+    expect(snaks.P813[0].datavalue.value.precision).toBe(11);
+  });
+
+  it('passes through missingConstraints and osmCoords from preview', async () => {
+    routeFetch([
+      ['/api/v1/edits/preview', () => jsonResponse({
+        ...PREVIEW,
+        missing_constraints: ['P625', 'P131'],
+        osm_coords: { lat: 24.7136, lon: 46.6753 },
+      })],
+      ['meta=tokens', csrf],
+      ['crossorigin=1', created],
+    ]);
+    const res = await WikidataEdit.addOsmBacklink('Q1', 'node', 99);
+    expect(res.missingConstraints).toEqual(['P625', 'P131']);
+    expect(res.osmCoords).toEqual({ lat: 24.7136, lon: 46.6753 });
   });
 
   it('posts the dry-run to the backend with the property and numeric id', async () => {
@@ -199,7 +233,10 @@ describe('maxlag and rate-limit handling', () => {
     routeFetch([
       ['/api/v1/edits/preview', okPreview],
       ['meta=tokens', csrf],
-      ['crossorigin=1', () => (++writes < 3 ? lagged() : created())],
+      ['crossorigin=1', (_url, init) => {
+        if (new URLSearchParams(init.body).get('action') === 'wbsetreference') return created();
+        return ++writes < 3 ? lagged() : created();
+      }],
     ]);
     const res = await WikidataEdit.addOsmBacklink('Q1', 'node', 1);
     expect(res.method).toBe('wbcreateclaim');
@@ -212,7 +249,10 @@ describe('maxlag and rate-limit handling', () => {
     routeFetch([
       ['/api/v1/edits/preview', okPreview],
       ['meta=tokens', csrf],
-      ['crossorigin=1', () => (++writes < 2 ? jsonResponse({}, { status: 429, headers: { 'Retry-After': '999' } }) : created())],
+      ['crossorigin=1', (_url, init) => {
+        if (new URLSearchParams(init.body).get('action') === 'wbsetreference') return created();
+        return ++writes < 2 ? jsonResponse({}, { status: 429, headers: { 'Retry-After': '999' } }) : created();
+      }],
     ]);
     await WikidataEdit.addOsmBacklink('Q1', 'node', 1);
     expect(WikidataEdit._sleep).toHaveBeenCalledWith(60_000);
@@ -257,9 +297,44 @@ describe('maxlag and rate-limit handling', () => {
     ]);
     const res = await WikidataEdit.addOsmBacklink('Q1', 'node', 1);
     expect(res.method).toBe('rest_v1');
+    expect(res.referenced).toBe(true);
     const rest = calls.find((c) => c.url.includes('/rest.php/wikibase'));
     expect(rest.init.headers.Authorization).toBe('Bearer AT');
-    expect(JSON.parse(rest.init.body).statement).toEqual({ property: { id: 'P11693' }, value: { type: 'value', content: '1' } });
+    const stmt = JSON.parse(rest.init.body).statement;
+    expect(stmt.property).toEqual({ id: 'P11693' });
+    expect(stmt.value).toEqual({ type: 'value', content: '1' });
+    expect(stmt.references[0].parts[0]).toEqual({ property: { id: 'P248' }, value: { type: 'value', content: 'Q936' } });
+    expect(stmt.references[0].parts[1]).toEqual({
+      property: { id: 'P854' },
+      value: { type: 'value', content: 'https://www.openstreetmap.org/node/1' },
+    });
+  });
+});
+
+describe('addCoordinateStatement (P625)', () => {
+  it('writes a P625 globecoordinate claim and attaches an OSM reference', async () => {
+    const calls = routeFetch([['meta=tokens', csrf], ['crossorigin=1', created]]);
+    const res = await WikidataEdit.addCoordinateStatement('Q1', 24.7136, 46.6753, 'node', 99);
+    expect(res.success).toBe(true);
+    expect(res.referenced).toBe(true);
+    const [claimCall, refCall] = writeCalls(calls);
+    const claimBody = new URLSearchParams(claimCall.init.body);
+    expect(claimBody.get('property')).toBe('P625');
+    expect(JSON.parse(claimBody.get('value'))).toEqual({
+      latitude: 24.7136,
+      longitude: 46.6753,
+      precision: 0.0001,
+      globe: 'http://www.wikidata.org/entity/Q2',
+    });
+    const refBody = new URLSearchParams(refCall.init.body);
+    expect(refBody.get('action')).toBe('wbsetreference');
+  });
+
+  it('rejects out-of-range coordinates before making any request', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(WikidataEdit.addCoordinateStatement('Q1', 99, 46, 'node', 1)).rejects.toThrow(/Invalid coordinates/);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 
