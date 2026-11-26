@@ -320,7 +320,15 @@ const WikidataEdit = {
           action: "already_linked",
           resolved_at: Date.now()
         });
-        return { success: true, skipped: true, method: "already_linked", warnings, missingConstraints, osmCoords };
+        return {
+          success: true,
+          skipped: true,
+          method: "already_linked",
+          warnings,
+          missingConstraints,
+          osmCoords,
+          unreferencedStatementId: preview.unreferenced_statement_id || null
+        };
       }
       if (baserevid === undefined && preview.baserevid > 0) baserevid = preview.baserevid;
     }
@@ -556,6 +564,155 @@ const WikidataEdit = {
     });
 
     return { success: true, method: "wbcreateclaim", data: json, referenced };
+  },
+
+  /**
+   * Backfills an OpenStreetMap provenance reference (P248=Q936, P854, P813)
+   * onto an already-existing unreferenced Wikidata statement.
+   */
+  async attachReferenceToStatement(qid, statementId, osmType, osmId, batchId = null, options = {}) {
+    const token = await WikidataAuth.ensureAccessToken();
+    if (!token) {
+      throw new Error("Not authenticated with Wikidata. Please sign in via the top bar.");
+    }
+    if (!statementId) {
+      throw new Error("Missing Wikidata statement ID.");
+    }
+
+    const cleanQid = qid.toUpperCase().trim();
+    const type = osmType.toLowerCase().trim();
+    const idStr = String(osmId).trim();
+    const activeBatch = batchId || this.getBatchId();
+    const summary = `Add OpenStreetMap ${type} ${idStr} reference via OSMxWikidata GCC Linker ([[:toolforge:editgroups/b/CB/${activeBatch}|details]])`;
+    const endpoints = WikidataAuth.getEndpoints();
+    const effectiveMaxlag = options.maxlag ?? this.MAXLAG_INTERACTIVE_SECONDS;
+    const csrfToken = await this.getCsrfToken(token);
+
+    const ok = await this._attachOsmReference(
+      statementId,
+      type,
+      idStr,
+      token,
+      csrfToken,
+      endpoints,
+      summary,
+      effectiveMaxlag,
+      options.baserevid || 0
+    );
+    if (!ok) {
+      throw new Error("Could not attach OpenStreetMap reference to the existing statement.");
+    }
+
+    this.logHistory({
+      id: `${statementId}#ref`,
+      qid: cleanQid,
+      property: "ref",
+      osmType: type,
+      osmId: idStr,
+      batchId: activeBatch,
+      timestamp: Date.now(),
+      user: WikidataAuth.getUser()?.username || "You",
+      url: `https://www.wikidata.org/wiki/${cleanQid}`
+    });
+    return { success: true, statementId };
+  },
+
+  /**
+   * Adds a P131 (located in the administrative territorial entity) statement
+   * after human confirmation from the guided P131 picker.
+   */
+  async addAdminEntityStatement(qid, p131Qid, osmType, osmId, batchId = null, options = {}) {
+    const token = await WikidataAuth.ensureAccessToken();
+    if (!token) {
+      throw new Error("Not authenticated with Wikidata. Please sign in via the top bar.");
+    }
+
+    const cleanQid = qid.toUpperCase().trim();
+    const cleanP131 = String(p131Qid || "").toUpperCase().trim();
+    if (!/^Q[1-9][0-9]*$/.test(cleanP131)) {
+      throw new Error("Invalid administrative territorial entity QID.");
+    }
+
+    const type = osmType.toLowerCase().trim();
+    const idStr = String(osmId).trim();
+    const numericId = parseInt(cleanP131.slice(1), 10);
+    const activeBatch = batchId || this.getBatchId();
+    const summary = `Add administrative territorial entity (P131=${cleanP131}) via OSMxWikidata GCC Linker ([[:toolforge:editgroups/b/CB/${activeBatch}|details]])`;
+    const endpoints = WikidataAuth.getEndpoints();
+    const effectiveMaxlag = options.maxlag ?? this.MAXLAG_INTERACTIVE_SECONDS;
+    const csrfToken = await this.getCsrfToken(token);
+
+    const fields = {
+      action: "wbcreateclaim",
+      format: "json",
+      entity: cleanQid,
+      property: "P131",
+      snaktype: "value",
+      value: JSON.stringify({ "entity-type": "item", "numeric-id": numericId, id: cleanP131 }),
+      summary: summary,
+      maxlag: String(effectiveMaxlag),
+      token: csrfToken
+    };
+
+    const json = await this._actionApiRequest(`${endpoints.wikidataApi}?crossorigin=1`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Api-User-Agent": "OSMxWikidataLinker/2.0 (https://wikidata.saudiosm.org)",
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams(fields).toString()
+    });
+
+    if (json.error) {
+      throw new Error(json.error.info || json.error.code || "Wikidata API returned error");
+    }
+
+    const referenced = await this._attachOsmReference(
+      json.claim?.id,
+      type,
+      idStr,
+      token,
+      csrfToken,
+      endpoints,
+      summary,
+      effectiveMaxlag,
+      json.pageinfo?.lastrevid || 0
+    );
+
+    this.logHistory({
+      id: json.claim?.id || `${cleanQid}$P131`,
+      qid: cleanQid,
+      property: "P131",
+      osmType: type,
+      osmId: idStr,
+      batchId: activeBatch,
+      timestamp: Date.now(),
+      user: WikidataAuth.getUser()?.username || "You",
+      url: `https://www.wikidata.org/wiki/${cleanQid}`
+    });
+
+    return { success: true, method: "wbcreateclaim", data: json, referenced, p131Qid: cleanP131 };
+  },
+
+  /**
+   * Searches Wikidata items for the guided P131 (administrative territorial entity) picker.
+   */
+  async searchAdminEntities(query, lang = "en") {
+    const q = String(query || "").trim();
+    if (!q) return [];
+    const safeLang = lang === "ar" ? "ar" : "en";
+    const url = `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(q)}&language=${safeLang}&uselang=${safeLang}&type=item&limit=6&format=json&origin=*`;
+    const res = await fetch(url, {
+      headers: { "Api-User-Agent": "OSMxWikidataLinker/2.0 (https://wikidata.saudiosm.org)" }
+    });
+    if (!res.ok) throw new Error(`Wikidata search failed (HTTP ${res.status})`);
+    const data = await res.json();
+    return (data.search || []).map(it => ({
+      id: it.id,
+      label: it.label || it.id,
+      description: it.description || ""
+    }));
   },
 
   /**

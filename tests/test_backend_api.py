@@ -292,6 +292,48 @@ def test_preview_reports_missing_p625_and_p131_and_osm_coords(client):
     assert any("P131" in w for w in data["warnings"])
 
 
+def test_preview_and_verify_detect_unreferenced_osm_claims(client):
+    def handler(request):
+        return httpx.Response(200, json={"entities": {"Q77": {
+            "id": "Q77",
+            "lastrevid": 22,
+            "labels": {"en": {"value": "Test Place"}},
+            "descriptions": {},
+            "claims": {
+                "P11693": [
+                    {
+                        "id": "Q77$unref-1",
+                        "mainsnak": {"datavalue": {"type": "string", "value": "1313924745"}},
+                    },
+                    {
+                        "id": "Q77$ref-2",
+                        "mainsnak": {"datavalue": {"type": "string", "value": "999"}},
+                        "references": [{"hash": "abc"}],
+                    },
+                ]
+            },
+        }}})
+
+    _install_mock_upstream(client, handler)
+    body = {"qid": "Q77", "property": "P11693", "osm_type": "node", "osm_id": 1313924745}
+    r = client.post("/api/v1/edits/preview", json=body, headers={"X-Real-IP": "198.51.100.96"})
+    assert r.status_code == 200
+    pdata = r.json()
+    assert pdata["status"] == "already_linked"
+    assert pdata["unreferenced_statement_id"] == "Q77$unref-1"
+
+    v = client.get("/api/v1/verify/Q77", headers={"X-Real-IP": "198.51.100.97"})
+    assert v.status_code == 200
+    vdata = v.json()["wikidata"]
+    assert vdata["missing_constraints"] == ["P625", "P131"]
+    assert vdata["unreferenced_osm_claims"] == [{
+        "property": "P11693",
+        "osm_type": "node",
+        "osm_id": "1313924745",
+        "statement_id": "Q77$unref-1",
+    }]
+
+
 # --- healthz freshness: both timestamp formats ---
 
 from datetime import datetime, timedelta, timezone

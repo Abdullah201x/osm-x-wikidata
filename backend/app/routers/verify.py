@@ -10,7 +10,7 @@ from typing import Optional, Dict, Any, Tuple
 import httpx
 from fastapi import APIRouter, Request, HTTPException, Query
 from app.limiter import limiter
-from app.routers._common import RE_QID, OSM_TYPES, get_http_client, claim_values, claim_item_ids
+from app.routers._common import RE_QID, OSM_TYPES, get_http_client, claim_values, claim_item_ids, unreferenced_osm_claims
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +165,7 @@ async def verify_qid(
             "p31": p31_ids,
             "p131": claim_item_ids(claims, "P131"),
             "missing_constraints": [p for p in ("P625", "P131") if not claims.get(p)],
+            "unreferenced_osm_claims": unreferenced_osm_claims(claims),
             "lat": lat,
             "lon": lon,
             "p11693": claim_values(claims, "P11693"), # node

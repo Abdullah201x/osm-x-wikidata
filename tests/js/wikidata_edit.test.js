@@ -338,6 +338,53 @@ describe('addCoordinateStatement (P625)', () => {
   });
 });
 
+describe('attachReferenceToStatement, addAdminEntityStatement, and searchAdminEntities', () => {
+  it('backfills an OSM reference onto an existing unreferenced statement', async () => {
+    const calls = routeFetch([['meta=tokens', csrf], ['crossorigin=1', created]]);
+    const res = await WikidataEdit.attachReferenceToStatement('Q1', 'Q1$existing', 'node', 1313924745);
+    expect(res).toEqual({ success: true, statementId: 'Q1$existing' });
+    const [refCall] = writeCalls(calls);
+    const body = new URLSearchParams(refCall.init.body);
+    expect(body.get('action')).toBe('wbsetreference');
+    expect(body.get('statement')).toBe('Q1$existing');
+    const snaks = JSON.parse(body.get('snaks'));
+    expect(snaks.P248[0].datavalue.value.id).toBe('Q936');
+    expect(snaks.P854[0].datavalue.value).toBe('https://www.openstreetmap.org/node/1313924745');
+  });
+
+  it('adds a P131 administrative entity statement and attaches an OSM reference', async () => {
+    const calls = routeFetch([['meta=tokens', csrf], ['crossorigin=1', created]]);
+    const res = await WikidataEdit.addAdminEntityStatement('Q1', 'Q3692', 'node', 99);
+    expect(res).toMatchObject({ success: true, referenced: true, p131Qid: 'Q3692' });
+    const [claimCall, refCall] = writeCalls(calls);
+    const claimBody = new URLSearchParams(claimCall.init.body);
+    expect(claimBody.get('property')).toBe('P131');
+    expect(JSON.parse(claimBody.get('value'))).toEqual({
+      'entity-type': 'item',
+      'numeric-id': 3692,
+      id: 'Q3692',
+    });
+    expect(new URLSearchParams(refCall.init.body).get('action')).toBe('wbsetreference');
+  });
+
+  it('rejects invalid P131 QIDs before making any request', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(WikidataEdit.addAdminEntityStatement('Q1', 'not-a-qid', 'node', 1)).rejects.toThrow(/Invalid administrative/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('searches Wikidata entities for the guided P131 picker', async () => {
+    routeFetch([
+      ['action=wbsearchentities', () => jsonResponse({
+        search: [{ id: 'Q3692', label: 'Riyadh', description: 'capital city of Saudi Arabia' }],
+      })],
+    ]);
+    const hits = await WikidataEdit.searchAdminEntities('Riyadh', 'en');
+    expect(hits).toEqual([{ id: 'Q3692', label: 'Riyadh', description: 'capital city of Saudi Arabia' }]);
+  });
+});
+
 describe('batch ids and resolved-state storage', () => {
   it('getBatchId is stable until reset, then changes', () => {
     const a = WikidataEdit.getBatchId();

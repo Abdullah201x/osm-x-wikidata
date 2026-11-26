@@ -549,6 +549,7 @@ function selectReverseItem(item, marker = null, skipFly = false) {
     </div>
 
     ${actionHtml}
+    <div id="wd-enrich-slot"></div>
 
     <!-- External Navigation Links -->
     <div class="inspector-section rv-external-links">
@@ -590,6 +591,19 @@ function selectReverseItem(item, marker = null, skipFly = false) {
         const vData = await res.json();
         verifyBtn.innerHTML = `${icon("check")} ${escapeHtml(i18n("verifyOk"))}`;
         const missing = vData.wikidata?.missing_constraints || [];
+        const unref = vData.wikidata?.unreferenced_osm_claims || [];
+        const enrichSlot = document.getElementById("wd-enrich-slot");
+        if (enrichSlot) {
+          renderWikidataEnrichCard(enrichSlot, {
+            qid: item.qid,
+            osmType: fullOsmType,
+            osmId,
+            lat,
+            lon,
+            missingConstraints: missing,
+            unreferencedClaims: unref
+          });
+        }
         if (missing.length > 0) {
           Notify.info(i18n("verifyOkMissingConstraints", { rev: vData.wikidata?.lastrevid ?? "–", props: missing.join(", ") }), {
             link: { href: wdUrl, label: t.viewInWikidata },
@@ -1288,7 +1302,9 @@ function selectItem(item, marker = null, skipFly = false) {
       <a href="${MappingTools.getIdEditorUrl(lat, lon)}" target="_blank" rel="noopener" class="btn btn-id" title="Shortcut: I">${icon("edit")} ${t.btnEditId} <kbd class="kbd-inline">I</kbd></a>
       <button id="btn-add-note" class="btn btn-note">${icon("edit")} ${t.btnAddNote}</button>
       <button id="btn-copy-qs" class="btn btn-qs">${icon("bolt")} ${t.btnQuickStatements}</button>
+      ${effectiveStatus === 2 ? `<button id="btn-wd-enrich-check" class="btn btn-wd-claim">${icon("search")} ${t.btnCheckEnrichWd}</button>` : ""}
     </div>
+    <div id="wd-enrich-slot"></div>
   `;
 
   if (p31 && !p31Entry) {
@@ -1370,6 +1386,38 @@ function selectItem(item, marker = null, skipFly = false) {
       Notify.success(i18n("qsCopied", { qs }));
     });
   };
+
+  const btnWdEnrichCheck = document.getElementById("btn-wd-enrich-check");
+  if (btnWdEnrichCheck) {
+    btnWdEnrichCheck.onclick = async () => {
+      const parsed = OsmAuth.parseOsmRef(effectiveOsmRef);
+      btnWdEnrichCheck.disabled = true;
+      btnWdEnrichCheck.textContent = i18n("verifying");
+      try {
+        const qsParams = parsed ? `?osm_type=${parsed.type}&osm_id=${parsed.id}` : "";
+        const res = await fetch(`/api/v1/verify/${qid}${qsParams}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const vData = await res.json();
+        const enrichSlot = document.getElementById("wd-enrich-slot");
+        if (enrichSlot) {
+          renderWikidataEnrichCard(enrichSlot, {
+            qid,
+            osmType: parsed?.type || "node",
+            osmId: parsed?.id || "",
+            lat,
+            lon,
+            missingConstraints: vData.wikidata?.missing_constraints || [],
+            unreferencedClaims: vData.wikidata?.unreferenced_osm_claims || []
+          });
+        }
+        btnWdEnrichCheck.innerHTML = `${icon("check")} ${t.btnCheckEnrichWd}`;
+      } catch (err) {
+        btnWdEnrichCheck.disabled = false;
+        btnWdEnrichCheck.innerHTML = `${icon("search")} ${t.btnCheckEnrichWd}`;
+        Notify.error(i18n("verifyFailed", { error: err.message }));
+      }
+    };
+  }
 
   document.getElementById("btn-add-note").onclick = () => {
     openNoteModal(lat, lon, nameAr || nameEn, qid);
@@ -2287,6 +2335,183 @@ function itemShareUrl() {
 function copyLinkButtonHtml(t) {
   const label = escapeHtml(t.btnCopyItemLink || "Copy link");
   return `<button type="button" id="btn-copy-item-link" class="btn-copy-link" title="${label}" aria-label="${label}">${icon("link")}</button>`;
+}
+
+function ensureWikidataLogin() {
+  if (typeof WikidataAuth !== "undefined" && WikidataAuth.isAuthenticated()) return true;
+  const wantLogin = confirm(i18n("wdLoginPrompt"));
+  if (wantLogin && typeof WikidataAuth !== "undefined") {
+    WikidataAuth.startLogin();
+  }
+  return false;
+}
+
+/**
+ * Renders an inline Wikidata Enrichment card inside `#wd-enrich-slot` for
+ * backfilling OSM references (P248/P854/P813), P625 coordinates, and P131
+ * (located in the administrative territorial entity) via a guided search picker.
+ */
+function renderWikidataEnrichCard(container, opts) {
+  const t = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+  const { qid, osmType, osmId, lat, lon } = opts;
+  const missing = [...(opts.missingConstraints || [])];
+  const unref = [...(opts.unreferencedClaims || [])];
+
+  if (missing.length === 0 && unref.length === 0) {
+    container.innerHTML = `
+      <div class="wd-enrich-card wd-enrich-card--ok">
+        <div class="wd-enrich-header">${icon("check")} ${escapeHtml(t.wdEnrichAllGood)}</div>
+      </div>
+    `;
+    return;
+  }
+
+  const needsP625 = missing.includes("P625") && Number.isFinite(Number(lat)) && Number.isFinite(Number(lon));
+  const needsP131 = missing.includes("P131");
+
+  const refButtonsHtml = unref.map((u, idx) => `
+    <div class="wd-enrich-row" data-unref-idx="${idx}">
+      <span class="wd-enrich-label">${escapeHtml(i18n("wdUnrefClaim", { prop: u.property, id: u.osm_id }))}</span>
+      <button type="button" class="btn rv-btn btn-wd-claim wd-btn-add-ref" data-idx="${idx}">
+        ${icon("plus")} ${escapeHtml(t.btnAddOsmRef)}
+      </button>
+    </div>
+  `).join("");
+
+  const p625Html = needsP625 ? `
+    <div class="wd-enrich-row" id="wd-enrich-p625-row">
+      <span class="wd-enrich-label">${escapeHtml(t.wdMissingP625)} (<code>${Number(lat).toFixed(5)}, ${Number(lon).toFixed(5)}</code>)</span>
+      <button type="button" class="btn rv-btn btn-wd-claim" id="wd-btn-add-p625">
+        ${icon("plus")} ${escapeHtml(t.btnAddP625)}
+      </button>
+    </div>
+  ` : "";
+
+  const p131Html = needsP131 ? `
+    <div class="wd-enrich-p131" id="wd-enrich-p131-row">
+      <div class="wd-enrich-label">${escapeHtml(t.wdMissingP131)}</div>
+      <div class="wd-p131-search-row">
+        <input type="text" id="wd-p131-query" class="wd-p131-input" placeholder="${escapeHtml(t.wdP131Placeholder)}" />
+        <button type="button" id="wd-p131-search-btn" class="btn rv-btn rv-btn-ghost">${icon("search")} ${escapeHtml(t.btnSearchP131)}</button>
+      </div>
+      <div id="wd-p131-results" class="wd-p131-results"></div>
+    </div>
+  ` : "";
+
+  container.innerHTML = `
+    <div class="wd-enrich-card">
+      <div class="wd-enrich-header">${icon("bolt")} ${escapeHtml(t.wdEnrichTitle)}</div>
+      ${refButtonsHtml}
+      ${p625Html}
+      ${p131Html}
+    </div>
+  `;
+
+  container.querySelectorAll(".wd-btn-add-ref").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!ensureWikidataLogin()) return;
+      const u = unref[Number(btn.dataset.idx)];
+      btn.disabled = true;
+      btn.textContent = i18n("wdAdding");
+      try {
+        await WikidataEdit.attachReferenceToStatement(qid, u.statement_id, u.osm_type, u.osm_id, null, {
+          maxlag: WikidataEdit.MAXLAG_INTERACTIVE_SECONDS
+        });
+        window.dispatchEvent(new CustomEvent("osm-history-updated"));
+        Notify.success(i18n("wdRefAdded", { qid }));
+        const row = container.querySelector(`[data-unref-idx="${btn.dataset.idx}"]`);
+        if (row) row.remove();
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = `${icon("plus")} ${escapeHtml(t.btnAddOsmRef)}`;
+        Notify.error(i18n("wdRefFailed", { qid, error: err.message }));
+      }
+    });
+  });
+
+  const p625Btn = container.querySelector("#wd-btn-add-p625");
+  if (p625Btn) {
+    p625Btn.addEventListener("click", async () => {
+      if (!ensureWikidataLogin()) return;
+      p625Btn.disabled = true;
+      p625Btn.textContent = i18n("wdAdding");
+      try {
+        await WikidataEdit.addCoordinateStatement(qid, lat, lon, osmType || "node", osmId || "", null, {
+          maxlag: WikidataEdit.MAXLAG_INTERACTIVE_SECONDS
+        });
+        window.dispatchEvent(new CustomEvent("osm-history-updated"));
+        Notify.success(i18n("wdP625Added", { qid }));
+        const row = container.querySelector("#wd-enrich-p625-row");
+        if (row) row.remove();
+      } catch (err) {
+        p625Btn.disabled = false;
+        p625Btn.innerHTML = `${icon("plus")} ${escapeHtml(t.btnAddP625)}`;
+        Notify.error(i18n("wdP625Failed", { qid, error: err.message }));
+      }
+    });
+  }
+
+  const p131Input = container.querySelector("#wd-p131-query");
+  const p131SearchBtn = container.querySelector("#wd-p131-search-btn");
+  const p131Results = container.querySelector("#wd-p131-results");
+  if (p131Input && p131SearchBtn && p131Results) {
+    const runSearch = async () => {
+      const q = p131Input.value.trim();
+      if (!q) return;
+      p131SearchBtn.disabled = true;
+      p131Results.innerHTML = `<div class="wd-p131-status">${escapeHtml(t.verifying)}</div>`;
+      try {
+        const hits = await WikidataEdit.searchAdminEntities(q, currentLang);
+        if (hits.length === 0) {
+          p131Results.innerHTML = `<div class="wd-p131-status">${escapeHtml(t.wdP131NoResults)}</div>`;
+        } else {
+          p131Results.innerHTML = hits.map(h => `
+            <div class="wd-p131-hit">
+              <div class="wd-p131-hit-info">
+                <strong>${escapeHtml(h.label)}</strong> <code>${escapeHtml(h.id)}</code>
+                ${h.description ? `<div class="wd-p131-hit-desc">${escapeHtml(h.description)}</div>` : ""}
+              </div>
+              <button type="button" class="btn rv-btn btn-wd-claim wd-btn-pick-p131" data-p131="${escapeHtml(h.id)}">
+                ${escapeHtml(t.btnAddP131)}
+              </button>
+            </div>
+          `).join("");
+          p131Results.querySelectorAll(".wd-btn-pick-p131").forEach(pickBtn => {
+            pickBtn.addEventListener("click", async () => {
+              if (!ensureWikidataLogin()) return;
+              const p131Qid = pickBtn.dataset.p131;
+              pickBtn.disabled = true;
+              pickBtn.textContent = i18n("wdAdding");
+              try {
+                await WikidataEdit.addAdminEntityStatement(qid, p131Qid, osmType || "node", osmId || "", null, {
+                  maxlag: WikidataEdit.MAXLAG_INTERACTIVE_SECONDS
+                });
+                window.dispatchEvent(new CustomEvent("osm-history-updated"));
+                Notify.success(i18n("wdP131Added", { qid, p131: p131Qid }));
+                const row = container.querySelector("#wd-enrich-p131-row");
+                if (row) row.remove();
+              } catch (err) {
+                pickBtn.disabled = false;
+                pickBtn.textContent = t.btnAddP131;
+                Notify.error(i18n("wdP131Failed", { qid, error: err.message }));
+              }
+            });
+          });
+        }
+      } catch (err) {
+        p131Results.innerHTML = `<div class="wd-p131-status">${escapeHtml(err.message)}</div>`;
+      } finally {
+        p131SearchBtn.disabled = false;
+      }
+    };
+    p131SearchBtn.addEventListener("click", runSearch);
+    p131Input.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        runSearch();
+      }
+    });
+  }
 }
 
 function wireCopyLinkButton(t) {

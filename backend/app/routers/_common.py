@@ -54,3 +54,32 @@ def claim_item_ids(claims: dict, prop: str) -> List[Any]:
         except Exception:
             pass
     return ids
+
+
+OSM_PROP_TO_TYPE = {
+    "P11693": "node",
+    "P10689": "way",
+    "P402": "relation",
+}
+
+
+def unreferenced_osm_claims(claims: dict) -> List[dict]:
+    """OSM ID statements (P11693/P10689/P402) that carry zero references."""
+    out = []
+    for prop, osm_type in OSM_PROP_TO_TYPE.items():
+        for c in claims.get(prop, []):
+            if c.get("references"):
+                continue
+            try:
+                val = str(c["mainsnak"]["datavalue"]["value"]).strip()
+            except Exception:
+                continue
+            stmt_id = c.get("id", "")
+            if val and stmt_id:
+                out.append({
+                    "property": prop,
+                    "osm_type": osm_type,
+                    "osm_id": val,
+                    "statement_id": stmt_id,
+                })
+    return out

@@ -3065,6 +3065,64 @@ kbd, .kbd-inline {
 .reverse-action-card--osm .reverse-action-header { color: var(--color-missing); }
 .inspector-section.rv-external-links { margin-top: 10px; }
 
+/* Inline Wikidata Enrichment Card (references, P625, guided P131 picker) */
+.wd-enrich-card {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--rgb-accent), 0.35);
+  background: rgba(var(--rgb-accent), 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wd-enrich-card--ok {
+  border-color: rgba(var(--rgb-linked), 0.4);
+  background: rgba(var(--rgb-linked), 0.08);
+}
+.wd-enrich-header {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.wd-enrich-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.wd-enrich-label { font-size: 0.75rem; color: var(--color-text-muted); }
+.wd-enrich-p131 { display: flex; flex-direction: column; gap: 6px; }
+.wd-p131-search-row { display: flex; gap: 6px; }
+.wd-p131-input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.76rem;
+}
+.wd-p131-results { display: flex; flex-direction: column; gap: 5px; }
+.wd-p131-status { font-size: 0.74rem; color: var(--color-text-muted); }
+.wd-p131-hit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--panel-border);
+}
+.wd-p131-hit-info { font-size: 0.75rem; min-width: 0; }
+.wd-p131-hit-desc { font-size: 0.7rem; color: var(--color-text-muted); margin-top: 2px; }
+
 /* "Action completed" state after a reverse push. */
 .empty-state.done-state { padding: 24px; text-align: center; }
 .done-state .empty-icon { font-size: 2.2rem; margin-bottom: 8px; }

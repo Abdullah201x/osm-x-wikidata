@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from fastapi import APIRouter, Request, HTTPException
 
 from app.limiter import limiter
-from app.routers._common import RE_QID, normalize_osm_type, get_http_client, claim_values, claim_item_ids
+from app.routers._common import RE_QID, normalize_osm_type, get_http_client, claim_values, claim_item_ids, unreferenced_osm_claims
 from app.routers.verify import raise_if_rate_limited
 
 logger = logging.getLogger(__name__)
@@ -127,6 +127,11 @@ async def preview_edit(request: Request, payload: EditPreviewRequest):
 
     str_oid = str(payload.osm_id)
     if str_oid in existing_vals:
+        unref_match = next(
+            (u["statement_id"] for u in unreferenced_osm_claims(claims)
+             if u["property"] == payload.property and u["osm_id"] == str_oid),
+            None,
+        )
         return {
             "valid": True,
             "status": "already_linked",
@@ -134,6 +139,7 @@ async def preview_edit(request: Request, payload: EditPreviewRequest):
             "property": payload.property,
             "osm_id": payload.osm_id,
             "missing_constraints": missing_constraints,
+            "unreferenced_statement_id": unref_match,
             "warnings": [f"Statement {payload.property}={str_oid} already exists on {qid}.", *warnings]
         }
     elif existing_vals:
