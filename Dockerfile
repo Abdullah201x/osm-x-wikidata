@@ -1,5 +1,5 @@
 # Stage 1: Pre-compress static assets using Brotli (-q 9) and Gzip (-9)
-FROM alpine:3.21 AS builder
+FROM alpine:3.24 AS builder
 
 RUN apk add --no-cache brotli gzip bash findutils
 
