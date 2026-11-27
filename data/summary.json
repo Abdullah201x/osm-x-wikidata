@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-11-26T13:37:29Z",
+  "updated_at": "2026-11-27T13:31:34Z",
   "pbf_file": "gcc-states-latest.osm.pbf",
-  "total_items": 92478,
-  "total_missing": 82726,
-  "total_candidates": 5969,
-  "total_linked": 3783,
+  "total_items": 92871,
+  "total_missing": 83139,
+  "total_candidates": 5845,
+  "total_linked": 3887,
   "countries": {
     "KW": {
       "name_en": "Kuwait",
@@ -13,19 +13,19 @@
       "counts": {
         "total": 405,
         "missing": 223,
-        "candidates": 94,
-        "linked": 88,
+        "candidates": 65,
+        "linked": 117,
         "filtered_non_physical": 206
       },
       "reverse_counts": {
-        "total_tagged": 167,
-        "missing_backlink": 91,
-        "missing_backlink_high": 13,
-        "missing_backlink_medium": 51,
-        "missing_backlink_low": 27,
+        "total_tagged": 196,
+        "missing_backlink": 120,
+        "missing_backlink_high": 27,
+        "missing_backlink_medium": 65,
+        "missing_backlink_low": 28,
         "broken_osm_tag": 6,
         "conflict": 16,
-        "review_gap": 42
+        "review_gap": 51
       }
     },
     "QA": {
@@ -35,19 +35,19 @@
       "counts": {
         "total": 2115,
         "missing": 1698,
-        "candidates": 234,
-        "linked": 183,
+        "candidates": 198,
+        "linked": 219,
         "filtered_non_physical": 952
       },
       "reverse_counts": {
-        "total_tagged": 248,
-        "missing_backlink": 153,
-        "missing_backlink_high": 43,
-        "missing_backlink_medium": 84,
-        "missing_backlink_low": 26,
+        "total_tagged": 284,
+        "missing_backlink": 180,
+        "missing_backlink_high": 64,
+        "missing_backlink_medium": 89,
+        "missing_backlink_low": 27,
         "broken_osm_tag": 5,
-        "conflict": 38,
-        "review_gap": 60
+        "conflict": 43,
+        "review_gap": 70
       }
     },
     "AE": {
@@ -99,21 +99,21 @@
       "name_ar": "المملكة العربية السعودية",
       "file": "sa.json",
       "counts": {
-        "total": 82131,
-        "missing": 76362,
-        "candidates": 4410,
-        "linked": 1359,
+        "total": 82524,
+        "missing": 76775,
+        "candidates": 4359,
+        "linked": 1390,
         "filtered_non_physical": 4273
       },
       "reverse_counts": {
-        "total_tagged": 3351,
-        "missing_backlink": 1244,
-        "missing_backlink_high": 218,
-        "missing_backlink_medium": 633,
-        "missing_backlink_low": 393,
+        "total_tagged": 3383,
+        "missing_backlink": 1258,
+        "missing_backlink_high": 228,
+        "missing_backlink_medium": 636,
+        "missing_backlink_low": 394,
         "broken_osm_tag": 57,
         "conflict": 910,
-        "review_gap": 603
+        "review_gap": 606
       }
     },
     "BH": {
@@ -123,31 +123,31 @@
       "counts": {
         "total": 544,
         "missing": 278,
-        "candidates": 79,
-        "linked": 187,
+        "candidates": 71,
+        "linked": 195,
         "filtered_non_physical": 69
       },
       "reverse_counts": {
-        "total_tagged": 220,
-        "missing_backlink": 168,
-        "missing_backlink_high": 79,
-        "missing_backlink_medium": 67,
+        "total_tagged": 225,
+        "missing_backlink": 165,
+        "missing_backlink_high": 85,
+        "missing_backlink_medium": 58,
         "missing_backlink_low": 22,
-        "broken_osm_tag": 8,
+        "broken_osm_tag": 5,
         "conflict": 14,
-        "review_gap": 53
+        "review_gap": 57
       }
     }
   },
   "total_filtered_non_physical": 6326,
   "reverse_totals": {
-    "total_tagged": 6389,
-    "missing_backlink": 3314,
-    "missing_backlink_high": 998,
-    "missing_backlink_medium": 1547,
-    "missing_backlink_low": 769,
-    "broken_osm_tag": 120,
-    "conflict": 1233,
-    "review_gap": 1772
+    "total_tagged": 6491,
+    "missing_backlink": 3381,
+    "missing_backlink_high": 1049,
+    "missing_backlink_medium": 1560,
+    "missing_backlink_low": 772,
+    "broken_osm_tag": 117,
+    "conflict": 1238,
+    "review_gap": 1798
   }
 }
