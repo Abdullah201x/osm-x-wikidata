@@ -6,7 +6,7 @@ Orchestrates:
 3. Spatial join & Arabic name matching.
 4. Exporting compact, minified web JSON datasets to data/*.json and data/summary.json.
 
-Compatible with C:\\Users\\abdul\\Desktop\\update osm\\update_projects.py.
+Compatible with C:\\OSM\\update osm\\update_projects.py.
 """
 
 import os
