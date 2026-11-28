@@ -64,5 +64,11 @@
 {"date":"2026-11-27","cc":"kw","linked":117,"candidates":65,"missing_backlink":120,"broken":6,"conflict":16},
 {"date":"2026-11-27","cc":"om","linked":744,"candidates":389,"missing_backlink":688,"broken":0,"conflict":45},
 {"date":"2026-11-27","cc":"qa","linked":219,"candidates":198,"missing_backlink":180,"broken":5,"conflict":43},
-{"date":"2026-11-27","cc":"sa","linked":1390,"candidates":4359,"missing_backlink":1258,"broken":57,"conflict":910}
+{"date":"2026-11-27","cc":"sa","linked":1390,"candidates":4359,"missing_backlink":1258,"broken":57,"conflict":910},
+{"date":"2026-11-28","cc":"ae","linked":1222,"candidates":763,"missing_backlink":970,"broken":44,"conflict":210},
+{"date":"2026-11-28","cc":"bh","linked":195,"candidates":71,"missing_backlink":165,"broken":5,"conflict":14},
+{"date":"2026-11-28","cc":"kw","linked":117,"candidates":65,"missing_backlink":120,"broken":6,"conflict":16},
+{"date":"2026-11-28","cc":"om","linked":744,"candidates":388,"missing_backlink":688,"broken":0,"conflict":45},
+{"date":"2026-11-28","cc":"qa","linked":219,"candidates":198,"missing_backlink":180,"broken":5,"conflict":43},
+{"date":"2026-11-28","cc":"sa","linked":1390,"candidates":4352,"missing_backlink":1265,"broken":57,"conflict":910}
 ]}
